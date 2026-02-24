@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <!-- This covers the main internal storage (/storage/emulated/0) -->
+    <external-path name="external_files" path="." />
+
+    <!-- This covers the very root of the device (required for some folders) -->
+    <root-path name="root" path="." />
+
+    <!-- This covers app-specific files -->
+    <files-path name="my_files" path="." />
+</paths>
