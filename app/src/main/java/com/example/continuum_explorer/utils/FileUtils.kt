@@ -4,6 +4,8 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
+import android.graphics.BitmapFactory
+import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.os.Environment
 import android.provider.OpenableColumns
@@ -69,6 +71,125 @@ fun getUriForUniversalFile(context: Context, file: UniversalFile): Uri? {
     } catch (e: Exception) {
         e.printStackTrace()
         null
+    }
+}
+
+/**
+ * Gets a human-readable file type string
+ */
+fun getFileType(file: UniversalFile): String {
+    if (file.isDirectory) return "Folder"
+
+    val extension = file.name.substringAfterLast(".", "").lowercase()
+    val extensionString = extension.uppercase()
+
+    return when (extension) {
+        "zip", "rar", "7z", "tar", "gz" -> "Archive"
+        "jpg", "jpeg", "bmp", "png", "gif", "webp" -> "Image"
+        "mp4", "mkv", "avi", "mov", "webm" -> "Video"
+        "mp3", "wav", "ogg", "m4a", "flac" -> "Audio"
+        "txt", "doc", "docx", "odt", "pdf" -> "Document"
+        "" -> "File"
+        else -> "$extensionString File"
+    }
+}
+
+/**
+ * Extracts Video Resolution metadata
+ */
+fun getVideoResolution(context: Context, file: UniversalFile): String? {
+    val retriever = MediaMetadataRetriever()
+    return try {
+        if (file.fileRef != null) {
+            retriever.setDataSource(file.fileRef.absolutePath)
+        } else if (file.documentFileRef != null) {
+            retriever.setDataSource(context, file.documentFileRef.uri)
+        } else {
+            return null
+        }
+
+        val width = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH)
+        val height = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT)
+        val rotation = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_ROTATION)?.toIntOrNull() ?: 0
+
+        if (width != null && height != null) {
+            if (rotation == 90 || rotation == 270) {
+                "${height}x${width}"
+            } else {
+                "${width}x${height}"
+            }
+        } else {
+            null
+        }
+    } catch (e: Exception) {
+        null
+    } finally {
+        try { retriever.release() } catch (e: Exception) {}
+    }
+}
+
+/**
+ * Extracts Media Duration metadata
+ */
+fun getMediaDuration(context: Context, file: UniversalFile): String? {
+    val retriever = MediaMetadataRetriever()
+    return try {
+        if (file.fileRef != null) {
+            retriever.setDataSource(file.fileRef.absolutePath)
+        } else if (file.documentFileRef != null) {
+            retriever.setDataSource(context, file.documentFileRef.uri)
+        } else {
+            return null
+        }
+
+        val durationString = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)
+        if (durationString != null) {
+            val millis = durationString.toLong()
+            val totalSeconds = millis / 1000
+            val minutes = totalSeconds / 60
+            val seconds = totalSeconds % 60
+
+            if (minutes >= 60) {
+                val hours = minutes / 60
+                val remainingMinutes = minutes % 60
+                String.format("%02d:%02d:%02d", hours, remainingMinutes, seconds)
+            } else {
+                String.format("%02d:%02d", minutes, seconds)
+            }
+        } else {
+            null
+        }
+    } catch (e: Exception) {
+        null
+    } finally {
+        try { retriever.release() } catch (e: Exception) {}
+    }
+}
+
+/**
+ * Extracts Image Resolution metadata
+ */
+fun getImageResolution(context: Context, file: UniversalFile): String {
+    val options = BitmapFactory.Options().apply {
+        inJustDecodeBounds = true
+    }
+    try {
+        val inputStream = if (file.fileRef != null) {
+            file.fileRef.inputStream()
+        } else if (file.documentFileRef != null) {
+            context.contentResolver.openInputStream(file.documentFileRef.uri)
+        } else {
+            null
+        }
+        inputStream?.use { stream ->
+            BitmapFactory.decodeStream(stream, null, options)
+        }
+        if (options.outWidth > 0 && options.outHeight > 0) {
+            return "${options.outWidth}x${options.outHeight}"
+        }
+        return "Unknown Resolution"
+    } catch (e: Exception) {
+        return "Unknown Resolution"
     }
 }
 

@@ -97,6 +97,7 @@ fun ItemContextMenu(
                 text = { Text("Properties") },
                 onClick = {
                     onDismiss()
+                    appState.showProperties()
                 },
                 leadingIcon = { Icon(Icons.Default.Info, null) }
             )
@@ -335,6 +336,7 @@ fun ItemContextMenu(
                 text = { Text("Properties") },
                 onClick = {
                     onDismiss()
+                    appState.showProperties()
                 },
                 leadingIcon = { Icon(Icons.Default.Info, null) }
             )
@@ -391,11 +393,13 @@ fun BackgroundContextMenu(
 
                 HorizontalDivider()
 
-                DropdownMenuItem(
-                    text = { Text("Empty Recycle Bin") },
-                    leadingIcon = { Icon(Icons.Default.DeleteForever, null) },
-                    onClick = { appState.emptyRecycleBin() }
-                )
+                if (isInRecycleBin) {
+                    DropdownMenuItem(
+                        text = { Text("Empty Recycle Bin") },
+                        leadingIcon = { Icon(Icons.Default.DeleteForever, null) },
+                        onClick = { appState.emptyRecycleBin() }
+                    )
+                }
 
                 DropdownMenuItem(
                     text = { Text("Refresh") },

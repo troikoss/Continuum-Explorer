@@ -158,7 +158,10 @@ fun CommandBar(
                     CommandButton(
                         text = "Properties",
                         icon = Icons.Default.Info,
-                        onClick = { isTouch -> if (isTouch) {selectionManager.clear()} },
+                        onClick = { isTouch -> 
+                            appState.showProperties()
+                            if (isTouch) {selectionManager.clear()} 
+                        },
                     )
                 } else {
                     // Sort Menu
@@ -505,7 +508,10 @@ fun CommandBar(
                     CommandButton(
                         text = "Properties",
                         icon = Icons.Default.Info,
-                        onClick = { isTouch -> if (isTouch) {selectionManager.clear()} },
+                        onClick = { isTouch -> 
+                            appState.showProperties()
+                            if (isTouch) {selectionManager.clear()} 
+                        },
                     )
 
                 }

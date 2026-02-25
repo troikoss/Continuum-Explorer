@@ -163,6 +163,10 @@ class AppConfigurations(private val context: Context) {
     var isDetailsPaneVisible by mutableStateOf(true)
 
     init {
+        reload()
+    }
+
+    fun reload() {
         loadAddedSafUris()
         loadFavorites()
         loadLibrarySettings()
@@ -234,18 +238,21 @@ class AppConfigurations(private val context: Context) {
     fun toggleRecentVisibility() {
         isRecentVisible = !isRecentVisible
         saveLibrarySettings()
+        GlobalEvents.triggerConfigUpdate()
     }
     
     fun addFavorite(path: String) {
         if (!favoritePaths.contains(path)) {
             favoritePaths.add(path)
             saveFavorites()
+            GlobalEvents.triggerConfigUpdate()
         }
     }
     
     fun removeFavorite(path: String) {
         if (favoritePaths.remove(path)) {
             saveFavorites()
+            GlobalEvents.triggerConfigUpdate()
         }
     }
     
@@ -254,6 +261,7 @@ class AppConfigurations(private val context: Context) {
         val item = favoritePaths.removeAt(fromIndex)
         favoritePaths.add(toIndex, item)
         saveFavorites()
+        GlobalEvents.triggerConfigUpdate()
     }
     
     fun moveLibraryItem(fromIndex: Int, toIndex: Int) {
@@ -261,6 +269,7 @@ class AppConfigurations(private val context: Context) {
         val item = libraryOrder.removeAt(fromIndex)
         libraryOrder.add(toIndex, item)
         saveLibrarySettings()
+        GlobalEvents.triggerConfigUpdate()
     }
     
     fun isFavorite(path: String): Boolean {

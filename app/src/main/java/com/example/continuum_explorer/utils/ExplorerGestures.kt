@@ -341,6 +341,15 @@ fun Modifier.containerGestures(
                         appState.redo(); focusRequester.requestFocus(); true
                     } else false
 
+                    Key.Slash -> if (ctrl) {
+                        FileOperationsManager.showShortcuts()
+                        val intent = Intent(context, PopUpActivity::class.java).apply {
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        }
+                        context.startActivity(intent)
+                        true
+                    } else false
+
                     else -> false
                 }
             } else false

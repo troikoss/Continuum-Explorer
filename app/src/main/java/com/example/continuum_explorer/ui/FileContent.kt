@@ -53,9 +53,15 @@ fun FileContent(
     val selectionManager = appState.selectionManager
     val focusRequester = remember { FocusRequester() }
 
-    // Request focus on launch so keyboard shortcuts work immediately
-    LaunchedEffect(Unit) {
-        focusRequester.requestFocus()
+    // Request focus logic:
+    // We only take focus if the search UI is NOT active. 
+    // This prevents the file list from stealing focus while the user is typing or searching.
+    LaunchedEffect(appState.isSearchUIActive) {
+        if (!appState.isSearchUIActive) {
+            try {
+                focusRequester.requestFocus()
+            } catch (e: Exception) {}
+        }
     }
 
     // Tracks the bounding box of every visible file item to support marquee selection

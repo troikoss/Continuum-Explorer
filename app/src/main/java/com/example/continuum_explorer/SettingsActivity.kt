@@ -8,12 +8,14 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Keyboard
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.continuum_explorer.ui.theme.FileExplorer2Theme
 import com.example.continuum_explorer.utils.DeleteBehavior
@@ -41,6 +43,7 @@ fun SettingsScreen(onBack: () -> Unit) {
     
     var showDeleteDialog by remember { mutableStateOf(false) }
     var showThemeDialog by remember { mutableStateOf(false) }
+    var showShortcutsDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -48,7 +51,7 @@ fun SettingsScreen(onBack: () -> Unit) {
                 title = { Text("Settings") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 }
             )
@@ -78,6 +81,13 @@ fun SettingsScreen(onBack: () -> Unit) {
                     Text(text)
                 },
                 modifier = Modifier.clickable { showThemeDialog = true }
+            )
+
+            ListItem(
+                headlineContent = { Text("Shortcut Cheatsheet") },
+                supportingContent = { Text("View available keyboard and mouse shortcuts") },
+                leadingContent = { Icon(Icons.Default.Keyboard, contentDescription = null) },
+                modifier = Modifier.clickable { showShortcutsDialog = true }
             )
 
             HorizontalDivider()
@@ -192,7 +202,82 @@ fun SettingsScreen(onBack: () -> Unit) {
                     }
                 )
             }
+
+            if (showShortcutsDialog) {
+                AlertDialog(
+                    onDismissRequest = { showShortcutsDialog = false },
+                    title = { Text("Shortcuts Cheatsheet") },
+                    text = {
+                        Column(
+                            modifier = Modifier
+                                .verticalScroll(rememberScrollState())
+                                .fillMaxWidth()
+                        ) {
+                            ShortcutCategory("Navigation & Selection")
+                            ShortcutItem("Arrow Keys", "Move selection")
+                            ShortcutItem("Home / End", "Go to start / end of list")
+                            ShortcutItem("Page Up / Down", "Scroll page up / down")
+                            ShortcutItem("Ctrl + A", "Select all")
+                            ShortcutItem("Backspace", "Go back to parent folder")
+
+                            Spacer(modifier = Modifier.height(16.dp))
+                            ShortcutCategory("File Operations")
+                            ShortcutItem("Enter", "Open file or folder")
+                            ShortcutItem("Ctrl + Enter", "Open in new tab")
+                            ShortcutItem("Shift + Enter", "Open in new window")
+                            ShortcutItem("Ctrl + C / X / V", "Copy / Cut / Paste")
+                            ShortcutItem("Delete", "Delete (Shift + Delete for permanent)")
+                            ShortcutItem("F2", "Rename")
+                            ShortcutItem("F5", "Refresh")
+
+                            Spacer(modifier = Modifier.height(16.dp))
+                            ShortcutCategory("App Actions")
+                            ShortcutItem("Ctrl + N", "New window")
+                            ShortcutItem("Ctrl + W", "Close window")
+                            ShortcutItem("Ctrl + Z / Y", "Undo / Redo")
+                            ShortcutItem("Ctrl + Mouse Wheel", "Zoom in / out")
+
+                            Spacer(modifier = Modifier.height(16.dp))
+                            ShortcutCategory("Mouse")
+                            ShortcutItem("Right Click", "Context menu")
+                            ShortcutItem("Middle Click", "Open in new tab")
+                            ShortcutItem("Shift + Middle Click", "Open in new window")
+                            ShortcutItem("Drag", "Copy")
+                            ShortcutItem("Shift + Drag", "Move")
+                        }
+                    },
+                    confirmButton = {
+                        TextButton(onClick = { showShortcutsDialog = false }) {
+                            Text("Close")
+                        }
+                    }
+                )
+            }
         }
+    }
+}
+
+@Composable
+fun ShortcutCategory(name: String) {
+    Text(
+        text = name,
+        style = MaterialTheme.typography.labelLarge,
+        color = MaterialTheme.colorScheme.primary,
+        fontWeight = FontWeight.Bold,
+        modifier = Modifier.padding(bottom = 4.dp)
+    )
+}
+
+@Composable
+fun ShortcutItem(keys: String, action: String) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(text = keys, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+        Text(text = action, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 

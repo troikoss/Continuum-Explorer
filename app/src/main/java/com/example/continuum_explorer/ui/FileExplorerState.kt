@@ -4,13 +4,12 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.graphics.BitmapFactory
-import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
 import android.os.storage.StorageManager
 import android.provider.DocumentsContract
+import android.text.format.Formatter
 import android.widget.Toast
 import androidx.compose.runtime.*
 import androidx.compose.ui.platform.LocalConfiguration
@@ -57,7 +56,7 @@ class FileExplorerState(
     var currentArchivePath by mutableStateOf("")
     
     // Cache for current archive structure: Path -> List of Files
-    private var archiveCache: Map<String, List<UniversalFile>>? = null
+    var archiveCache: Map<String, List<UniversalFile>>? = null
     
     // The processed and sorted list of files to display
     var files by mutableStateOf(emptyList<UniversalFile>())
@@ -94,6 +93,9 @@ class FileExplorerState(
     // Callback to open a new tab
     var onOpenInNewTab: ((UniversalFile) -> Unit)? = null
 
+    var isSearchMode by mutableStateOf(false)
+    var isSearchUIActive by mutableStateOf(false)
+
     val activeViewMode: ViewMode
         @Composable
         get() {
@@ -116,6 +118,13 @@ class FileExplorerState(
         scope.launch {
             GlobalEvents.refreshEvent.collect {
                 refresh()
+            }
+        }
+
+        // Listen for config sync events (like favorite updates)
+        scope.launch {
+            GlobalEvents.configChangeEvent.collect {
+                appConfigs.reload()
             }
         }
     }
@@ -210,139 +219,67 @@ class FileExplorerState(
             false
         }
 
-    fun getFileType(file: UniversalFile): String {
-        if (file.isDirectory) return "Folder"
-
-        val extension = file.name.substringAfterLast(".", "").lowercase()
-        val extensionString = extension.uppercase()
-
-        return when (extension) {
-            "zip", "rar", "7z", "tar", "gz" -> "Archive"
-            "jpg", "jpeg", "bmp", "png", "gif", "webp" -> "Image"
-            "mp4", "mkv", "avi", "mov", "webm" -> "Video"
-            "mp3", "wav", "ogg", "m4a", "flac" -> "Audio"
-            "txt", "doc", "docx", "odt", "pdf" -> "Document"
-
-            "" -> "File"
-
-            else -> "$extensionString File"
-        }
-    }
-
-    fun getVideoResolution(context: Context, file: UniversalFile): String? {
-        val retriever = MediaMetadataRetriever()
-        return try {
-            if (file.fileRef != null) {
-                retriever.setDataSource(file.fileRef.absolutePath)
-            } else if (file.documentFileRef != null) {
-                retriever.setDataSource(context, file.documentFileRef.uri)
-            } else {
-                return null
-            }
-
-            val width = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH)
-            val height = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT)
-            val rotation = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_ROTATION)?.toIntOrNull() ?: 0
-
-            if (width != null && height != null) {
-                // If the video is recorded in portrait, flip the width and height
-                if (rotation == 90 || rotation == 270) {
-                    "${height}x${width}"
-                } else {
-                    "${width}x${height}"
-                }
-            } else {
-                null
-            }
-        } catch (e: Exception) {
-            null
-        } finally {
-            try { retriever.release() } catch (e: Exception) {}
-        }
-    }
-
-    fun getMediaDuration(context: Context, file: UniversalFile): String? {
-        val retriever = MediaMetadataRetriever()
-        return try {
-            if (file.fileRef != null) {
-                retriever.setDataSource(file.fileRef.absolutePath)
-            } else if (file.documentFileRef != null) {
-                retriever.setDataSource(context, file.documentFileRef.uri)
-            } else {
-                return null
-            }
-
-            val durationString = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)
-            if (durationString != null) {
-                val millis = durationString.toLong()
-
-                // Basic math to get hours, minutes, and seconds
-                val totalSeconds = millis / 1000
-                val minutes = totalSeconds / 60
-                val seconds = totalSeconds % 60
-
-                if (minutes >= 60) {
-                    val hours = minutes / 60
-                    val remainingMinutes = minutes % 60
-                    String.format("%02d:%02d:%02d", hours, remainingMinutes, seconds)
-                } else {
-                    String.format("%02d:%02d", minutes, seconds)
-                }
-            } else {
-                null
-            }
-        } catch (e: Exception) {
-            null
-        } finally {
-            try { retriever.release() } catch (e: Exception) {}
-        }
-    }
-
-
-    /**
-     * Returns a formatted string like "1920x1080"
-     */
-    fun getImageResolution(context: Context, file: UniversalFile): String {
-        // Tell the factory to ONLY read the dimensions, not the image pixels
-        val options = BitmapFactory.Options().apply {
-            inJustDecodeBounds = true
-        }
-
-        try {
-            // Open the file safely
-            val inputStream = if (file.fileRef != null) {
-                file.fileRef.inputStream()
-            } else if (file.documentFileRef != null) {
-                context.contentResolver.openInputStream(file.documentFileRef.uri)
-            } else {
-                null
-            }
-
-            // 'use' block automatically closes the stream when it's done
-            inputStream?.use { stream ->
-                BitmapFactory.decodeStream(stream, null, options)
-            }
-
-            // Check if dimensions were found successfully
-            if (options.outWidth > 0 && options.outHeight > 0) {
-                return "${options.outWidth}x${options.outHeight}"
-            }
-
-            return "Unknown Resolution"
-
-        } catch (e: Exception) {
-            return "Unknown Resolution"
-        }
-    }
-
-
-
     fun onScrollToItemCompleted() {
         scrollToItemIndex = null
     }
 
     fun refresh() {
+        if (isSearchMode) {
+            isSearchMode = false
+        }
         triggerLoad(forceRefresh = true)
+    }
+    
+    fun performSearch(query: String, searchSubfolders: Boolean) {
+        if (query.isBlank()) {
+            if (isSearchMode) {
+                isSearchMode = false
+                triggerLoad()
+            }
+            return
+        }
+        
+        loadingJob?.cancel()
+        loadingJob = scope.launch {
+            withContext(Dispatchers.Main) {
+                isSearchMode = true
+                isLoading = true
+                files = emptyList() // Clear previous results immediately
+                val key = getCurrentStorageKey()
+                folderConfigs.resolveViewMode(key)
+                folderConfigs.resolveSortParams(key)
+                folderConfigs.resolveGridSize(key)
+                loadedPathKey = key ?: "search_results"
+            }
+            try {
+                // Parse if we need to load archives
+                if ((currentArchiveFile != null || currentArchiveUri != null) && archiveCache == null) {
+                    val source: Any = currentArchiveFile ?: currentArchiveUri!!
+                    archiveCache = withContext(Dispatchers.IO) { ZipUtils.parseArchive(context, source) }
+                }
+            
+                val results = SearchManager.search(
+                    context = context,
+                    query = query,
+                    currentPath = currentPath,
+                    currentSafUri = currentSafUri,
+                    searchSubfolders = searchSubfolders,
+                    archiveCache = archiveCache,
+                    currentArchivePath = currentArchivePath
+                )
+                
+                withContext(Dispatchers.Main) {
+                    files = sortFiles(results)
+                    selectionManager.allFiles = files
+                    isLoading = false
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    isLoading = false
+                    Toast.makeText(context, "Search failed", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
     }
 
     fun handleSafResult(uri: Uri?) {
@@ -379,6 +316,7 @@ class FileExplorerState(
     }
 
     fun triggerLoad(forceRefresh: Boolean = false) {
+        if (isSearchMode) return
         loadingJob?.cancel()
         loadingJob = scope.launch {
             loadFiles(forceRefresh)
@@ -481,9 +419,10 @@ class FileExplorerState(
     }
 
     fun formatDate(timestamp: Long): String = dateFormatter.format(timestamp)
-    fun formatSize(size: Long): String = "${size / 1024} KB"
+    fun formatSize(size: Long): String = Formatter.formatFileSize(context, size)
 
     fun getCurrentStorageKey(): String? {
+        if (isSearchMode) return "search_results"
         return if (currentArchiveFile != null || currentArchiveUri != null) {
             val base = currentArchiveFile?.absolutePath ?: currentArchiveUri.toString()
             "archive:$base:${currentArchivePath.removeSuffix("/")}"
@@ -526,6 +465,7 @@ class FileExplorerState(
         currentArchiveUri = archiveUri
         currentArchivePath = archivePath ?: ""
         isRecentMode = isRecent
+        isSearchMode = false
         
         scrollToItemIndex = null
         selectionManager.reset()
@@ -989,6 +929,17 @@ class FileExplorerState(
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
         context.startActivity(intent)
+    }
+
+    fun showProperties() {
+        val selected = selectionManager.selectedItems.toList()
+        if (selected.isNotEmpty()) {
+            FileOperationsManager.showProperties(selected)
+            val intent = Intent(context, PopUpActivity::class.java).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(intent)
+        }
     }
 
     fun emptyRecycleBin() {

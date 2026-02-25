@@ -15,13 +15,16 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
@@ -62,10 +65,19 @@ import com.example.continuum_explorer.utils.ExtractSettings
 import com.example.continuum_explorer.utils.FileOperationsManager
 import com.example.continuum_explorer.utils.NotificationHelper
 import com.example.continuum_explorer.utils.PopupType
+import com.example.continuum_explorer.utils.calculateSizeRecursively
+import com.example.continuum_explorer.utils.getFileType
+import com.example.continuum_explorer.utils.getImageResolution
+import com.example.continuum_explorer.utils.getMediaDuration
+import com.example.continuum_explorer.utils.getVideoResolution
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 import net.lingala.zip4j.model.enums.CompressionLevel
 import net.lingala.zip4j.model.enums.CompressionMethod
 import net.lingala.zip4j.model.enums.EncryptionMethod
+import java.text.SimpleDateFormat
+import java.util.Locale
 
 class PopUpActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -95,6 +107,8 @@ class PopUpActivity : ComponentActivity() {
                             PopupType.PASSWORD_INPUT -> PasswordInputContent(onClose = { finish() })
                             PopupType.EXTRACT_OPTIONS -> ExtractOptionsContent(onClose = { finish() })
                             PopupType.ARCHIVE_OPTIONS -> ArchiveOptionsContent(onClose = { finish() })
+                            PopupType.SHORTCUTS -> ShortcutsContent(onClose = { finish() })
+                            PopupType.PROPERTIES -> PropertiesContent(onClose = { finish() })
                             else -> ProgressContent(onClose = { finish() })
                         }
                     }
@@ -108,6 +122,261 @@ class PopUpActivity : ComponentActivity() {
         NotificationHelper.stop()
     }
 }
+
+@Composable
+fun PropertiesContent(onClose: () -> Unit) {
+    val targets = FileOperationsManager.propertiesTargets.value
+    if (targets.isEmpty()) {
+        onClose()
+        return
+    }
+
+    val context = LocalContext.current
+    val focusRequester = remember { FocusRequester() }
+
+    LaunchedEffect(Unit) {
+        focusRequester.requestFocus()
+    }
+
+    Column(
+        modifier = Modifier
+            .padding(16.dp)
+            .verticalScroll(rememberScrollState())
+            .fillMaxWidth()
+    ) {
+        Text(
+            text = "Properties",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+
+        if (targets.size == 1) {
+            val file = targets.first()
+            val fileType = remember(file) { getFileType(file) }
+            val formatter = remember { SimpleDateFormat("MMM dd, yyyy HH:mm:ss", Locale.getDefault()) }
+            val formattedDate = remember(file.lastModified) { formatter.format(file.lastModified) }
+
+            var calculatedSize by remember { mutableStateOf<Long?>(null) }
+            var isCalculatingSize by remember { mutableStateOf(file.isDirectory) }
+            
+            var extraRes by remember { mutableStateOf<String?>(null) }
+            var extraDur by remember { mutableStateOf<String?>(null) }
+            var isLoadingExtra by remember { mutableStateOf(false) }
+
+            LaunchedEffect(file) {
+                if (file.isDirectory) {
+                    withContext(Dispatchers.IO) {
+                        val size = calculateSizeRecursively(context, file)
+                        withContext(Dispatchers.Main) {
+                            calculatedSize = size
+                            isCalculatingSize = false
+                        }
+                    }
+                } else {
+                    calculatedSize = file.length
+                }
+
+                if (fileType == "Image") {
+                    isLoadingExtra = true
+                    withContext(Dispatchers.IO) {
+                        val res = getImageResolution(context, file)
+                        withContext(Dispatchers.Main) {
+                            extraRes = res
+                            isLoadingExtra = false
+                        }
+                    }
+                } else if (fileType == "Video") {
+                    isLoadingExtra = true
+                    withContext(Dispatchers.IO) {
+                        val res = getVideoResolution(context, file)
+                        val duration = getMediaDuration(context, file)
+                        withContext(Dispatchers.Main) {
+                            extraRes = res
+                            extraDur = duration
+                            isLoadingExtra = false
+                        }
+                    }
+                } else if (fileType == "Audio") {
+                     isLoadingExtra = true
+                     withContext(Dispatchers.IO) {
+                         val duration = getMediaDuration(context, file)
+                         withContext(Dispatchers.Main) {
+                             extraDur = duration
+                             isLoadingExtra = false
+                         }
+                     }
+                }
+            }
+
+            PropertyRow("Name:", file.name)
+            PropertyRow("Type:", fileType)
+            
+            if (isCalculatingSize) {
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 4.dp)) {
+                    Text(
+                        text = "Size:",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.width(80.dp),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Calculating...", style = MaterialTheme.typography.bodyMedium)
+                }
+            } else {
+                PropertyRow("Size:", Formatter.formatFileSize(context, calculatedSize ?: 0L))
+            }
+            
+            PropertyRow("Location:", file.absolutePath)
+            PropertyRow("Modified:", formattedDate)
+
+            if (isLoadingExtra) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Loading metadata...", style = MaterialTheme.typography.bodySmall)
+                }
+            } else if (extraRes != null || extraDur != null) {
+                Spacer(modifier = Modifier.height(8.dp))
+                HorizontalDivider()
+                Spacer(modifier = Modifier.height(8.dp))
+                if (extraRes != null) PropertyRow("Resolution:", extraRes!!)
+                if (extraDur != null) PropertyRow("Duration:", extraDur!!)
+            }
+        } else {
+            // Multiple files
+            var totalSize by remember { mutableStateOf<Long?>(null) }
+            var isCalculatingSize by remember { mutableStateOf(true) }
+
+            LaunchedEffect(targets) {
+                withContext(Dispatchers.IO) {
+                    var size = 0L
+                    for (target in targets) {
+                        size += calculateSizeRecursively(context, target)
+                    }
+                    withContext(Dispatchers.Main) {
+                        totalSize = size
+                        isCalculatingSize = false
+                    }
+                }
+            }
+
+            val dirsCount = targets.count { it.isDirectory }
+            val filesCount = targets.size - dirsCount
+
+            PropertyRow("Items:", "${targets.size} selected")
+            PropertyRow("Contains:", "$dirsCount Folders, $filesCount Files")
+
+            if (isCalculatingSize) {
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 4.dp)) {
+                    Text(
+                        text = "Total Size:",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.width(80.dp),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Calculating...", style = MaterialTheme.typography.bodyMedium)
+                }
+            } else {
+                PropertyRow("Total Size:", Formatter.formatFileSize(context, totalSize ?: 0L))
+            }
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+            Button(
+                onClick = onClose,
+                modifier = Modifier.focusRequester(focusRequester)
+            ) {
+                Text("Close")
+            }
+        }
+    }
+}
+
+@Composable
+fun PropertyRow(label: String, value: String) {
+    SelectionContainer {
+        Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.width(80.dp),
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                text = value,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        }
+    }
+}
+
+@Composable
+fun ShortcutsContent(onClose: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .padding(16.dp)
+            .verticalScroll(rememberScrollState())
+            .fillMaxWidth()
+    ) {
+        Text(
+            text = "Shortcuts Cheatsheet",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+
+        ShortcutCategory("Navigation & Selection")
+        ShortcutItem("Arrow Keys", "Move selection")
+        ShortcutItem("Home / End", "Go to start / end of list")
+        ShortcutItem("Page Up / Down", "Scroll page up / down")
+        ShortcutItem("Ctrl + A", "Select all")
+        ShortcutItem("Backspace", "Go back to parent folder")
+
+        Spacer(modifier = Modifier.height(16.dp))
+        ShortcutCategory("File Operations")
+        ShortcutItem("Enter", "Open file or folder")
+        ShortcutItem("Ctrl + Enter", "Open in new tab")
+        ShortcutItem("Shift + Enter", "Open in new window")
+        ShortcutItem("Ctrl + C / X / V", "Copy / Cut / Paste")
+        ShortcutItem("Delete", "Delete (Shift + Delete for permanent)")
+        ShortcutItem("F2", "Rename")
+        ShortcutItem("F5", "Refresh")
+
+        Spacer(modifier = Modifier.height(16.dp))
+        ShortcutCategory("App Actions")
+        ShortcutItem("Ctrl + N", "New window")
+        ShortcutItem("Ctrl + W", "Close window")
+        ShortcutItem("Ctrl + Z / Y", "Undo / Redo")
+        ShortcutItem("Ctrl + Mouse Wheel", "Zoom in / out")
+
+        Spacer(modifier = Modifier.height(16.dp))
+        ShortcutCategory("Mouse")
+        ShortcutItem("Right Click", "Context menu")
+        ShortcutItem("Middle Click", "Open in new tab")
+        ShortcutItem("Shift + Middle Click", "Open in new window")
+        ShortcutItem("Drag", "Copy")
+        ShortcutItem("Shift + Drag", "Move")
+
+        Spacer(modifier = Modifier.height(24.dp))
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+            Button(onClick = onClose) {
+                Text("Close")
+            }
+        }
+    }
+}
+
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

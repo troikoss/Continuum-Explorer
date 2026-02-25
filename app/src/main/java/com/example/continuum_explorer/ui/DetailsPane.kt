@@ -24,8 +24,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.continuum_explorer.model.ScreenSize
 import com.example.continuum_explorer.utils.IconHelper
+import com.example.continuum_explorer.utils.getFileType
+import com.example.continuum_explorer.utils.getImageResolution
+import com.example.continuum_explorer.utils.getMediaDuration
+import com.example.continuum_explorer.utils.getVideoResolution
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -39,7 +42,7 @@ fun DetailsPane (
     val totalFiles = appState.files.size
     val currentPath = appState.currentUniversalPath
 
-    val fileType = if (selectionCount >= 1) appState.getFileType(selectedItems.first()) else null
+    val fileType = if (selectionCount >= 1) getFileType(selectedItems.first()) else null
 
     Box(
         modifier = Modifier
@@ -88,7 +91,7 @@ fun DetailsPane (
                 if (selectionCount == 1) {
 
                     Text(
-                        text = appState.getFileType(selectedItems.first()),
+                        text = getFileType(selectedItems.first()),
                         fontSize = 18.sp
                     )
                     Spacer(modifier = Modifier.height(4.dp))
@@ -119,15 +122,15 @@ fun DetailsPane (
                         withContext(Dispatchers.IO) {
                             if (fileType == "Video" || fileType == "Audio") {
                                 duration =
-                                    appState.getMediaDuration(context, selectedItems.first())
+                                    getMediaDuration(context, selectedItems.first())
                             }
 
                             when (fileType) {
                                 "Video" -> resolution =
-                                    appState.getVideoResolution(context, selectedItems.first())
+                                    getVideoResolution(context, selectedItems.first())
 
                                 "Image" -> resolution =
-                                    appState.getImageResolution(context, selectedItems.first())
+                                    getImageResolution(context, selectedItems.first())
                             }
                         }
                     }

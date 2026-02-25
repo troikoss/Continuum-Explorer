@@ -32,8 +32,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
@@ -72,11 +76,23 @@ fun TopBar(
     var addressBar by remember { mutableStateOf(false) }
     var historyMenuExpanded by remember { mutableStateOf(false) }
 
+    // Search related state
+    var searchBar by remember { mutableStateOf(false) }
+    var searchQuery by remember { mutableStateOf(TextFieldValue("")) }
+    var searchOptionsMenuExpanded by remember { mutableStateOf(false) }
+    var searchSubfolders by remember { mutableStateOf(false) }
+    var searchKindMenuExpanded by remember { mutableStateOf(false) }
+
     val interactionSource = remember { MutableInteractionSource() }
 
     val focusManager = LocalFocusManager.current
     val focusRequester = remember { FocusRequester() }
     val coroutineScope = rememberCoroutineScope()
+
+    // Sync UI searchBar state to global state
+    LaunchedEffect(searchBar) {
+        appState.isSearchUIActive = searchBar
+    }
 
     // Logic to determine what to show in the address bar text field
     val currentPathString = remember(appState.currentPath, appState.currentSafUri, appState.currentArchiveFile, appState.currentArchiveUri, appState.currentArchivePath) {
@@ -123,6 +139,15 @@ fun TopBar(
             focusRequester.requestFocus()
             textPathValue = textPathValue.copy(
                 selection = TextRange(0, textPathValue.text.length)
+            )
+        }
+    }
+
+    LaunchedEffect(searchBar) {
+        if (searchBar) {
+            focusRequester.requestFocus()
+            searchQuery = searchQuery.copy(
+                selection = TextRange(0, searchQuery.text.length)
             )
         }
     }
@@ -309,12 +334,158 @@ fun TopBar(
                         interactionSource = interactionSource,
                         indication = null
                     ) {
-                        if (!addressBar) addressBar = true
+                        if (!addressBar && !searchBar) addressBar = true
                     },
                 color = MaterialTheme.colorScheme.onPrimary,
                 shape = MaterialTheme.shapes.small
             ) {
-                if (!addressBar) {
+                if (searchBar) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(start = 12.dp),
+                        verticalAlignment = CenterVertically
+                    ) {
+                        BasicTextField(
+                            value = searchQuery,
+                            onValueChange = { searchQuery = it },
+                            modifier = Modifier
+                                .weight(1f)
+                                .focusRequester(focusRequester)
+                                .focusProperties {
+                                    down = FocusRequester.Cancel
+                                    up = FocusRequester.Cancel
+                                }
+                                .onPreviewKeyEvent { event ->
+                                    if (event.key == Key.DirectionUp || event.key == Key.DirectionDown) {
+                                        true // Consume Up/Down keys to prevent focus from leaving the search bar
+                                    } else {
+                                        false
+                                    }
+                                },
+                            singleLine = true,
+                            textStyle = MaterialTheme.typography.bodyMedium.copy(
+                                fontSize = 14.sp,
+                                color = MaterialTheme.colorScheme.onSurface
+                            ),
+                            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                            keyboardActions = KeyboardActions(
+                                onSearch = {
+                                    appState.performSearch(searchQuery.text, searchSubfolders)
+                                }
+                            ),
+                            decorationBox = { innerTextField ->
+                                if (searchQuery.text.isEmpty()) {
+                                    Text(
+                                        text = "Search...",
+                                        style = MaterialTheme.typography.bodyMedium.copy(
+                                            fontSize = 14.sp,
+                                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                                        )
+                                    )
+                                }
+                                innerTextField()
+                            }
+                        )
+
+                        Box {
+                            IconButton(onClick = { searchOptionsMenuExpanded = true }) {
+                                Icon(Icons.Default.ArrowDropDown, contentDescription = "Search Options")
+                            }
+
+                            DropdownMenu(
+                                expanded = searchOptionsMenuExpanded,
+                                onDismissRequest = { 
+                                    searchOptionsMenuExpanded = false
+                                    searchKindMenuExpanded = false 
+                                }
+                            ) {
+                                if (searchKindMenuExpanded) {
+                                    DropdownMenuItem(
+                                        text = { Text("Back") },
+                                        leadingIcon = { Icon(Icons.AutoMirrored.Filled.ArrowBack, null) },
+                                        onClick = { searchKindMenuExpanded = false }
+                                    )
+                                    HorizontalDivider()
+                                    val kinds = listOf("folder", "document", "image", "video", "audio", "archive")
+                                    kinds.forEach { kind ->
+                                        DropdownMenuItem(
+                                            text = { Text("kind:$kind") },
+                                            onClick = {
+                                                searchQuery = TextFieldValue(searchQuery.text + "kind:$kind ")
+                                                searchOptionsMenuExpanded = false
+                                                searchKindMenuExpanded = false
+                                                focusRequester.requestFocus()
+                                            }
+                                        )
+                                    }
+                                } else {
+                                    DropdownMenuItem(
+                                        text = { Text("Search all subfolders") },
+                                        trailingIcon = {
+                                            Checkbox(checked = searchSubfolders, onCheckedChange = null)
+                                        },
+                                        onClick = { searchSubfolders = !searchSubfolders }
+                                    )
+                                    HorizontalDivider()
+                                    DropdownMenuItem(
+                                        text = { Text("kind: (File type)") },
+                                        onClick = { searchKindMenuExpanded = true },
+                                        trailingIcon = { Icon(Icons.Default.ChevronRight, null) }
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text("AND") },
+                                        onClick = {
+                                            searchQuery = TextFieldValue(searchQuery.text + " AND ")
+                                            searchOptionsMenuExpanded = false
+                                            focusRequester.requestFocus()
+                                        }
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text("OR") },
+                                        onClick = {
+                                            searchQuery = TextFieldValue(searchQuery.text + " OR ")
+                                            searchOptionsMenuExpanded = false
+                                            focusRequester.requestFocus()
+                                        }
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text("NOT") },
+                                        onClick = {
+                                            searchQuery = TextFieldValue(searchQuery.text + " NOT ")
+                                            searchOptionsMenuExpanded = false
+                                            focusRequester.requestFocus()
+                                        }
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text("*.ext (Extension)") },
+                                        onClick = {
+                                            searchQuery = TextFieldValue(searchQuery.text + "*.zip ")
+                                            searchOptionsMenuExpanded = false
+                                            focusRequester.requestFocus()
+                                        }
+                                    )
+                                }
+                            }
+                        }
+
+                        IconButton(onClick = {
+                            searchBar = false
+                            focusManager.clearFocus()
+                            if (appState.isSearchMode) {
+                                appState.refresh() // Reset to normal view if search was closed
+                            }
+                        }) {
+                            Icon(
+                                Icons.Default.Close,
+                                contentDescription = "Close",
+                                modifier = Modifier.size(20.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                } else if (!addressBar) {
                     Row(
                         modifier = Modifier
                             .padding(horizontal = 4.dp)
@@ -502,7 +673,14 @@ fun TopBar(
                 }
             }
 
-            IconButton(onClick = { /*Search*/ }) {
+            IconButton(onClick = {
+                if (searchBar) {
+                    appState.performSearch(searchQuery.text, searchSubfolders)
+                } else {
+                    searchBar = true
+                    addressBar = false
+                }
+            }) {
                 Icon(Icons.Default.Search, contentDescription = "Search")
             }
             Box {

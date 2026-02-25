@@ -8,11 +8,13 @@ import android.os.storage.StorageManager
 import android.text.format.Formatter
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.drag
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -20,6 +22,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -35,6 +38,7 @@ import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.FolderSpecial
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.SdCard
 import androidx.compose.material.icons.filled.Splitscreen
 import androidx.compose.material.icons.filled.Storage
@@ -44,16 +48,19 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.NavigationDrawerItemDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
@@ -75,6 +82,8 @@ import com.example.continuum_explorer.utils.SettingsManager
 import com.example.continuum_explorer.utils.contextMenuDetector
 import com.example.continuum_explorer.utils.fileDropTarget
 import com.example.continuum_explorer.utils.toUniversal
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.io.File
 import kotlin.math.roundToInt
 
@@ -737,9 +746,25 @@ private fun NavStorageItem(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    var expanded by remember { mutableStateOf(false) }
+    var expandedMenu by remember { mutableStateOf(false) }
     var menuOffset by remember { mutableStateOf(DpOffset.Zero)}
     val density = LocalDensity.current
+
+    var expandedTree by remember { mutableStateOf(false) }
+    var subDirs by remember { mutableStateOf<List<File>>(emptyList()) }
+
+    LaunchedEffect(expandedTree) {
+        if (expandedTree && path != null) {
+            withContext(Dispatchers.IO) {
+                val dirs = path.listFiles()?.filter { it.isDirectory && !it.isHidden }?.sortedBy { it.name }
+                if (dirs != null) {
+                    withContext(Dispatchers.Main) {
+                        subDirs = dirs
+                    }
+                }
+            }
+        }
+    }
 
     val totalFormatted = Formatter.formatFileSize(context, totalSpace)
     val freeFormatted = Formatter.formatFileSize(context, freeSpace)
@@ -747,60 +772,155 @@ private fun NavStorageItem(
     val usedSpace = totalSpace - freeSpace
     val progress = if (totalSpace > 0) usedSpace.toFloat() / totalSpace.toFloat() else 0f
 
-    Box(modifier = modifier.padding(NavigationDrawerItemDefaults.ItemPadding)) {
-        NavigationDrawerItem(
-            label = {
-                Column(modifier = Modifier.padding(vertical = 12.dp)) {
-                    Text(
-                        text = label,
-                        fontWeight = FontWeight.Medium,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
+    Column {
+        Box(modifier = modifier.padding(NavigationDrawerItemDefaults.ItemPadding)) {
+            NavigationDrawerItem(
+                label = {
+                    Column(modifier = Modifier.padding(vertical = 12.dp)) {
+                        Text(
+                            text = label,
+                            fontWeight = FontWeight.Medium,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
 
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(4.dp)
-                            .clip(MaterialTheme.shapes.small)
-                            .background(MaterialTheme.colorScheme.surfaceVariant)
-                    ) {
                         Box(
                             modifier = Modifier
-                                .fillMaxWidth(progress)
-                                .fillMaxHeight()
-                                .background(MaterialTheme.colorScheme.primary)
+                                .fillMaxWidth()
+                                .height(4.dp)
+                                .clip(MaterialTheme.shapes.small)
+                                .background(MaterialTheme.colorScheme.surfaceVariant)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth(progress)
+                                    .fillMaxHeight()
+                                    .background(MaterialTheme.colorScheme.primary)
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        Text(
+                            text = "$freeFormatted free of $totalFormatted",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    Text(
-                        text = "$freeFormatted free of $totalFormatted",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            },
-            selected = false,
-            onClick = onClick,
-            icon = { Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.secondary) },
-            modifier = Modifier.contextMenuDetector(enableLongPress = true, aggressive = true) { offset ->
-                menuOffset = with(density) { DpOffset(offset.x.toDp(), offset.y.toDp()) }
-                expanded = true
-            },
-            shape = MaterialTheme.shapes.medium
-        )
-
-        Box(modifier = Modifier.offset(menuOffset.x, menuOffset.y)) {
-            NavContextMenu(
-                expanded = expanded,
-                onDismissRequest = { expanded = false },
-                appState = appState,
-                label = label,
-                path = path?.absolutePath
+                },
+                selected = false,
+                onClick = onClick,
+                icon = { Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.secondary) },
+                badge = {
+                    if (path != null) {
+                        IconButton(
+                            onClick = { expandedTree = !expandedTree },
+                            modifier = Modifier.size(28.dp)
+                        ) {
+                            Icon(
+                                imageVector = if (expandedTree) Icons.Default.KeyboardArrowDown else Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                                contentDescription = if (expandedTree) "Collapse" else "Expand",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                },
+                modifier = Modifier.contextMenuDetector(enableLongPress = true, aggressive = true) { offset ->
+                    menuOffset = with(density) { DpOffset(offset.x.toDp(), offset.y.toDp()) }
+                    expandedMenu = true
+                },
+                shape = MaterialTheme.shapes.medium
             )
+
+            Box(modifier = Modifier.offset(menuOffset.x, menuOffset.y)) {
+                NavContextMenu(
+                    expanded = expandedMenu,
+                    onDismissRequest = { expandedMenu = false },
+                    appState = appState,
+                    label = label,
+                    path = path?.absolutePath
+                )
+            }
+        }
+
+        if (expandedTree) {
+            subDirs.forEach { childFolder ->
+                StorageFolderTreeItem(
+                    folder = childFolder,
+                    level = 1,
+                    appState = appState
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun StorageFolderTreeItem(
+    folder: File,
+    level: Int,
+    appState: FileExplorerState
+) {
+    var expanded by remember { mutableStateOf(false) }
+    var subDirs by remember { mutableStateOf<List<File>>(emptyList()) }
+
+    LaunchedEffect(expanded) {
+        if (expanded) {
+            withContext(Dispatchers.IO) {
+                val dirs = folder.listFiles()?.filter { it.isDirectory && !it.isHidden }?.sortedBy { it.name }
+                if (dirs != null) {
+                    withContext(Dispatchers.Main) {
+                        subDirs = dirs
+                    }
+                }
+            }
+        }
+    }
+
+    Column {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = (16 + level * 16).dp, end = 16.dp, top = 2.dp, bottom = 2.dp)
+                .clip(MaterialTheme.shapes.small)
+                .clickable { appState.navigateTo(folder, null) }
+                .fileDropTarget(appState, destPath = folder),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(
+                onClick = { expanded = !expanded },
+                modifier = Modifier.size(28.dp)
+            ) {
+                Icon(
+                    imageVector = if (expanded) Icons.Default.KeyboardArrowDown else Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    contentDescription = if (expanded) "Collapse" else "Expand",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Icon(
+                imageVector = Icons.Default.Folder,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.secondary,
+                modifier = Modifier.size(20.dp)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = folder.name,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                style = MaterialTheme.typography.bodyMedium
+            )
+        }
+
+        if (expanded) {
+            subDirs.forEach { childFolder ->
+                StorageFolderTreeItem(
+                    folder = childFolder,
+                    level = level + 1,
+                    appState = appState
+                )
+            }
         }
     }
 }

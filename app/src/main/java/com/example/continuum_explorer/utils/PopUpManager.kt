@@ -18,7 +18,9 @@ enum class PopupType {
     DELETE_PERMANENT_CONFIRM,
     PASSWORD_INPUT,
     EXTRACT_OPTIONS,
-    ARCHIVE_OPTIONS
+    ARCHIVE_OPTIONS,
+    SHORTCUTS,
+    PROPERTIES
 }
 
 enum class CollisionResult {
@@ -103,6 +105,9 @@ object FileOperationsManager {
 
     // Archive Options State
     private var archiveDeferred: CompletableDeferred<ArchiveSettings>? = null
+
+    // Properties State
+    var propertiesTargets = mutableStateOf<List<UniversalFile>>(emptyList())
 
     // List of listeners to be notified on updates
     private val listeners = mutableListOf<() -> Unit>()
@@ -257,6 +262,19 @@ object FileOperationsManager {
     fun onArchiveResult(settings: ArchiveSettings) {
         archiveDeferred?.complete(settings)
         archiveDeferred = null
+    }
+
+    fun showShortcuts() {
+        popupType.value = PopupType.SHORTCUTS
+        isOperating.value = false
+        notifyListeners()
+    }
+
+    fun showProperties(files: List<UniversalFile>) {
+        propertiesTargets.value = files
+        popupType.value = PopupType.PROPERTIES
+        isOperating.value = false
+        notifyListeners()
     }
 
     fun openRename(file: UniversalFile, onConfirm: (String) -> Unit) {
