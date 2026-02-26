@@ -149,10 +149,7 @@ fun CommandBar(
                     CommandButton(
                         text = "Delete Permanently",
                         icon = Icons.Default.Delete,
-                        onClick = { isTouch -> 
-                            appState.deleteSelection(forcePermanent = true)
-                            if (isTouch) {selectionManager.clear()} 
-                        },
+                        onClick = { appState.deleteSelection(forcePermanent = true) },
                     )
 
                     CommandButton(
@@ -502,7 +499,7 @@ fun CommandBar(
                     CommandButton(
                         text = "Delete",
                         icon = Icons.Default.Delete,
-                        onClick = { isTouch -> appState.deleteSelection(); if (isTouch) {selectionManager.clear()} },
+                        onClick = { appState.deleteSelection()},
                     )
 
                     CommandButton(

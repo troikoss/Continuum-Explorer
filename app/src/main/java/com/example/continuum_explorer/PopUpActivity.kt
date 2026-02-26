@@ -358,6 +358,7 @@ fun ShortcutsContent(onClose: () -> Unit) {
         ShortcutItem("Ctrl + W", "Close window")
         ShortcutItem("Ctrl + Z / Y", "Undo / Redo")
         ShortcutItem("Ctrl + Mouse Wheel", "Zoom in / out")
+        ShortcutItem("Ctrl + /", "Shortcut Cheatsheet")
 
         Spacer(modifier = Modifier.height(16.dp))
         ShortcutCategory("Mouse")
