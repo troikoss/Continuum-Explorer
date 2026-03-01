@@ -24,7 +24,7 @@ Archive Support: Integrated .zip viewer (Support for .7z is planned; .rar suppor
 ## Planned Features:
 Media Suite: In-app video and image viewer optimized for desktop inputs.
 
-Enhanced Search: Detailed, high-speed file indexing.
-
 Cloud Support: Native Google Drive integration.
+
+Advanced Rename
 
