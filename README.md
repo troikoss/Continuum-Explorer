@@ -6,7 +6,7 @@ https://github.com/user-attachments/assets/68dd7068-a8ad-49f6-82b1-7c930df842ba
 
 [!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://www.buymeacoffee.com/troikoss)
 
-Key Features:
+## Key Features:
 Tabs & Multi-Window: Support for advanced multitasking.
 
 Recycle Bin: File recovery with undo/redo capabilities.
@@ -21,7 +21,7 @@ Responsive Design: A UI that dynamically adapts to any screen or window dimensio
 
 Archive Support: Integrated .zip viewer (Support for .7z is planned; .rar support is currently excluded due to licensing).
 
-Planned Features:
+## Planned Features:
 Media Suite: In-app video and image viewer optimized for desktop inputs.
 
 Enhanced Search: Detailed, high-speed file indexing.
