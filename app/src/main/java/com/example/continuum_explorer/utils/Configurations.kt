@@ -161,6 +161,9 @@ class AppConfigurations(private val context: Context) {
     val libraryOrder = mutableStateListOf<String>("recent", "trash")
     var isRecentVisible by mutableStateOf(true)
 
+    var navPaneWidthPx by mutableFloatStateOf(400f)
+    var detailsPaneWidthPx by mutableFloatStateOf(400f)
+
     init {
         reload()
     }
@@ -169,6 +172,21 @@ class AppConfigurations(private val context: Context) {
         loadAddedSafUris()
         loadFavorites()
         loadLibrarySettings()
+        loadPaneWidths()
+    }
+
+    fun savePaneWidths() {
+        val prefs = context.getSharedPreferences("pane_widths", Context.MODE_PRIVATE)
+        prefs.edit().apply {
+            putFloat("nav_width", navPaneWidthPx)
+            putFloat("details_width", detailsPaneWidthPx)
+        }.apply()
+    }
+
+    private fun loadPaneWidths() {
+        val prefs = context.getSharedPreferences("pane_widths", Context.MODE_PRIVATE)
+        navPaneWidthPx = prefs.getFloat("nav_width", 400f)
+        detailsPaneWidthPx = prefs.getFloat("details_width", 400f)
     }
 
     private fun loadAddedSafUris() {

@@ -36,12 +36,15 @@ import com.example.continuum_explorer.utils.getVideoResolution
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.text.style.TextOverflow
 
 
 @Composable
 fun DetailsPane (
-    appState: FileExplorerState
+    appState: FileExplorerState,
+    modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
     val selectedItems = appState.selectionManager.selectedItems
@@ -52,12 +55,15 @@ fun DetailsPane (
     val fileType = if (selectionCount >= 1) getFileType(selectedItems.first()) else null
 
     Box(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxHeight()
-            .width(240.dp)
             .background(MaterialTheme.colorScheme.surface)
     ) {
-        Column(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+        ) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()

@@ -1,10 +1,6 @@
 package com.example.continuum_explorer.ui
 
-import android.view.PointerIcon
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.awaitEachGesture
-import androidx.compose.foundation.gestures.awaitFirstDown
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -18,19 +14,14 @@ import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.pointer.pointerHoverIcon
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.input.pointer.positionChange
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import com.example.continuum_explorer.model.FileColumnType
 import com.example.continuum_explorer.model.SortOrder
+import com.example.continuum_explorer.utils.VerticalResizeHandle
 
 /**
  * Header row for the "Details" view mode. 
@@ -54,17 +45,23 @@ fun DetailsHeader(appState: FileExplorerState) {
         )
 
         appState.folderConfigs.extraColumns.forEach { column ->
-            val widthPx = appState.folderConfigs.columnWidths[column.type] ?: column.minWidth
+            val currentWidthPx = appState.folderConfigs.columnWidths[column.type] ?: column.minWidth
 
-            VerticalResizeHandle { delta ->
-                val currentWidth = appState.folderConfigs.columnWidths[column.type] ?: column.minWidth
-                appState.folderConfigs.columnWidths[column.type] = (currentWidth - delta).coerceIn(100f, 800f)
-            }
+            // This is your resize handle
+            VerticalResizeHandle(
+                onResize = { delta ->
+                    // Use + delta so dragging right makes it wider
+                    val newWidth = currentWidthPx + delta
+                    appState.folderConfigs.columnWidths[column.type] = newWidth.coerceIn(100f, 800f)
+                },
+                modifier = Modifier.height(24.dp),
+                contentAlignment = Alignment.Center
+            )
 
             SortableHeaderLabel(
                 label = column.label,
                 modifier = Modifier
-                    .width(with(LocalDensity.current) { widthPx.toDp() })
+                    .width(with(LocalDensity.current) { currentWidthPx.toDp() })
                     .padding(start = 8.dp),
                 isActive = appState.folderConfigs.sortParams.columnType == column.type,
                 order = appState.folderConfigs.sortParams.order,
@@ -103,43 +100,4 @@ fun SortableHeaderLabel(
     }
 }
 
-@Composable
-fun VerticalResizeHandle(onResize: (Float) -> Unit) {
-    val context = LocalContext.current
-    val resizeIcon = remember(context) {
-        androidx.compose.ui.input.pointer.PointerIcon(
-            PointerIcon.getSystemIcon(context, PointerIcon.TYPE_HORIZONTAL_DOUBLE_ARROW)
-        )
-    }
 
-    Box(
-        modifier = Modifier
-            .width(16.dp)
-            .height(24.dp)
-            .pointerHoverIcon(resizeIcon)
-            .pointerInput(onResize) {
-                awaitEachGesture {
-                    val down = awaitFirstDown()
-                    down.consume()
-                    while (true) {
-                        val event = awaitPointerEvent()
-                        val dragChange = event.changes.firstOrNull() ?: break
-                        if (!dragChange.pressed) break
-                        val delta = dragChange.positionChange().x
-                        if (delta != 0f) {
-                            onResize(delta)
-                            dragChange.consume()
-                        }
-                    }
-                }
-            },
-        contentAlignment = Alignment.Center
-    ) {
-        VerticalDivider(
-            modifier = Modifier
-                .height(24.dp)
-                .width(1.dp),
-            color = MaterialTheme.colorScheme.outlineVariant
-        )
-    }
-}

@@ -4,6 +4,7 @@ import android.content.ClipData
 import android.content.Intent
 import android.content.res.Configuration
 import android.os.Environment
+import android.view.PointerIcon
 import android.view.View
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.draganddrop.dragAndDropSource
@@ -15,9 +16,14 @@ import androidx.compose.foundation.gestures.awaitLongPressOrCancellation
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.gestures.detectTransformGestures
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.width
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.*
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.draganddrop.DragAndDropEvent
@@ -45,11 +51,14 @@ import androidx.compose.ui.input.pointer.isPrimaryPressed
 import androidx.compose.ui.input.pointer.isSecondaryPressed
 import androidx.compose.ui.input.pointer.isShiftPressed
 import androidx.compose.ui.input.pointer.isTertiaryPressed
+import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import com.example.continuum_explorer.PopUpActivity
 import com.example.continuum_explorer.model.UniversalFile
 import com.example.continuum_explorer.model.ViewMode
@@ -704,6 +713,50 @@ fun Modifier.fileDropTarget(
         },
         target = target
     )
+}
+
+
+@Composable
+fun VerticalResizeHandle(
+    onResize: (Float) -> Unit,
+    modifier: Modifier = Modifier,
+    contentAlignment: Alignment = Alignment.Center
+) {
+    val context = LocalContext.current
+    val resizeIcon = remember(context) {
+        androidx.compose.ui.input.pointer.PointerIcon(
+            PointerIcon.getSystemIcon(context, PointerIcon.TYPE_HORIZONTAL_DOUBLE_ARROW)
+        )
+    }
+
+    Box(
+        modifier = modifier
+            .width(16.dp)
+            .pointerHoverIcon(resizeIcon)
+            .pointerInput(onResize) {
+                awaitEachGesture {
+                    val down = awaitFirstDown()
+                    down.consume()
+                    while (true) {
+                        val event = awaitPointerEvent()
+                        val dragChange = event.changes.firstOrNull() ?: break
+                        if (!dragChange.pressed) break
+                        val delta = dragChange.positionChange().x
+                        if (delta != 0f) {
+                            onResize(delta)
+                            dragChange.consume()
+                        }
+                    }
+                }
+            },
+        contentAlignment = contentAlignment
+    ) {
+        VerticalDivider(
+            modifier = Modifier
+                .width(1.dp),
+            color = MaterialTheme.colorScheme.outlineVariant
+        )
+    }
 }
 
 /**

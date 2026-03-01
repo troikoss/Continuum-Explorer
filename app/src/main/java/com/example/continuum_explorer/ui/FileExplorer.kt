@@ -25,16 +25,17 @@ import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.PermanentDrawerSheet
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.VerticalDivider
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerType
@@ -42,10 +43,12 @@ import androidx.compose.ui.input.pointer.isShiftPressed
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.LocalDensity
+import androidx.xr.compose.testing.toDp
 import com.example.continuum_explorer.model.ScreenSize
 import com.example.continuum_explorer.utils.DetailsMode
 import com.example.continuum_explorer.utils.SettingsManager
+import com.example.continuum_explorer.utils.VerticalResizeHandle
 import com.example.continuum_explorer.utils.ZipUtils
 import com.example.continuum_explorer.utils.fileDropTarget
 import kotlinx.coroutines.CoroutineScope
@@ -64,6 +67,7 @@ fun FileExplorer(
     initialArchiveUri: Uri? = null
 ) {
     val context = LocalContext.current
+    val density = LocalDensity.current
     val scope = rememberCoroutineScope()
 
     val tabs = remember { mutableStateListOf<FileExplorerState>() }
@@ -147,11 +151,11 @@ fun FileExplorer(
     val navigateToSection: (Int) -> Unit = { index ->
         val internalRoot = Environment.getExternalStorageDirectory()
         when {
-            index == 1 -> appState.navigateTo(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), null, newRoot = internalRoot)
-            index == 2 -> appState.navigateTo(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS), null, newRoot = internalRoot)
-            index == 3 -> appState.navigateTo(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES), null, newRoot = internalRoot)
-            index == 4 -> appState.navigateTo(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MUSIC), null, newRoot = internalRoot)
-            index == 5 -> appState.navigateTo(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MOVIES), null, newRoot = internalRoot)
+//            index == 1 -> appState.navigateTo(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), null, newRoot = internalRoot)
+//            index == 2 -> appState.navigateTo(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS), null, newRoot = internalRoot)
+//            index == 3 -> appState.navigateTo(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES), null, newRoot = internalRoot)
+//            index == 4 -> appState.navigateTo(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MUSIC), null, newRoot = internalRoot)
+//            index == 5 -> appState.navigateTo(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MOVIES), null, newRoot = internalRoot)
             index == 6 -> appState.navigateTo(internalRoot, null, newRoot = internalRoot)
             index == 7 -> {
                 val trashDir = File(internalRoot, ".Trash")
@@ -190,6 +194,12 @@ fun FileExplorer(
             }
         }
     }
+
+    val navPaneWidthPx = appState.appConfigs.navPaneWidthPx
+    val detailsPaneWidthPx = appState.appConfigs.detailsPaneWidthPx
+
+    val navPaneWidthDp = with(density) { navPaneWidthPx.toDp() }
+    val detailsPaneWidthDp = with(density) { detailsPaneWidthPx.toDp() }
 
     Box(
         modifier = Modifier
@@ -282,9 +292,9 @@ fun FileExplorer(
                             .weight(1f)
                             .padding(innerPadding)
                     ) {
-                        if (appState.getScreenSize() == ScreenSize.LARGE || appState.getScreenSize() == ScreenSize.MEDIUM) {
+                        if (appState.getScreenSize() != ScreenSize.SMALL) {
                             PermanentDrawerSheet(
-                                modifier = Modifier.width(240.dp)
+                                modifier = Modifier.width(navPaneWidthDp)
                             ) {
                                 NavigationPane(
                                     appState = appState,
@@ -299,7 +309,12 @@ fun FileExplorer(
                                     }
                                 )
                             }
-                            VerticalDivider()
+                            VerticalResizeHandle(onResize = { delta ->
+                                appState.appConfigs.navPaneWidthPx = (appState.appConfigs.navPaneWidthPx + delta).coerceIn(350f, 700f)
+                                appState.appConfigs.savePaneWidths()
+                            },
+                                contentAlignment = Alignment.CenterStart
+                            )
                         }
 
                         Box(modifier = Modifier.weight(1f)) {
@@ -309,10 +324,16 @@ fun FileExplorer(
                         }
 
                         if (appState.getScreenSize() == ScreenSize.LARGE && SettingsManager.detailsMode.value == DetailsMode.PANE) {
-                            VerticalDivider()
+                            VerticalResizeHandle(onResize = { delta ->
+                                appState.appConfigs.detailsPaneWidthPx = (appState.appConfigs.detailsPaneWidthPx - delta).coerceIn(200f, 700f)
+                                appState.appConfigs.savePaneWidths()
+                            },
+                                contentAlignment = Alignment.CenterEnd
+                            )
 
                             DetailsPane(
-                                appState = appState
+                                appState = appState,
+                                modifier = Modifier.width(detailsPaneWidthDp)
                             )
                         }
                     }
