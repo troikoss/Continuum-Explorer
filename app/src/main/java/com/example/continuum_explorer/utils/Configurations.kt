@@ -160,7 +160,6 @@ class AppConfigurations(private val context: Context) {
     val favoritePaths = mutableStateListOf<String>()
     val libraryOrder = mutableStateListOf<String>("recent", "trash")
     var isRecentVisible by mutableStateOf(true)
-    var isDetailsPaneVisible by mutableStateOf(true)
 
     init {
         reload()
@@ -170,7 +169,6 @@ class AppConfigurations(private val context: Context) {
         loadAddedSafUris()
         loadFavorites()
         loadLibrarySettings()
-        loadDetailsPaneSettings()
     }
 
     private fun loadAddedSafUris() {
@@ -222,17 +220,6 @@ class AppConfigurations(private val context: Context) {
             putString("order", libraryOrder.joinToString("|"))
             putBoolean("is_recent_visible", isRecentVisible)
         }.apply()
-    }
-
-    private fun loadDetailsPaneSettings() {
-        val prefs = context.getSharedPreferences("details_pane", Context.MODE_PRIVATE)
-        isDetailsPaneVisible = prefs.getBoolean("is_details_pane_visible", true)
-    }
-
-    fun toggleDetailsPaneVisibility() {
-        isDetailsPaneVisible = !isDetailsPaneVisible
-        val prefs = context.getSharedPreferences("details_pane", Context.MODE_PRIVATE)
-        prefs.edit().putBoolean("is_details_pane_visible", isDetailsPaneVisible).apply()
     }
 
     fun toggleRecentVisibility() {

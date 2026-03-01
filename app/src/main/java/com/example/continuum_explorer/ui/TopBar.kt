@@ -693,17 +693,6 @@ fun TopBar(
                     onDismissRequest = { optionsMenuExpanded = false }
                 ) {
 
-                    if (appState.getScreenSize() == ScreenSize.LARGE) {
-                        DropdownMenuItem(
-                            text = { Text(if (appState.appConfigs.isDetailsPaneVisible) "Hide Details Pane" else "Show Details Pane") },
-                            onClick = {
-                                optionsMenuExpanded = false
-                                appState.appConfigs.toggleDetailsPaneVisibility()
-                            },
-                            leadingIcon = { Icon(Icons.Default.Info, null) }
-                        )
-                    }
-
                     DropdownMenuItem(
                         text = { Text("Settings") },
                         onClick = {

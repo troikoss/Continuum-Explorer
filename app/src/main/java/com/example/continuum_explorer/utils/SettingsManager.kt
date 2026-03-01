@@ -4,6 +4,12 @@ import android.content.Context
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 
+enum class DetailsMode {
+    OFF,
+    PANE,
+    BAR
+}
+
 enum class DeleteBehavior {
     ASK,
     RECYCLE,
@@ -21,12 +27,16 @@ object SettingsManager {
     private const val KEY_DELETE_BEHAVIOR = "delete_behavior"
     private const val KEY_DEFAULT_ARCHIVE_VIEWER = "default_archive_viewer"
     private const val KEY_THEME_MODE = "theme_mode"
+    private const val KEY_DETAILS_MODE = "details_mode"
 
     private val _deleteBehavior = mutableStateOf(DeleteBehavior.ASK)
     val deleteBehavior: State<DeleteBehavior> = _deleteBehavior
 
     private val _themeMode = mutableStateOf(ThemeMode.SYSTEM)
     val themeMode: State<ThemeMode> = _themeMode
+
+    private val _detailsMode = mutableStateOf(DetailsMode.OFF)
+    val detailsMode: State<DetailsMode> = _detailsMode
 
     // Derived state: enabled if behavior is not PERMANENT
     private val _isRecycleBinEnabled = mutableStateOf(true)
@@ -55,7 +65,23 @@ object SettingsManager {
         }
         _themeMode.value = theme
 
+        val savedDetails = prefs.getString(KEY_DETAILS_MODE, DetailsMode.OFF.name)
+        _detailsMode.value = try {
+            DetailsMode.valueOf(savedDetails ?: DetailsMode.OFF.name)
+        } catch (e: Exception) {
+            DetailsMode.OFF
+        }
+
         _isDefaultArchiveViewerEnabled.value = prefs.getBoolean(KEY_DEFAULT_ARCHIVE_VIEWER, true)
+    }
+
+    fun setDetailsMode(context: Context, mode: DetailsMode) {
+        _detailsMode.value = mode
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putString(KEY_DETAILS_MODE, mode.name).apply()
+
+        // ADD THIS LINE: It tells the rest of the app "Hey! Settings changed!"
+        GlobalEvents.triggerConfigUpdate()
     }
 
     fun setDeleteBehavior(context: Context, behavior: DeleteBehavior) {

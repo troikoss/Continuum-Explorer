@@ -40,6 +40,8 @@ class FileExplorerState(
     val folderConfigs = FolderConfigurations(context)
     val appConfigs = AppConfigurations(context)
 
+    val appSettings = AppConfigurations(context)
+
     // Reference to the main storage root to prevent navigating into system files
     var storageRoot by mutableStateOf<File>(Environment.getExternalStorageDirectory())
 

@@ -12,6 +12,8 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Keyboard
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -40,10 +42,12 @@ fun SettingsScreen(onBack: () -> Unit) {
     val deleteBehavior = SettingsManager.deleteBehavior.value
     val isDefaultArchiveViewerEnabled = SettingsManager.isDefaultArchiveViewerEnabled.value
     val themeMode = SettingsManager.themeMode.value
-    
+    val detailsMode = SettingsManager.detailsMode.value
+
     var showDeleteDialog by remember { mutableStateOf(false) }
     var showThemeDialog by remember { mutableStateOf(false) }
     var showShortcutsDialog by remember { mutableStateOf(false) }
+    var showDetailsDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -84,10 +88,16 @@ fun SettingsScreen(onBack: () -> Unit) {
             )
 
             ListItem(
-                headlineContent = { Text("Shortcut Cheatsheet") },
-                supportingContent = { Text("View available keyboard and mouse shortcuts") },
-                leadingContent = { Icon(Icons.Default.Keyboard, contentDescription = null) },
-                modifier = Modifier.clickable { showShortcutsDialog = true }
+                headlineContent = { Text("Details (Large screens only)") },
+                supportingContent = {
+                    val text = when (detailsMode) {
+                        com.example.continuum_explorer.utils.DetailsMode.OFF -> "Hidden"
+                        com.example.continuum_explorer.utils.DetailsMode.PANE -> "Side Pane"
+                        com.example.continuum_explorer.utils.DetailsMode.BAR -> "Bottom Bar"
+                    }
+                    Text(text)
+                },
+                modifier = Modifier.clickable { showDetailsDialog = true }
             )
 
             HorizontalDivider()
@@ -121,6 +131,15 @@ fun SettingsScreen(onBack: () -> Unit) {
                         onCheckedChange = { SettingsManager.setDefaultArchiveViewerEnabled(context, it) }
                     )
                 }
+            )
+
+            HorizontalDivider()
+
+            ListItem(
+                headlineContent = { Text("Shortcut Cheatsheet") },
+                supportingContent = { Text("View available keyboard and mouse shortcuts") },
+                leadingContent = { Icon(Icons.Default.Keyboard, contentDescription = null) },
+                modifier = Modifier.clickable { showShortcutsDialog = true }
             )
 
             if (showDeleteDialog) {
@@ -197,6 +216,46 @@ fun SettingsScreen(onBack: () -> Unit) {
                     },
                     confirmButton = {
                         TextButton(onClick = { showThemeDialog = false }) {
+                            Text("Cancel")
+                        }
+                    }
+                )
+            }
+
+            if (showDetailsDialog) {
+                AlertDialog(
+                    onDismissRequest = { showDetailsDialog = false },
+                    title = { Text("Choose Details Mode") },
+                    text = {
+                        Column {
+                            OptionItem(
+                                label = "Hidden",
+                                selected = detailsMode == com.example.continuum_explorer.utils.DetailsMode.OFF,
+                                onClick = {
+                                    SettingsManager.setDetailsMode(context, com.example.continuum_explorer.utils.DetailsMode.OFF)
+                                    showDetailsDialog = false
+                                }
+                            )
+                            OptionItem(
+                                label = "Side Pane",
+                                selected = detailsMode == com.example.continuum_explorer.utils.DetailsMode.PANE,
+                                onClick = {
+                                    SettingsManager.setDetailsMode(context, com.example.continuum_explorer.utils.DetailsMode.PANE)
+                                    showDetailsDialog = false
+                                }
+                            )
+                            OptionItem(
+                                label = "Bottom Bar",
+                                selected = detailsMode == com.example.continuum_explorer.utils.DetailsMode.BAR,
+                                onClick = {
+                                    SettingsManager.setDetailsMode(context, com.example.continuum_explorer.utils.DetailsMode.BAR)
+                                    showDetailsDialog = false
+                                }
+                            )
+                        }
+                    },
+                    confirmButton = {
+                        TextButton(onClick = { showDetailsDialog = false }) {
                             Text("Cancel")
                         }
                     }

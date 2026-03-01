@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
@@ -43,6 +44,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.example.continuum_explorer.model.ScreenSize
+import com.example.continuum_explorer.utils.DetailsMode
 import com.example.continuum_explorer.utils.SettingsManager
 import com.example.continuum_explorer.utils.ZipUtils
 import com.example.continuum_explorer.utils.fileDropTarget
@@ -197,7 +199,8 @@ fun FileExplorer(
                     while (true) {
                         val event = awaitPointerEvent(PointerEventPass.Initial)
                         appState.isShiftPressed = event.keyboardModifiers.isShiftPressed
-                        appState.isMouseInteraction = event.changes.any { it.type == PointerType.Mouse }
+                        appState.isMouseInteraction =
+                            event.changes.any { it.type == PointerType.Mouse }
                     }
                 }
             }
@@ -269,44 +272,59 @@ fun FileExplorer(
                     }
                 }
             ) { innerPadding ->
-                Row(
+                Column (
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(innerPadding)
-                ) {
-                    if (appState.getScreenSize() == ScreenSize.LARGE || appState.getScreenSize() ==  ScreenSize.MEDIUM) {
-                        PermanentDrawerSheet(
-                            modifier = Modifier.width(240.dp)
-                        ) {
-                            NavigationPane(
-                                appState = appState,
-                                onItemSelected = {
-                                    navigateToSection(it)
-                                },
-                                onSafItemSelected = { uri ->
-                                    appState.navigateTo(null, uri)
-                                },
-                                onAddStorageClick = {
-                                    safLauncher.launch(null)
-                                }
+
+                ){
+                    Row(
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(innerPadding)
+                    ) {
+                        if (appState.getScreenSize() == ScreenSize.LARGE || appState.getScreenSize() == ScreenSize.MEDIUM) {
+                            PermanentDrawerSheet(
+                                modifier = Modifier.width(240.dp)
+                            ) {
+                                NavigationPane(
+                                    appState = appState,
+                                    onItemSelected = {
+                                        navigateToSection(it)
+                                    },
+                                    onSafItemSelected = { uri ->
+                                        appState.navigateTo(null, uri)
+                                    },
+                                    onAddStorageClick = {
+                                        safLauncher.launch(null)
+                                    }
+                                )
+                            }
+                            VerticalDivider()
+                        }
+
+                        Box(modifier = Modifier.weight(1f)) {
+                            FileContent(
+                                appState = appState
                             )
                         }
-                        VerticalDivider()
+
+                        if (appState.getScreenSize() == ScreenSize.LARGE && SettingsManager.detailsMode.value == DetailsMode.PANE) {
+                            VerticalDivider()
+
+                            DetailsPane(
+                                appState = appState
+                            )
+                        }
                     }
 
-                    Box(modifier = Modifier.weight(1f)) {
-                        FileContent(
+                    if (appState.getScreenSize() == ScreenSize.LARGE && SettingsManager.detailsMode.value == DetailsMode.BAR) {
+                        HorizontalDivider()
+
+                        DetailsBar(
                             appState = appState
                         )
                     }
 
-                    if (appState.getScreenSize() == ScreenSize.LARGE && appState.appConfigs.isDetailsPaneVisible) {
-                        VerticalDivider()
-
-                        DetailsPane(
-                            appState = appState
-                        )
-                    }
                 }
             }
         }
