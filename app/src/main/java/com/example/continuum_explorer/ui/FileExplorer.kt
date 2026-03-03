@@ -281,12 +281,12 @@ fun FileExplorer(
                 Column (
                     modifier = Modifier
                         .fillMaxSize()
+                        .padding(innerPadding)
 
                 ){
                     Row(
                         modifier = Modifier
                             .weight(1f)
-                            .padding(innerPadding)
                     ) {
                         if (appState.getScreenSize() != ScreenSize.SMALL) {
                             PermanentDrawerSheet(
