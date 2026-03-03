@@ -29,7 +29,6 @@ import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
@@ -44,7 +43,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
-import androidx.xr.compose.testing.toDp
+import androidx.compose.ui.unit.dp
 import com.example.continuum_explorer.model.ScreenSize
 import com.example.continuum_explorer.utils.DetailsMode
 import com.example.continuum_explorer.utils.SettingsManager
@@ -195,11 +194,8 @@ fun FileExplorer(
         }
     }
 
-    val navPaneWidthPx = appState.appConfigs.navPaneWidthPx
-    val detailsPaneWidthPx = appState.appConfigs.detailsPaneWidthPx
-
-    val navPaneWidthDp = with(density) { navPaneWidthPx.toDp() }
-    val detailsPaneWidthDp = with(density) { detailsPaneWidthPx.toDp() }
+    val navPaneWidth = appState.appConfigs.navPaneWidth
+    val detailsPaneWidth = appState.appConfigs.detailsPaneWidth
 
     Box(
         modifier = Modifier
@@ -294,7 +290,7 @@ fun FileExplorer(
                     ) {
                         if (appState.getScreenSize() != ScreenSize.SMALL) {
                             PermanentDrawerSheet(
-                                modifier = Modifier.width(navPaneWidthDp)
+                                modifier = Modifier.width(navPaneWidth)
                             ) {
                                 NavigationPane(
                                     appState = appState,
@@ -310,7 +306,7 @@ fun FileExplorer(
                                 )
                             }
                             VerticalResizeHandle(onResize = { delta ->
-                                appState.appConfigs.navPaneWidthPx = (appState.appConfigs.navPaneWidthPx + delta).coerceIn(350f, 700f)
+                                appState.appConfigs.navPaneWidth = (appState.appConfigs.navPaneWidth + delta).coerceIn(200.dp, 300.dp)
                                 appState.appConfigs.savePaneWidths()
                             },
                                 contentAlignment = Alignment.CenterStart
@@ -325,7 +321,7 @@ fun FileExplorer(
 
                         if (appState.getScreenSize() == ScreenSize.LARGE && SettingsManager.detailsMode.value == DetailsMode.PANE) {
                             VerticalResizeHandle(onResize = { delta ->
-                                appState.appConfigs.detailsPaneWidthPx = (appState.appConfigs.detailsPaneWidthPx - delta).coerceIn(200f, 700f)
+                                appState.appConfigs.detailsPaneWidth = (appState.appConfigs.detailsPaneWidth - delta).coerceIn(200.dp, 300.dp)
                                 appState.appConfigs.savePaneWidths()
                             },
                                 contentAlignment = Alignment.CenterEnd
@@ -333,7 +329,7 @@ fun FileExplorer(
 
                             DetailsPane(
                                 appState = appState,
-                                modifier = Modifier.width(detailsPaneWidthDp)
+                                modifier = Modifier.width(detailsPaneWidth)
                             )
                         }
                     }

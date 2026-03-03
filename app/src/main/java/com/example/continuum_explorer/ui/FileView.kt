@@ -162,7 +162,7 @@ fun FileView(
                                 Text(name, modifier = Modifier.weight(1f), maxLines = 1)
 
                                 appState.folderConfigs.extraColumns.forEach { column ->
-                                    val widthPx = appState.folderConfigs.columnWidths[column.type] ?: column.minWidth
+                                    val width = appState.folderConfigs.columnWidths[column.type] ?: column.minWidth
                                     val text = when(column.type) {
                                         FileColumnType.DATE -> appState.formatDate(file.lastModified)
                                         FileColumnType.SIZE -> if (isFolder) "--" else appState.formatSize(file.length)
@@ -172,7 +172,7 @@ fun FileView(
                                     Text(
                                         text = text,
                                         modifier = Modifier
-                                            .width(with(LocalDensity.current) { widthPx.toDp() })
+                                            .width(width)
                                             .padding(start = 32.dp),
                                         style = MaterialTheme.typography.bodySmall,
                                         maxLines = 1

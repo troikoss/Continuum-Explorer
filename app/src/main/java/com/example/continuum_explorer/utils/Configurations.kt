@@ -9,6 +9,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.foundation.layout.size
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.example.continuum_explorer.model.*
 
@@ -25,11 +26,11 @@ class FolderConfigurations(private val context: Context) {
     var gridItemSize by mutableIntStateOf(100)
 
     val extraColumns = listOf(
-        FileColumnDefinition(FileColumnType.DATE, "Date Modified", initialWidth = 225f),
-        FileColumnDefinition(FileColumnType.SIZE, "Size", initialWidth = 175f)
+        FileColumnDefinition(FileColumnType.DATE, "Date Modified", initialWidth = 110.dp),
+        FileColumnDefinition(FileColumnType.SIZE, "Size", initialWidth = 80.dp)
     )
     
-    val columnWidths = mutableStateMapOf<FileColumnType, Float>().apply {
+    val columnWidths = mutableStateMapOf<FileColumnType, Dp>().apply {
         extraColumns.forEach { put(it.type, it.initialWidth) }
     }
 
@@ -161,8 +162,8 @@ class AppConfigurations(private val context: Context) {
     val libraryOrder = mutableStateListOf<String>("recent", "trash")
     var isRecentVisible by mutableStateOf(true)
 
-    var navPaneWidthPx by mutableFloatStateOf(400f)
-    var detailsPaneWidthPx by mutableFloatStateOf(400f)
+    var navPaneWidth by mutableStateOf(240.dp)
+    var detailsPaneWidth by mutableStateOf(240.dp)
 
     init {
         reload()
@@ -178,15 +179,15 @@ class AppConfigurations(private val context: Context) {
     fun savePaneWidths() {
         val prefs = context.getSharedPreferences("pane_widths", Context.MODE_PRIVATE)
         prefs.edit().apply {
-            putFloat("nav_width", navPaneWidthPx)
-            putFloat("details_width", detailsPaneWidthPx)
+            putFloat("nav_width", navPaneWidth.value)
+            putFloat("details_width", detailsPaneWidth.value)
         }.apply()
     }
 
     private fun loadPaneWidths() {
         val prefs = context.getSharedPreferences("pane_widths", Context.MODE_PRIVATE)
-        navPaneWidthPx = prefs.getFloat("nav_width", 400f)
-        detailsPaneWidthPx = prefs.getFloat("details_width", 400f)
+        navPaneWidth = prefs.getFloat("nav_width", 240f).dp
+        detailsPaneWidth = prefs.getFloat("details_width", 240f).dp
     }
 
     private fun loadAddedSafUris() {

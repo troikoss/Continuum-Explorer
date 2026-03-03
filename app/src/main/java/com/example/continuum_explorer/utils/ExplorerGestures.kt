@@ -58,6 +58,8 @@ import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.example.continuum_explorer.PopUpActivity
 import com.example.continuum_explorer.model.UniversalFile
@@ -718,11 +720,13 @@ fun Modifier.fileDropTarget(
 
 @Composable
 fun VerticalResizeHandle(
-    onResize: (Float) -> Unit,
+    onResize: (Dp) -> Unit,
     modifier: Modifier = Modifier,
     contentAlignment: Alignment = Alignment.Center
 ) {
     val context = LocalContext.current
+    val density = LocalDensity.current
+
     val resizeIcon = remember(context) {
         androidx.compose.ui.input.pointer.PointerIcon(
             PointerIcon.getSystemIcon(context, PointerIcon.TYPE_HORIZONTAL_DOUBLE_ARROW)
@@ -741,9 +745,10 @@ fun VerticalResizeHandle(
                         val event = awaitPointerEvent()
                         val dragChange = event.changes.firstOrNull() ?: break
                         if (!dragChange.pressed) break
-                        val delta = dragChange.positionChange().x
-                        if (delta != 0f) {
-                            onResize(delta)
+                        val deltaPx = dragChange.positionChange().x
+                        if (deltaPx != 0f) {
+                            val deltaDp = with(density) { deltaPx.toDp() }
+                            onResize(deltaDp)
                             dragChange.consume()
                         }
                     }
@@ -752,8 +757,7 @@ fun VerticalResizeHandle(
         contentAlignment = contentAlignment
     ) {
         VerticalDivider(
-            modifier = Modifier
-                .width(1.dp),
+            modifier = Modifier.width(1.dp),
             color = MaterialTheme.colorScheme.outlineVariant
         )
     }

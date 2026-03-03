@@ -1,6 +1,8 @@
 package com.example.continuum_explorer.model
 
 import android.net.Uri
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import androidx.documentfile.provider.DocumentFile
 import java.io.File
 
@@ -42,8 +44,8 @@ data class NavLocation(
 data class FileColumnDefinition(
     val type: FileColumnType,
     val label: String,
-    val minWidth: Float = 150f,
-    val initialWidth: Float = 250f
+    val minWidth: Dp = 75.dp,
+    val initialWidth: Dp = 125.dp
 )
 
 /**

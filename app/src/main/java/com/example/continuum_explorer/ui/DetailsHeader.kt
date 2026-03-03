@@ -45,14 +45,13 @@ fun DetailsHeader(appState: FileExplorerState) {
         )
 
         appState.folderConfigs.extraColumns.forEach { column ->
-            val currentWidthPx = appState.folderConfigs.columnWidths[column.type] ?: column.minWidth
+            val currentWidth = appState.folderConfigs.columnWidths[column.type] ?: column.minWidth
 
             // This is your resize handle
             VerticalResizeHandle(
                 onResize = { delta ->
-                    // Use + delta so dragging right makes it wider
-                    val newWidth = currentWidthPx + delta
-                    appState.folderConfigs.columnWidths[column.type] = newWidth.coerceIn(100f, 800f)
+                    val newWidth = ((appState.folderConfigs.columnWidths[column.type] ?: column.minWidth) - delta).coerceIn(100.dp, 800.dp)
+                    appState.folderConfigs.columnWidths[column.type] = newWidth
                 },
                 modifier = Modifier.height(24.dp),
                 contentAlignment = Alignment.Center
@@ -61,7 +60,7 @@ fun DetailsHeader(appState: FileExplorerState) {
             SortableHeaderLabel(
                 label = column.label,
                 modifier = Modifier
-                    .width(with(LocalDensity.current) { currentWidthPx.toDp() })
+                    .width(currentWidth)
                     .padding(start = 8.dp),
                 isActive = appState.folderConfigs.sortParams.columnType == column.type,
                 order = appState.folderConfigs.sortParams.order,
