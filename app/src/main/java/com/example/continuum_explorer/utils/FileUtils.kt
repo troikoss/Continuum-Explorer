@@ -7,6 +7,7 @@ import android.content.Intent
 import android.graphics.BitmapFactory
 import android.media.MediaMetadataRetriever
 import android.net.Uri
+import android.os.Build
 import android.os.Environment
 import android.provider.OpenableColumns
 import android.webkit.MimeTypeMap
@@ -21,6 +22,7 @@ import java.io.FileOutputStream
 import java.io.OutputStream
 import java.util.ArrayDeque
 import java.util.Properties
+import android.provider.Settings
 
 /**
  * Extension functions to convert native File and DocumentFile types 
@@ -959,6 +961,26 @@ fun openWith(context: Context, file: UniversalFile) {
  */
 fun openFile(context: Context, file: UniversalFile) {
     val uri = getUriForUniversalFile(context, file) ?: return
+
+    // ---  APK PERMISSION CHECK ---
+    if (file.name.endsWith(".apk", ignoreCase = true)) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            // Check if we have permission to install apps
+            if (!context.packageManager.canRequestPackageInstalls()) {
+                // We don't have permission. Open the settings screen for this app.
+                val settingsIntent = Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES).apply {
+                    data = Uri.parse("package:${context.packageName}")
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                context.startActivity(settingsIntent)
+
+                // Tell the user what to do
+                Toast.makeText(context, "Please allow permission, then click the APK again to install.", Toast.LENGTH_LONG).show()
+                return // Stop here so it doesn't try to open the APK until they grant permission
+            }
+        }
+    }
+
     
     // Guess MIME type from extension if possible
     val extension = MimeTypeMap.getFileExtensionFromUrl(uri.toString())

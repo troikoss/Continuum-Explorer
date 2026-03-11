@@ -230,7 +230,7 @@ fun TopBar(
                             onDismissRequest = { historyMenuExpanded = false }
                         ) {
                             // Forward History (Latest at top)
-                            appState.forwardStack.asReversed()
+                            appState.forwardStack.take(5)
                                 .forEachIndexed { reversedIndex, location ->
                                     val unifiedIndex =
                                         appState.backStack.size + 1 + (appState.forwardStack.size - 1 - reversedIndex)
@@ -276,7 +276,7 @@ fun TopBar(
                             )
 
                             // Back History (Most recent just below current)
-                            appState.backStack.asReversed()
+                            appState.backStack.asReversed().take(5)
                                 .forEachIndexed { reversedIndex, location ->
                                     val originalIndex = appState.backStack.size - 1 - reversedIndex
                                     DropdownMenuItem(

@@ -185,7 +185,13 @@ class FileExplorerState(
                 }
                 else currentPath?.name ?: "Unknown"
             } else if (currentSafUri != null) {
-                getSafDisplayName(currentSafUri!!)
+                // Do the exact same check here
+                if (safStack.isNotEmpty()) {
+                    val doc = DocumentFile.fromTreeUri(context, currentSafUri!!)
+                    doc?.name ?: "Unknown Folder"
+                } else {
+                    getSafDisplayName(currentSafUri!!)
+                }
             } else {
                 "New Tab"
             }
@@ -447,6 +453,21 @@ class FileExplorerState(
         archivePath: String? = null,
         isRecent: Boolean = false
     ) {
+        val targetArchivePath = archivePath ?: ""
+        
+        if (newPath == currentPath &&
+            newUri == currentSafUri &&
+            archiveFile == currentArchiveFile &&
+            archiveUri == currentArchiveUri &&
+            targetArchivePath == currentArchivePath &&
+            isRecent == isRecentMode) {
+            
+            if (newRoot != null && newRoot != storageRoot) {
+                storageRoot = newRoot
+            }
+            return
+        }
+
         if (addToHistory) {
             backStack.add(NavLocation(currentPath, currentSafUri, currentArchiveFile, currentArchiveUri, currentArchivePath, ArrayList(safStack)))
             forwardStack.clear()
@@ -465,7 +486,7 @@ class FileExplorerState(
         currentSafUri = newUri
         currentArchiveFile = archiveFile
         currentArchiveUri = archiveUri
-        currentArchivePath = archivePath ?: ""
+        currentArchivePath = targetArchivePath
         isRecentMode = isRecent
         isSearchMode = false
         
@@ -538,7 +559,14 @@ class FileExplorerState(
                 location.path.name
             }
         } else if (location.uri != null) {
-            getSafDisplayName(location.uri)
+            // If the safStack is not empty, we are in a subfolder! Get its exact name.
+            if (location.safStack != null && location.safStack.isNotEmpty()) {
+                val doc = DocumentFile.fromTreeUri(context, location.uri)
+                doc?.name ?: "Unknown Folder"
+            } else {
+                // We are at the root, use your display name function
+                getSafDisplayName(location.uri)
+            }
         } else {
             "New Tab"
         }
@@ -629,7 +657,7 @@ class FileExplorerState(
         } else if (currentSafUri != null) {
             if (safStack.isNotEmpty()) {
                 leavingUri = currentSafUri
-                destinationUri = safStack.removeLast()
+                destinationUri = safStack.last()
                 canPerformGoUp = true
             } else {
                 Toast.makeText(context, "Already at picked folder root", Toast.LENGTH_SHORT).show()
@@ -644,6 +672,9 @@ class FileExplorerState(
                 archiveUri = nextArchiveUri,
                 archivePath = nextArchivePath
             )
+            if (leavingUri != null && destinationUri != null && safStack.isNotEmpty()) {
+                safStack.removeLast()
+            }
             focusItemInList(leavingPath, leavingUri)
         }
     }
@@ -668,8 +699,9 @@ class FileExplorerState(
                 safStack.clear()
                 navigateTo(item.fileRef, null)
             } else if (item.documentFileRef != null) {
-                currentSafUri?.let { safStack.add(it) }
+                val oldUri = currentSafUri
                 navigateTo(null, item.documentFileRef.uri)
+                oldUri?.let { safStack.add(it) }
             }
         } else {
             if (ZipUtils.isArchive(item) && item.fileRef != null && SettingsManager.isDefaultArchiveViewerEnabled.value) {

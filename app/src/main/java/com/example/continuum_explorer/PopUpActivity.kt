@@ -5,6 +5,7 @@ import android.text.format.Formatter
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.forEach
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -57,6 +58,7 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.continuum_explorer.model.UniversalFile
 import com.example.continuum_explorer.ui.theme.FileExplorer2Theme
 import com.example.continuum_explorer.utils.ArchiveSettings
 import com.example.continuum_explorer.utils.CollisionResult
@@ -158,6 +160,7 @@ fun PropertiesContent(onClose: () -> Unit) {
             val formattedDate = remember(file.lastModified) { formatter.format(file.lastModified) }
 
             var calculatedSize by remember { mutableStateOf<Long?>(null) }
+            var calculatedSizeOnDisk by remember { mutableStateOf<Long?>(null) }
             var isCalculatingSize by remember { mutableStateOf(file.isDirectory) }
             
             var extraRes by remember { mutableStateOf<String?>(null) }
@@ -168,13 +171,16 @@ fun PropertiesContent(onClose: () -> Unit) {
                 if (file.isDirectory) {
                     withContext(Dispatchers.IO) {
                         val size = calculateSizeRecursively(context, file)
+                        val sizeOnDisk = calculateSizeOnDiskRecursively(file)
                         withContext(Dispatchers.Main) {
                             calculatedSize = size
+                            calculatedSizeOnDisk = sizeOnDisk
                             isCalculatingSize = false
                         }
                     }
                 } else {
                     calculatedSize = file.length
+                    calculatedSizeOnDisk = ((file.length + 4095L) / 4096L) * 4096L
                 }
 
                 if (fileType == "Image") {
@@ -226,7 +232,8 @@ fun PropertiesContent(onClose: () -> Unit) {
                     Text("Calculating...", style = MaterialTheme.typography.bodyMedium)
                 }
             } else {
-                PropertyRow("Size:", Formatter.formatFileSize(context, calculatedSize ?: 0L))
+                PropertyRow("Size:", formatSizeWithBytes(context, calculatedSize ?: 0L))
+                PropertyRow("Size on disk:", formatSizeWithBytes(context, calculatedSizeOnDisk ?: 0L))
             }
             
             PropertyRow("Location:", file.absolutePath)
@@ -249,16 +256,20 @@ fun PropertiesContent(onClose: () -> Unit) {
         } else {
             // Multiple files
             var totalSize by remember { mutableStateOf<Long?>(null) }
+            var totalSizeOnDisk by remember { mutableStateOf<Long?>(null) }
             var isCalculatingSize by remember { mutableStateOf(true) }
 
             LaunchedEffect(targets) {
                 withContext(Dispatchers.IO) {
                     var size = 0L
+                    var sizeOnDisk = 0L
                     for (target in targets) {
                         size += calculateSizeRecursively(context, target)
+                        sizeOnDisk += calculateSizeOnDiskRecursively(target)
                     }
                     withContext(Dispatchers.Main) {
                         totalSize = size
+                        totalSizeOnDisk = sizeOnDisk
                         isCalculatingSize = false
                     }
                 }
@@ -284,7 +295,8 @@ fun PropertiesContent(onClose: () -> Unit) {
                     Text("Calculating...", style = MaterialTheme.typography.bodyMedium)
                 }
             } else {
-                PropertyRow("Total Size:", Formatter.formatFileSize(context, totalSize ?: 0L))
+                PropertyRow("Total Size:", formatSizeWithBytes(context, totalSize ?: 0L))
+                PropertyRow("Size on disk:", formatSizeWithBytes(context, totalSizeOnDisk ?: 0L))
             }
         }
 
@@ -744,7 +756,7 @@ fun InputContent(onClose: () -> Unit) {
             onValueChange = { textState = it },
             label = { Text("Name") },
             singleLine = true,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().focusRequester(focusRequester),
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
             keyboardActions = KeyboardActions(onDone = { onConfirm() })
         )
@@ -754,8 +766,7 @@ fun InputContent(onClose: () -> Unit) {
             Spacer(modifier = Modifier.width(8.dp))
             Button(
                 onClick = onConfirm,
-                enabled = textState.text.isNotBlank(),
-                modifier = Modifier.focusRequester(focusRequester)
+                enabled = textState.text.isNotBlank()
             ) {
                 Text(buttonLabel)
             }
@@ -952,4 +963,51 @@ fun DetailRow(label: String, value: String) {
         Text(text = label, style = MaterialTheme.typography.bodySmall, modifier = Modifier.width(100.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
         Text(text = value, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
+}
+
+// Helper to format text like: "1.2 MB (1,234,567 bytes)"
+private fun formatSizeWithBytes(context: android.content.Context, sizeInBytes: Long): String {
+    val formattedSize = android.text.format.Formatter.formatFileSize(context, sizeInBytes)
+    val exactBytes = java.text.NumberFormat.getInstance().format(sizeInBytes)
+    return "$formattedSize ($exactBytes bytes)"
+}
+
+// Helper to calculate actual space taken on the storage drive (using standard 4KB blocks)
+private fun calculateSizeOnDiskRecursively(file: UniversalFile): Long {
+
+    if (!file.isDirectory) {
+        val length = file.length
+        return if (length == 0L) 0L else ((length + 4095L) / 4096L) * 4096L
+    }
+
+    var total = 4096L // Folders themselves take up at least one block of space
+
+    // 1. If it's a standard local folder
+    if (file.fileRef != null) {
+        file.fileRef.listFiles()?.forEach { child ->
+            // Create a temporary UniversalFile so the math works in the loop
+            val tempFile = UniversalFile(
+                name = child.name,
+                isDirectory = child.isDirectory,
+                lastModified = child.lastModified(),
+                length = child.length(),
+                fileRef = child
+            )
+            total += calculateSizeOnDiskRecursively(tempFile)
+        }
+    }
+    // 2. If it's an external folder (like an SD card using SAF DocumentFile)
+    else if (file.documentFileRef != null) {
+        file.documentFileRef.listFiles().forEach { child ->
+            val tempFile = UniversalFile(
+                name = child.name ?: "Unknown",
+                isDirectory = child.isDirectory,
+                lastModified = child.lastModified(),
+                length = child.length(),
+                documentFileRef = child
+            )
+            total += calculateSizeOnDiskRecursively(tempFile)
+        }
+    }
+    return total
 }
