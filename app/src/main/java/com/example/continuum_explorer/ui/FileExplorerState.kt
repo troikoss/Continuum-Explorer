@@ -679,7 +679,7 @@ class FileExplorerState(
         }
     }
 
-    private fun focusItemInList(path: File?, uri: Uri?) {
+    fun focusItemInList(path: File?, uri: Uri?) {
         if (path == null && uri == null) return
         pendingFocusPath = path
         pendingFocusUri = uri

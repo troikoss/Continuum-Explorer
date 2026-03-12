@@ -514,6 +514,11 @@ fun TopBar(
                                 val targetPathString = "/" + targetPathSegments.joinToString("/")
                                 val targetFile = File(targetPathString)
 
+                                val leavingFile = if (realIndex + 1 < allSegments.size) {
+                                    val leavingPathSegments = allSegments.take(realIndex + 2)
+                                    File("/" + leavingPathSegments.joinToString("/"))
+                                } else null
+
                                 TextButton(
                                     onClick = {
                                         if (appState.currentArchiveFile != null) {
@@ -533,6 +538,7 @@ fun TopBar(
                                         } else {
                                             appState.navigateTo(targetFile, null)
                                         }
+                                        appState.focusItemInList(leavingFile, null)
                                     },
                                     contentPadding = PaddingValues(horizontal = 12.dp),
                                     modifier = if (targetFile.isDirectory) Modifier.fileDropTarget(appState, destPath = targetFile) else Modifier
@@ -575,6 +581,8 @@ fun TopBar(
                                 val doc = DocumentFile.fromTreeUri(context, uri)
                                 val displayName = doc?.name ?: "Unknown"
 
+                                val leavingUri = if (index + 1 < safItems.size) safItems[index + 1] else null
+
                                 TextButton(
                                     onClick = {
                                         // Navigation in SAF breadcrumbs
@@ -585,6 +593,7 @@ fun TopBar(
                                                 appState.safStack.removeAt(appState.safStack.lastIndex)
                                             }
                                             appState.navigateTo(null, targetUri)
+                                            appState.focusItemInList(null, leavingUri)
                                         }
                                     },
                                     contentPadding = PaddingValues(horizontal = 12.dp),

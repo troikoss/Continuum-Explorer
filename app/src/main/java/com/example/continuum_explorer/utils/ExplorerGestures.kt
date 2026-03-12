@@ -2,7 +2,6 @@ package com.example.continuum_explorer.utils
 
 import android.content.ClipData
 import android.content.Intent
-import android.content.res.Configuration
 import android.os.Environment
 import android.view.PointerIcon
 import android.view.View
@@ -56,7 +55,6 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
@@ -168,21 +166,27 @@ fun Modifier.containerGestures(
     gridState: androidx.compose.foundation.lazy.grid.LazyGridState
 ): Modifier = composed {
     val context = LocalContext.current
-
-    val configuration = LocalConfiguration.current
-    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-    val sidebarWidth = if (isLandscape) 240 else 0
+    val density = LocalDensity.current
+    var containerWidthPx by remember { mutableIntStateOf(0) }
 
     val columnCount = when (viewMode) {
         ViewMode.GRID -> {
-            val totalPadding = 64
-            val availableWidth = configuration.screenWidthDp - sidebarWidth - totalPadding
-            (availableWidth / gridItemSize).coerceAtLeast(1)
+            // Calculate usable width by subtracting horizontal padding:
+            // 1. Modifier padding (32dp left + 32dp right = 64dp)
+            // 2. Content padding (8dp left + 8dp right = 16dp)
+            // Total = 80dp
+            val totalPaddingPx = with(density) { 80.dp.toPx() }
+            val gridItemSizePx = with(density) { gridItemSize.dp.toPx() }
+            val availableGridWidthPx = (containerWidthPx - totalPaddingPx).coerceAtLeast(0f)
+            (availableGridWidthPx / gridItemSizePx).toInt().coerceAtLeast(1)
         }
         else -> 1
     }
 
     this
+        .onGloballyPositioned { coordinates ->
+            containerWidthPx = coordinates.size.width
+        }
         .focusRequester(focusRequester)
         .focusProperties {
             left = FocusRequester.Cancel
@@ -238,23 +242,23 @@ fun Modifier.containerGestures(
 
                 when (keyEvent.key) {
                     Key.DirectionUp -> {
-                        selectionManager.moveSelection(-columnCount, shift, ctrl); true
+                        selectionManager.moveSelection(-columnCount, shift, ctrl, clamp = false); true
                     }
 
                     Key.DirectionDown -> {
-                        selectionManager.moveSelection(columnCount, shift, ctrl); true
+                        selectionManager.moveSelection(columnCount, shift, ctrl, clamp = false); true
                     }
 
 
                     Key.DirectionLeft -> {
                         if (viewMode == ViewMode.GRID) {
-                            selectionManager.moveSelection(-1, shift, ctrl); true
+                            selectionManager.moveSelection(-1, shift, ctrl, clamp = false); true
                         } else false
                     }
 
                     Key.DirectionRight -> {
                         if (viewMode == ViewMode.GRID) {
-                            selectionManager.moveSelection(1, shift, ctrl); true
+                            selectionManager.moveSelection(1, shift, ctrl, clamp = false); true
                         } else false
                     }
 
@@ -263,7 +267,7 @@ fun Modifier.containerGestures(
                         // 1. Get the number of items currently on screen
                         val pageSize = gridState.layoutInfo.visibleItemsInfo.size
                         // 2. Move selection back by one full page
-                        selectionManager.moveSelection(-pageSize, shift, ctrl)
+                        selectionManager.moveSelection(-pageSize, shift, ctrl, clamp = true)
                         true
                     }
 
@@ -271,7 +275,7 @@ fun Modifier.containerGestures(
                         // 1. Get the number of items currently on screen
                         val pageSize = gridState.layoutInfo.visibleItemsInfo.size
                         // 2. Move selection forward by one full page
-                        selectionManager.moveSelection(pageSize, shift, ctrl)
+                        selectionManager.moveSelection(pageSize, shift, ctrl, clamp = true)
                         true
                     }
 
@@ -279,7 +283,7 @@ fun Modifier.containerGestures(
                         // 1. Find where we are currently (the lead item)
                         val currentIndex = selectionManager.leadItem?.let { appState.files.indexOf(it) } ?: 0
                         // 2. To get to index 0, move back by exactly the current index
-                        selectionManager.moveSelection(-currentIndex, shift, ctrl)
+                        selectionManager.moveSelection(-currentIndex, shift, ctrl, clamp = true)
                         true
                     }
 
@@ -289,7 +293,7 @@ fun Modifier.containerGestures(
                         // 2. Find the index of the very last file
                         val lastIndex = (appState.files.size - 1).coerceAtLeast(0)
                         // 3. Move forward by the difference
-                        selectionManager.moveSelection(lastIndex - currentIndex, shift, ctrl)
+                        selectionManager.moveSelection(lastIndex - currentIndex, shift, ctrl, clamp = true)
                         true
                     }
 
@@ -746,7 +750,7 @@ fun VerticalResizeHandle(
                         val dragChange = event.changes.firstOrNull() ?: break
                         if (!dragChange.pressed) break
                         val deltaPx = dragChange.positionChange().x
-                        if (deltaPx != 0f) {
+                        if (deltaPx != 1f) {
                             val deltaDp = with(density) { deltaPx.toDp() }
                             onResize(deltaDp)
                             dragChange.consume()

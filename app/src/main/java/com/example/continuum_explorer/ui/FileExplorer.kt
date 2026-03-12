@@ -13,6 +13,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -290,7 +291,9 @@ fun FileExplorer(
                     ) {
                         if (appState.getScreenSize() != ScreenSize.SMALL) {
                             PermanentDrawerSheet(
-                                modifier = Modifier.width(navPaneWidth)
+                                modifier = Modifier.width(navPaneWidth),
+                                windowInsets = WindowInsets(0, 0, 0, 0)
+
                             ) {
                                 NavigationPane(
                                     appState = appState,

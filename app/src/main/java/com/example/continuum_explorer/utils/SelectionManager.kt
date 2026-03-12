@@ -151,29 +151,64 @@ class SelectionManager {
 
     /**
      * Updates selection based on keyboard arrow keys.
+     * @param clamp If true, forces the selection into bounds (snaps to edges). 
+     *              If false, prevents movement if it would cross a boundary (standard arrow key behavior).
      */
-    fun moveSelection(direction: Int, isShiftPressed: Boolean, isCtrlPressed: Boolean) {
+    fun moveSelection(direction: Int, isShiftPressed: Boolean, isCtrlPressed: Boolean, clamp: Boolean = true) {
         if (allFiles.isEmpty()) return
 
         val currentIndex = if (leadItem != null) allFiles.indexOf(leadItem) else -1
-        val newIndex = (currentIndex + direction).coerceIn(0, allFiles.size - 1)
+        
+        // If nothing is selected, start at the first or last item depending on direction
+        if (currentIndex == -1) {
+            val startFile = if (direction > 0) allFiles.first() else allFiles.last()
+            selectSingle(startFile)
+            return
+        }
 
-        val newFile = allFiles[newIndex]
+        var targetIndex = currentIndex + direction
+        
+        if (clamp) {
+            // Old system: Just snap to the nearest valid index
+            targetIndex = targetIndex.coerceIn(0, allFiles.size - 1)
+        } else {
+            // New Arrow Key Logic:
+            
+            // 1. Handle "Down" into an incomplete last row.
+            // If the target is out of bounds...
+            if (direction > 1 && targetIndex >= allFiles.size) {
+                // ...calculate where the last row starts.
+                val lastRowStart = ((allFiles.size - 1) / direction) * direction
+                // Only snap to the end if we aren't already in the last row.
+                if (currentIndex < lastRowStart) {
+                    targetIndex = allFiles.size - 1
+                }
+            }
+
+            // 2. Prevent jumping rows if at boundaries (e.g. Up from row 0)
+            if (targetIndex < 0 || targetIndex >= allFiles.size) {
+                return
+            }
+        }
+
+        val newFile = allFiles[targetIndex]
 
         if (isCtrlPressed) {
             leadItem = newFile
         } else if (isShiftPressed && anchorItem != null) {
             // Expand selection from Anchor to New Lead
             val start = allFiles.indexOf(anchorItem)
-            val end = newIndex
+            val end = targetIndex
 
-            val range = if (start < end) {
-                allFiles.subList(start, end + 1)
+            if (start != -1) {
+                val range = if (start < end) {
+                    allFiles.subList(start, end + 1)
                 } else {
-                allFiles.subList(end, start + 1)
+                    allFiles.subList(end, start + 1)
+                }
+                selectedItems = range.toSet()
+                leadItem = newFile
             }
-            selectedItems = range.toSet()
-            leadItem = newFile
         } else {
             // Single selection move
             selectedItems = setOf(newFile)
