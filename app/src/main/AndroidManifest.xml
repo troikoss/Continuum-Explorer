@@ -46,6 +46,30 @@
                 <data android:mimeType="application/vnd.android.package-archive" />
             </intent-filter>
         </activity>
+
+        <activity
+            android:name=".ImageViewerActivity"
+            android:exported="true"
+            android:label="Image Viewer"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden"
+            android:theme="@style/Theme.FileExplorer2"
+            android:documentLaunchMode="always"
+            android:launchMode="singleTop"
+            android:taskAffinity="" >
+            <intent-filter>
+                <!-- ACTION_VIEW means this activity can display data to the user -->
+                <action android:name="android.intent.action.VIEW" />
+
+                <!-- DEFAULT is required for the activity to be found by implicit intents -->
+                <category android:name="android.intent.category.DEFAULT" />
+
+                <!-- BROWSABLE allows the activity to be opened from a web browser or link -->
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <!-- This specifies that your app can handle any type of image -->
+                <data android:mimeType="image/*" />
+            </intent-filter>
+        </activity>
         
         <provider
             android:name="androidx.core.content.FileProvider"
@@ -72,7 +96,7 @@
             android:excludeFromRecents="true"
             android:launchMode="singleTop"
             android:taskAffinity="" />
-            
+
         <receiver android:name=".utils.NotificationCancelReceiver" android:exported="false">
              <intent-filter>
                 <action android:name="continuum_explorer.ACTION_CANCEL_OPERATION" />
