@@ -23,6 +23,7 @@ import java.io.OutputStream
 import java.util.ArrayDeque
 import java.util.Properties
 import android.provider.Settings
+import android.provider.DocumentsContract
 
 /**
  * Extension functions to convert native File and DocumentFile types 
@@ -445,17 +446,20 @@ suspend fun pasteFromClipboard(
         return emptyList()
     }
 
-    val isMove = PendingCut.isActive
     val totalCount = clipData.itemCount
 
     val trashDir = File(Environment.getExternalStorageDirectory(), ".Trash")
     val isPasteToTrash = currentPath?.absolutePath == trashDir.absolutePath
     
     // Check if we can use our internal file references safely
+    val firstClipUriStr = clipData.getItemAt(0).uri?.toString()
+    val firstPendingUriStr = if (PendingCut.files.isNotEmpty()) getUriForUniversalFile(context, PendingCut.files[0])?.toString() else null
     val usePendingCut = PendingCut.files.isNotEmpty() && 
                         PendingCut.files.size == totalCount &&
-                        (clipData.getItemAt(0).uri == getUriForUniversalFile(context, PendingCut.files[0]))
+                        firstClipUriStr != null && firstPendingUriStr != null &&
+                        (firstClipUriStr == firstPendingUriStr || Uri.decode(firstClipUriStr) == Uri.decode(firstPendingUriStr))
 
+    val isMove = usePendingCut && PendingCut.isActive
     val destSafDoc = if (currentSafUri != null) DocumentFile.fromTreeUri(context, currentSafUri) else null
 
     // 1. Calculate Total Size
@@ -509,12 +513,33 @@ suspend fun pasteFromClipboard(
                 PendingCut.files[i]
             } else {
                 val name = getFileName(context, sourceUri)
+                
+                var isDir = false
+                var fileRef: File? = null
+                
+                if (sourceUri.scheme == "file") {
+                    val f = File(sourceUri.path ?: "")
+                    isDir = f.isDirectory
+                    fileRef = f
+                } else if (sourceUri.scheme == "content") {
+                    val mimeType = context.contentResolver.getType(sourceUri)
+                    if (mimeType == DocumentsContract.Document.MIME_TYPE_DIR) {
+                        isDir = true
+                    }
+                }
+                
+                val docFile = DocumentFile.fromSingleUri(context, sourceUri)
+                if (!isDir && docFile != null && docFile.isDirectory) {
+                    isDir = true
+                }
+                
                 UniversalFile(
                     name = name,
-                    isDirectory = false, 
-                    lastModified = 0L,
-                    length = 0L,
-                    documentFileRef = DocumentFile.fromSingleUri(context, sourceUri),
+                    isDirectory = isDir, 
+                    lastModified = docFile?.lastModified() ?: 0L,
+                    length = docFile?.length() ?: 0L,
+                    fileRef = fileRef,
+                    documentFileRef = docFile,
                     absolutePath = sourceUri.toString()
                 )
             }
