@@ -143,8 +143,10 @@ fun FileExplorer(
 
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
 
-    BackHandler(enabled = appState.canGoUp) {
-        appState.goUp()
+    BackHandler(enabled = appState.canGoUp || appState.selectionManager.selectedItems.isNotEmpty()) {
+        if (appState.selectionManager.selectedItems.isNotEmpty()) {
+            appState.selectionManager.clear()
+        } else appState.goUp()
     }
 
     // Helper to handle navigation selection
