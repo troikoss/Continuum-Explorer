@@ -3,7 +3,9 @@ package com.example.continuum_explorer.ui
 import androidx.compose.foundation.background
 import androidx.compose.foundation.hoverable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.getValue
@@ -17,12 +19,17 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.DpOffset
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Popup
+import androidx.compose.ui.window.PopupProperties
 import com.example.continuum_explorer.model.*
 import com.example.continuum_explorer.utils.*
 import com.example.continuum_explorer.utils.IconHelper.FileThumbnail
 import com.example.continuum_explorer.utils.IconHelper.isMimeTypePreviewable
+import kotlinx.coroutines.delay
 
 /**
  * Renders a single file or folder item. 
@@ -50,10 +57,13 @@ fun FileView(
     var showMenu by remember { mutableStateOf(false) }
     var menuOffset by remember { mutableStateOf(DpOffset.Zero)}
     val density = LocalDensity.current
-
-    val isHovered = mousePosition?.let { pos ->
+    val isMouseHovered = mousePosition?.let { pos ->
         itemPositions[file]?.contains(pos)
     } ?: false
+
+    val isNativeHovered by interactionSource.collectIsHoveredAsState()
+
+    val finalIsHovered = isMouseHovered || isNativeHovered
 
     Box {
         // We put all gesture detectors on this Surface.
@@ -90,7 +100,7 @@ fun FileView(
                 }
         ) {
             // Internal content that handles the background and actual visuals
-            Box(modifier = Modifier.selectionBackground(file, selectionManager, isHovered)) {
+            Box(modifier = Modifier.selectionBackground(file, selectionManager, finalIsHovered)) {
                 when (appState.activeViewMode) {
                     ViewMode.GRID -> {
                         Column(

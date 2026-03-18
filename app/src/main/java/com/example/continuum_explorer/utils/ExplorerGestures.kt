@@ -429,8 +429,9 @@ fun Modifier.itemGestures(
                 val event = awaitPointerEvent()
                 val isMouse = event.changes.any { it.type == PointerType.Mouse }
                 val isTouch = event.changes.any { it.type == PointerType.Touch }
+                val isStylus = event.changes.any { it.type == PointerType.Stylus }
 
-                if (isTouch && event.type == PointerEventType.Press) {
+                if (isTouch || isStylus && event.type == PointerEventType.Press) {
                     val pointerId = event.changes[0].id
                     val longPress = awaitLongPressOrCancellation(pointerId)
                     if (longPress != null && !selectionManager.isInSelectionMode()) {
