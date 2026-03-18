@@ -5,7 +5,7 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import com.example.continuum_explorer.ui.FileExplorer
-import com.example.continuum_explorer.ui.theme.FileExplorer2Theme
+import com.example.continuum_explorer.ui.theme.FileExplorerTheme
 import com.example.continuum_explorer.utils.SettingsManager
 
 class ArchiveViewerActivity : ComponentActivity() {
@@ -23,7 +23,7 @@ class ArchiveViewerActivity : ComponentActivity() {
         }
 
         setContent {
-            FileExplorer2Theme {
+            FileExplorerTheme {
                 // FileExplorer's internal state (appState.isLoading) will handle 
                 // showing the spinner during the initial parse.
                 FileExplorer(initialArchiveUri = uri)

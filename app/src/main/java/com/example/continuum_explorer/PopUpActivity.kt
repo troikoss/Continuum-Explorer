@@ -5,7 +5,6 @@ import android.text.format.Formatter
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.forEach
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -59,7 +58,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.continuum_explorer.model.UniversalFile
-import com.example.continuum_explorer.ui.theme.FileExplorer2Theme
+import com.example.continuum_explorer.ui.theme.FileExplorerTheme
 import com.example.continuum_explorer.utils.ArchiveSettings
 import com.example.continuum_explorer.utils.CollisionResult
 import com.example.continuum_explorer.utils.DeleteResult
@@ -86,7 +85,7 @@ class PopUpActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         setContent {
-            FileExplorer2Theme {
+            FileExplorerTheme {
                 Box(
                     modifier = Modifier.fillMaxWidth().fillMaxHeight(),
                     contentAlignment = Alignment.Center

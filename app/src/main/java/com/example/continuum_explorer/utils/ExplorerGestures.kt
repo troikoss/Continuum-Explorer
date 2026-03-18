@@ -98,7 +98,7 @@ fun Modifier.contextMenuDetector(
                 if (event.isContextMenuTrigger()) {
                     currentOnContextMenu(firstChange.position)
                     event.changes.forEach { it.consume() }
-                } else if (enableLongPress && event.type == PointerEventType.Press && firstChange.type == PointerType.Touch) {
+                } else if (enableLongPress && event.type == PointerEventType.Press && (firstChange.type == PointerType.Touch || firstChange.type == PointerType.Stylus)) {
                     val pointerId = firstChange.id
                     val startTime = System.currentTimeMillis()
                     val timeout = viewConfiguration.longPressTimeoutMillis
@@ -431,7 +431,7 @@ fun Modifier.itemGestures(
                 val isTouch = event.changes.any { it.type == PointerType.Touch }
                 val isStylus = event.changes.any { it.type == PointerType.Stylus }
 
-                if (isTouch || isStylus && event.type == PointerEventType.Press) {
+                if ((isTouch || isStylus) && event.type == PointerEventType.Press) {
                     val pointerId = event.changes[0].id
                     val longPress = awaitLongPressOrCancellation(pointerId)
                     if (longPress != null && !selectionManager.isInSelectionMode()) {

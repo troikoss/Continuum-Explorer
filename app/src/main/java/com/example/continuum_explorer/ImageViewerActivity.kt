@@ -1,7 +1,9 @@
 package com.example.continuum_explorer
 
 import android.app.Activity
+import android.content.ClipData
 import android.content.Context
+import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -10,6 +12,7 @@ import android.os.OutcomeReceiver
 import android.provider.DocumentsContract
 import android.provider.MediaStore
 import android.util.Log
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
@@ -31,7 +34,20 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.FitScreen
+import androidx.compose.material.icons.filled.Fullscreen
+import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.OpenInNew
+import androidx.compose.material.icons.filled.ZoomIn
+import androidx.compose.material.icons.filled.ZoomOut
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -62,10 +78,14 @@ import androidx.compose.ui.input.pointer.isPrimaryPressed
 import androidx.compose.ui.input.pointer.isTertiaryPressed
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import android.content.ClipboardManager
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Wallpaper
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
@@ -73,6 +93,8 @@ import androidx.core.view.WindowInsetsControllerCompat
 import coil.compose.AsyncImage
 import com.example.continuum_explorer.model.FileColumnType
 import com.example.continuum_explorer.model.SortOrder
+import com.example.continuum_explorer.ui.theme.FileExplorerTheme
+import com.example.continuum_explorer.utils.contextMenuDetector
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -88,11 +110,13 @@ class ImageViewerActivity : ComponentActivity() {
         val imageUri = intent.data?.toString() ?: intent.getStringExtra("IMAGE_URI")
 
         setContent {
-            ImageViewerScreen(
-                initialImageUri = imageUri,
-                onToggleFullscreen = { toggleFullscreen() },
-                isFullscreen = isFullscreen
-            )
+            FileExplorerTheme {
+                ImageViewerScreen(
+                    initialImageUri = imageUri,
+                    onToggleFullscreen = { toggleFullscreen() },
+                    isFullscreen = isFullscreen
+                )
+            }
         }
     }
 
@@ -248,6 +272,9 @@ fun ImageViewerScreen(
     var currentUri by remember { mutableStateOf(initialImageUri) }
     var siblingImages by remember { mutableStateOf<List<String>>(emptyList()) }
 
+    var showMenu by remember { mutableStateOf(false) }
+    var menuOffset by remember { mutableStateOf(Offset.Zero) }
+
     LaunchedEffect(initialImageUri) {
         if (initialImageUri != null) {
             withContext(Dispatchers.IO) {
@@ -351,6 +378,10 @@ fun ImageViewerScreen(
                             }
                         )
                     }
+                    .contextMenuDetector { clickOffset ->
+                        menuOffset = clickOffset
+                        showMenu = true
+                    }
                     .pointerInput(screenWidthPx, screenHeightPx) {
                         awaitPointerEventScope {
 
@@ -369,33 +400,37 @@ fun ImageViewerScreen(
                                                 androidx.compose.animation.core.animate(
                                                     initialValue = offset.x,
                                                     targetValue = screenWidthPx,
-                                                    animationSpec = androidx.compose.animation.core.tween(300)
+                                                    animationSpec = androidx.compose.animation.core.tween(
+                                                        300
+                                                    )
                                                 ) { value, _ -> offset = Offset(value, offset.y) }
 
                                                 // 2. Secretly swap to the previous image
                                                 currentUri = siblingImages[idx - 1]
                                                 // 3. Reset the position invisibly
                                                 offset = Offset.Zero
-                                            }
-                                            else if (offset.x < -swipeThreshold && idx < siblingImages.size - 1) {
+                                            } else if (offset.x < -swipeThreshold && idx < siblingImages.size - 1) {
                                                 // 1. Dragged left -> Animate it sliding fully to the left
                                                 androidx.compose.animation.core.animate(
                                                     initialValue = offset.x,
                                                     targetValue = -screenWidthPx,
-                                                    animationSpec = androidx.compose.animation.core.tween(300)
+                                                    animationSpec = androidx.compose.animation.core.tween(
+                                                        300
+                                                    )
                                                 ) { value, _ -> offset = Offset(value, offset.y) }
 
                                                 // 2. Secretly swap to the next image
                                                 currentUri = siblingImages[idx + 1]
                                                 // 3. Reset the position invisibly
                                                 offset = Offset.Zero
-                                            }
-                                            else {
+                                            } else {
                                                 // Didn't drag far enough. Rubber-band snap back to the center!
                                                 androidx.compose.animation.core.animate(
                                                     initialValue = offset.x,
                                                     targetValue = 0f,
-                                                    animationSpec = androidx.compose.animation.core.tween(300)
+                                                    animationSpec = androidx.compose.animation.core.tween(
+                                                        300
+                                                    )
                                                 ) { value, _ -> offset = Offset(value, offset.y) }
                                             }
                                         }
@@ -430,7 +465,7 @@ fun ImageViewerScreen(
                                     var direction = change.scrollDelta.y
 
                                     val idx = siblingImages.indexOf(currentUri)
-                                    if (idx > 0  && direction < 0f) {
+                                    if (idx > 0 && direction < 0f) {
                                         currentUri = siblingImages[idx - 1]
                                         direction = 0f
                                     }
@@ -461,7 +496,8 @@ fun ImageViewerScreen(
 
                             val zoomRatio = scale / oldScale
                             val focalPoint = centroid - screenCenter
-                            val newOffset = (offset + pan) * zoomRatio + focalPoint * (1f - zoomRatio)
+                            val newOffset =
+                                (offset + pan) * zoomRatio + focalPoint * (1f - zoomRatio)
 
                             val (maxX, maxY) = calculatePanLimits()
 
@@ -530,6 +566,178 @@ fun ImageViewerScreen(
                             )
                     )
                 }
+
+                DropdownMenu(
+                    expanded = showMenu,
+                    onDismissRequest = { showMenu = false }, // Close when clicking outside
+                    offset = DpOffset(
+                        x = with(LocalDensity.current) { menuOffset.x.toDp() },
+                        y = with(LocalDensity.current) { menuOffset.y.toDp() }
+                    )
+                ) {
+                    // --- GROUP 1: Open With ---
+                    DropdownMenuItem(
+                        text = { Text("Open with") },
+                        leadingIcon = { Icon(Icons.Default.OpenInNew, contentDescription = "Open with") },
+                        onClick = {
+                            showMenu = false
+                            currentUri?.let { uriString ->
+                                try {
+                                    // 1. Use your new helper function!
+                                    val contentUri = getSecureContentUri(context, uriString)
+
+                                    // 2. Do the action
+                                    val intent = Intent(Intent.ACTION_VIEW).apply {
+                                        setDataAndType(contentUri, "image/*")
+                                        flags = Intent.FLAG_GRANT_READ_URI_PERMISSION
+                                    }
+                                    context.startActivity(Intent.createChooser(intent, "Open with"))
+                                } catch (e: Exception) {
+                                    Toast.makeText(context, "Failed to open image", Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                        }
+                    )
+
+                    HorizontalDivider() // A visual line separating the groups
+
+                    // --- GROUP 2: Zoom Controls ---
+                    DropdownMenuItem(
+                        text = { Text("Zoom in") },
+                        leadingIcon = { Icon(Icons.Default.ZoomIn, contentDescription = "Zoom in") },
+                        onClick = {
+                            showMenu = false
+                            scale = (scale * 1.5f).coerceIn(1f, 10f)
+                        }
+                    )
+
+                    DropdownMenuItem(
+                        text = { Text("Reset zoom") },
+                        leadingIcon = { Icon(Icons.Default.FitScreen, contentDescription = "Reset zoom") },
+                        onClick = {
+                            showMenu = false
+                            scale = 1f
+                            offset = Offset.Zero
+                        }
+                    )
+
+                    DropdownMenuItem(
+                        text = { Text("Zoom out") },
+                        leadingIcon = { Icon(Icons.Default.ZoomOut, contentDescription = "Zoom out") },
+                        onClick = {
+                            showMenu = false
+                            scale = (scale / 1.5f).coerceIn(1f, 10f)
+                            if (scale == 1f) {
+                                offset = Offset.Zero // Snap back to center if fully zoomed out
+                            }
+                        }
+                    )
+
+                    HorizontalDivider()
+
+                    // --- GROUP 3: Copy/Share/Set as Wallpaper ---
+                    DropdownMenuItem(
+                        text = { Text("Copy image") },
+                        leadingIcon = { Icon(Icons.Default.Image, contentDescription = "Copy image") },
+                        onClick = {
+                            showMenu = false
+                            currentUri?.let { uriString ->
+                                try {
+                                    val uri = Uri.parse(uriString)
+
+                                    // Android needs a secure "content://" link to share images.
+                                    // If your image is a standard file, we convert it securely here:
+                                    val contentUri: Uri = if (uri.scheme == "file" || uri.scheme == null) {
+                                        val file = File(uri.path ?: uriString)
+                                        androidx.core.content.FileProvider.getUriForFile(
+                                            context,
+                                            "${context.packageName}.provider",
+                                            file
+                                        )
+                                    } else {
+                                        uri
+                                    }
+
+                                    // Give this secure link to the Android Clipboard
+                                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                    val clip = ClipData.newUri(context.contentResolver, "Copied Image", contentUri)
+                                    clipboard.setPrimaryClip(clip)
+
+                                    Toast.makeText(context, "Image copied to clipboard", Toast.LENGTH_SHORT).show()
+                                } catch (e: Exception) {
+                                    e.printStackTrace()
+                                    Toast.makeText(context, "Failed to copy image", Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                        }
+                    )
+
+                    DropdownMenuItem(
+                        text = { Text("Set as Wallpaper") },
+                        leadingIcon = { Icon(Icons.Default.Wallpaper, contentDescription = "Wallpaper") },
+                        onClick = {
+                            showMenu = false
+                            currentUri?.let { uriString ->
+                                try {
+                                    val contentUri = getSecureContentUri(context, uriString)
+
+                                    // ACTION_ATTACH_DATA is Android's built-in way to say "Use this file for something"
+                                    val wallpaperIntent = Intent(Intent.ACTION_ATTACH_DATA).apply {
+                                        setDataAndType(contentUri, "image/*")
+                                        putExtra("mimeType", "image/*")
+                                        flags = Intent.FLAG_GRANT_READ_URI_PERMISSION
+                                    }
+                                    context.startActivity(Intent.createChooser(wallpaperIntent, "Set as"))
+                                } catch (e: Exception) {
+                                    Toast.makeText(context, "Failed to set wallpaper", Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                        }
+                    )
+
+                    DropdownMenuItem(
+                        text = { Text("Share") },
+                        leadingIcon = { Icon(Icons.Default.Share, contentDescription = "Share") },
+                        onClick = {
+                            showMenu = false
+                            currentUri?.let { uriString ->
+                                try {
+                                    val contentUri = getSecureContentUri(context, uriString)
+
+                                    val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                                        type = "image/*"
+                                        putExtra(Intent.EXTRA_STREAM, contentUri)
+                                        flags = Intent.FLAG_GRANT_READ_URI_PERMISSION
+                                    }
+                                    context.startActivity(Intent.createChooser(shareIntent, "Share image via"))
+                                } catch (e: Exception) {
+                                    Toast.makeText(context, "Failed to share image", Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                        }
+                    )
+
+                    HorizontalDivider()
+
+                    // --- GROUP 4: Window Controls ---
+                    DropdownMenuItem(
+                        text = { Text("Fullscreen") },
+                        leadingIcon = { Icon(Icons.Default.Fullscreen, contentDescription = "Fullscreen") },
+                        onClick = {
+                            showMenu = false
+                            onToggleFullscreen()
+                        }
+                    )
+
+                    DropdownMenuItem(
+                        text = { Text("Close") },
+                        leadingIcon = { Icon(Icons.Default.Close, contentDescription = "Close") },
+                        onClick = {
+                            showMenu = false
+                            activity?.finish()
+                        }
+                    )
+                }
             }
 
             // When the viewed image changes (e.g. via keyboard keys), scroll the filmstrip to it
@@ -593,10 +801,8 @@ fun ImageViewerScreen(
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
                         .fillMaxWidth()
-                        .padding(bottom = 8.dp, start = 16.dp, end = 16.dp)
                         .background(
                             Color.Black.copy(alpha = 0.6f),
-                            shape = RoundedCornerShape(12.dp)
                         )
                         .padding(vertical = 8.dp), // Inner padding
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -609,12 +815,10 @@ fun ImageViewerScreen(
                             contentDescription = "Thumbnail",
                             contentScale = ContentScale.Crop,
                             modifier = Modifier
-                                .size(if (isSelected) itemSizeDp else 48.dp)
-                                .clip(RoundedCornerShape(8.dp))
+                                .size (itemSizeDp)
                                 .border(
-                                    width = if (isSelected) 2.dp else 0.dp,
-                                    color = if (isSelected) Color.White else Color.Transparent,
-                                    shape = RoundedCornerShape(8.dp)
+                                    width = if (isSelected) 1.dp else 0.dp,
+                                    color = if (isSelected) Color.White else Color.Transparent
                                 )
                                 .clickable {
                                     // Clicking a thumbnail gently scrolls it to the center
@@ -631,4 +835,21 @@ fun ImageViewerScreen(
             }
         }
     }
+}
+
+fun getSecureContentUri(context: Context, uriString: String): Uri {
+    val uri = Uri.parse(uriString)
+
+    // If it's already a secure content:// link, just return it
+    if (uri.scheme == "content") {
+        return uri
+    }
+
+    // Otherwise, it's a raw file, so convert it securely
+    val file = File(uri.path ?: uriString)
+    return androidx.core.content.FileProvider.getUriForFile(
+        context,
+        "${context.packageName}.provider",
+        file
+    )
 }

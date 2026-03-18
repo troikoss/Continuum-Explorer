@@ -19,7 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.example.continuum_explorer.ui.theme.FileExplorer2Theme
+import com.example.continuum_explorer.ui.theme.FileExplorerTheme
 import com.example.continuum_explorer.utils.DeleteBehavior
 import com.example.continuum_explorer.utils.SettingsManager
 import com.example.continuum_explorer.utils.ThemeMode
@@ -28,7 +28,7 @@ class SettingsActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            FileExplorer2Theme {
+            FileExplorerTheme {
                 SettingsScreen(onBack = { finish() })
             }
         }

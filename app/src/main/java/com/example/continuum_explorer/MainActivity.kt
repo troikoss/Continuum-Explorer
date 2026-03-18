@@ -15,7 +15,7 @@ import androidx.lifecycle.lifecycleScope
 import coil.ImageLoader
 import coil.decode.VideoFrameDecoder
 import com.example.continuum_explorer.ui.FileExplorer
-import com.example.continuum_explorer.ui.theme.FileExplorer2Theme
+import com.example.continuum_explorer.ui.theme.FileExplorerTheme
 import com.example.continuum_explorer.utils.SettingsManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -81,7 +81,7 @@ class MainActivity : ComponentActivity() {
         }
 
         setContent {
-            FileExplorer2Theme {
+            FileExplorerTheme {
                 FileExplorer(initialPath = initialPath, initialUri = initialUri, initialArchive = initialArchive)
             }
         }
