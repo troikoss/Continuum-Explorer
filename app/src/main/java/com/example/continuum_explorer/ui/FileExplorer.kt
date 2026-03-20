@@ -208,8 +208,10 @@ fun FileExplorer(
                     while (true) {
                         val event = awaitPointerEvent(PointerEventPass.Initial)
                         appState.isShiftPressed = event.keyboardModifiers.isShiftPressed
-                        appState.isMouseInteraction =
-                            event.changes.any { it.type == PointerType.Mouse }
+                        val activeChange = event.changes.firstOrNull { it.pressed } ?: event.changes.firstOrNull()
+                        if (activeChange != null) {
+                            appState.isMouseInteraction = (activeChange.type == PointerType.Mouse)
+                        }
                     }
                 }
             }

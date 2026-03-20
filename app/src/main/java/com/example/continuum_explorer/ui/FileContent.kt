@@ -18,12 +18,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
@@ -38,11 +41,11 @@ import com.example.continuum_explorer.utils.MarqueeAutoScroller
 import com.example.continuum_explorer.utils.MarqueeRenderer
 import com.example.continuum_explorer.utils.containerGestures
 import com.example.continuum_explorer.utils.contextMenuDetector
-import com.example.continuum_explorer.utils.updateMarqueeSelection
+import com.example.continuum_explorer.utils.rememberMarquee
 import kotlinx.coroutines.delay
 
 /**
- * The primary view for displaying files. 
+ * The primary view for displaying files.
  * Handles layout (Grid vs List), selection marquee, and auto-scrolling.
  */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -54,7 +57,7 @@ fun FileContent(
     val focusRequester = remember { FocusRequester() }
 
     // Request focus logic:
-    // We only take focus if the search UI is NOT active. 
+    // We only take focus if the search UI is NOT active.
     // This prevents the file list from stealing focus while the user is typing or searching.
     LaunchedEffect(appState.isSearchUIActive) {
         if (!appState.isSearchUIActive) {
@@ -75,6 +78,9 @@ fun FileContent(
     // Marquee (drag-to-select) state
     var dragStart by remember { mutableStateOf<Offset?>(null) }
     var dragEnd by remember { mutableStateOf<Offset?>(null) }
+
+    val marquee = rememberMarquee()
+
     var containerCoordinates by remember { mutableStateOf<LayoutCoordinates?>(null) }
 
     var mousePosition by remember { mutableStateOf<Offset?>(null) }
@@ -84,14 +90,14 @@ fun FileContent(
     var menuOffset by remember { mutableStateOf(DpOffset.Zero)}
 
     // We recreate the grid state only when the files for a new path are actually loaded.
-    // Basing the key on loadedPathKey instead of currentPath prevents the scroll position 
+    // Basing the key on loadedPathKey instead of currentPath prevents the scroll position
     // from resetting (jumping to top) while the old files are still being displayed during loading.
     val gridState = key(appState.loadedPathKey) {
         rememberLazyGridState(
             initialFirstVisibleItemIndex = appState.scrollToItemIndex ?: 0
         )
     }
-    
+
     // Clear the scroll target after we've used it for initialization
     LaunchedEffect(gridState) {
         if (appState.scrollToItemIndex != null) {
@@ -100,13 +106,28 @@ fun FileContent(
     }
 
     val density = LocalDensity.current
+    val viewMode = appState.activeViewMode
 
+    val columnCount = remember (
+        appState.activeViewMode,
+        containerCoordinates?.size?.width,
+        appState.folderConfigs.gridItemSize,
+        density
+    ){
+        val width = containerCoordinates?.size?.width ?: 0
+        if (viewMode == ViewMode.GRID && width > 0) {
+            // Calculate usable width by subtracting horizontal padding:
+            // 1. Modifier padding (32dp left + 32dp right = 64dp)
+            // 2. Content padding (8dp left + 8dp right = 16dp)
+            // Total = 80dp
 
-    /**
-     * Re-calculates which items are inside the marquee rectangle.
-     */
-    fun doMarqueeUpdate(start: Offset?, end: Offset?) {
-        updateMarqueeSelection(start, end, itemPositions, selectionManager)
+            val gridItemSize = appState.folderConfigs.gridItemSize
+
+            val totalPaddingPx = with(density) { 80.dp.toPx() }
+            val gridItemSizePx = with(density) { gridItemSize.dp.toPx() }
+            val availableGridWidthPx = (width - totalPaddingPx).coerceAtLeast(0f)
+            (availableGridWidthPx / gridItemSizePx).toInt().coerceAtLeast(1)
+        }  else 1
     }
 
     // Auto-Scroll Logic: Keeps the focused (lead) item visible when using arrow keys
@@ -152,7 +173,18 @@ fun FileContent(
         containerCoordinates = containerCoordinates,
         gridState = gridState,
         onDragStartChange = { dragStart = it },
-        onSelectionChange = { start, end -> doMarqueeUpdate(start, end) }
+        onSelectionChange = { start, end ->
+            marquee.updateSelection(
+                start = start,
+                end = end,
+                itemPositions = itemPositions,
+                allFiles = appState.files,
+                columnCount = columnCount,
+                onSelectionChange = { selectedFiles ->
+                    selectionManager.updateSelectionFromDrag(selectedFiles)
+                }
+            )
+        }
     )
 
     // Debounced Loading state: only show spinner if loading takes more than 400ms
@@ -169,24 +201,43 @@ fun FileContent(
 
     Box(modifier = Modifier
         .fillMaxSize()
+        .clipToBounds()
         .onGloballyPositioned { containerCoordinates = it }
         .containerGestures(
             selectionManager = selectionManager,
             focusRequester = focusRequester,
             viewMode = appState.activeViewMode,
-            gridItemSize = appState.folderConfigs.gridItemSize,
+            columns = columnCount,
             onZoom = { factor ->
                 val newSize = (appState.folderConfigs.gridItemSize * factor).toInt()
                 // Call the new function that saves the size to memory
-                appState.folderConfigs.updateGridSize(newSize.coerceIn(60, 300), appState.getCurrentStorageKey())
+                appState.folderConfigs.updateGridSize(
+                    newSize.coerceIn(60, 300),
+                    appState.getCurrentStorageKey()
+                )
             },
-            onDragStart = {
-                dragStart = it
+            onDragStart = { offset ->
+                dragStart = offset
+
+                // Reset the math variables for the new drag
+                marquee.reset()
+
                 selectionManager.clear(true)
             },
             onDrag = { offset ->
                 dragEnd = offset
-                doMarqueeUpdate(dragStart, dragEnd)
+
+                // Run the math and update the selection
+                marquee.updateSelection(
+                    start = dragStart,
+                    end = dragEnd,
+                    itemPositions = itemPositions,
+                    allFiles = appState.files,
+                    columnCount = columnCount,
+                    onSelectionChange = { selectedFiles ->
+                        selectionManager.updateSelectionFromDrag(selectedFiles)
+                    }
+                )
             },
             onDragEnd = { dragStart = null; dragEnd = null },
             mousePosition = { position -> mousePosition = position },
@@ -210,44 +261,61 @@ fun FileContent(
         }
 
         Column {
-            // Header for Details mode providing column sorting and resizing
+            // 1. Track the exact height of the header in pixels
+            var headerHeightPx by remember { mutableFloatStateOf(0f) }
+
             if (appState.activeViewMode == ViewMode.DETAILS) {
-                DetailsHeader(appState = appState)
+                // Wrap the header in a Box to silently measure its height
+                Box(
+                    modifier = Modifier.onGloballyPositioned { coordinates ->
+                        headerHeightPx = coordinates.size.height.toFloat()
+                    }
+                ) {
+                    DetailsHeader(appState = appState)
+                }
+            } else {
+                headerHeightPx = 0f
             }
 
-            LazyVerticalGrid(
-                state = gridState,
-                columns = when (appState.activeViewMode) {
-                    ViewMode.GRID  -> GridCells.Adaptive(minSize = appState.folderConfigs.gridItemSize.dp)
-                    else -> GridCells.Fixed(1)
-                },
+            // 2. Wrap the Grid and Renderer in a Box that fills the rest of the screen
+            Box(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 32.dp),
-                contentPadding = PaddingValues(8.dp)
+                    .weight(1f) // Takes up all space BELOW the header
+                    .clipToBounds() // CUTS OFF the blue box so it doesn't draw over the header!
             ) {
-                items(
-                    items = appState.files,
-                    key = { it.absolutePath }
-                ) { file ->
-                    FileView(
-                        file = file,
-                        itemPositions = itemPositions,
-                        containerCoordinates = containerCoordinates,
-                        mousePosition = mousePosition,
-                        appState = appState,
-                        focusRequester = focusRequester
-                    )
+                LazyVerticalGrid(
+                    state = gridState,
+                    columns = when (appState.activeViewMode) {
+                        ViewMode.GRID  -> GridCells.Adaptive(minSize = appState.folderConfigs.gridItemSize.dp)
+                        else -> GridCells.Fixed(1)
+                    },
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 32.dp),
+                    contentPadding = PaddingValues(8.dp)
+                ) {
+                    items(
+                        items = appState.files,
+                        key = { it.absolutePath }
+                    ) { file ->
+                        FileView(
+                            file = file,
+                            itemPositions = itemPositions,
+                            containerCoordinates = containerCoordinates,
+                            mousePosition = mousePosition,
+                            appState = appState,
+                            focusRequester = focusRequester
+                        )
+                    }
                 }
+
+                // 3. Shift the visual drawing coordinates up by the header height!
+                MarqueeRenderer(
+                    dragStart = dragStart?.let { Offset(it.x, it.y - headerHeightPx) },
+                    dragEnd = dragEnd?.let { Offset(it.x, it.y - headerHeightPx) }
+                )
             }
         }
-
-        // The visual selection rectangle
-        MarqueeRenderer(
-            dragStart = dragStart,
-            dragEnd = dragEnd,
-            containerCoordinates = containerCoordinates
-        )
 
         // Floating context menu
         Box(modifier = Modifier.offset(menuOffset.x, menuOffset.y)) {

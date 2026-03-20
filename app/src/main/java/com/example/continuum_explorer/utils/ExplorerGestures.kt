@@ -90,7 +90,7 @@ fun Modifier.contextMenuDetector(
             while (true) {
                 val event = awaitPointerEvent(pass = pass)
                 val firstChange = event.changes.firstOrNull() ?: continue
-                
+
                 // If the event is already consumed in this pass, and we aren't being "aggressive" (intercepting), skip it.
                 // This prevents the background menu from opening if an item menu was already triggered.
                 if (firstChange.isConsumed && !aggressive) continue
@@ -103,7 +103,7 @@ fun Modifier.contextMenuDetector(
                     val startTime = System.currentTimeMillis()
                     val timeout = viewConfiguration.longPressTimeoutMillis
                     var triggered = false
-                    
+
                     // Manual long press detection to support the specific 'pass' and prevent interference
                     // from child components that might consume the event in the Main pass.
                     while (true) {
@@ -112,7 +112,7 @@ fun Modifier.contextMenuDetector(
                             triggered = true
                             break
                         }
-                        
+
                         val nextEvent = withTimeoutOrNull(timeout - elapsed) {
                             awaitPointerEvent(pass = pass)
                         }
@@ -120,7 +120,7 @@ fun Modifier.contextMenuDetector(
                             triggered = true
                             break
                         }
-                        
+
                         val change = nextEvent.changes.find { it.id == pointerId }
                         // If the change is null, finger was lifted.
                         // If it's no longer pressed, gesture ended.
@@ -131,10 +131,10 @@ fun Modifier.contextMenuDetector(
                             break
                         }
                     }
-                    
+
                     if (triggered) {
                         currentOnContextMenu(firstChange.position)
-                        // Consume the entire gesture to prevent child components (like navigation) 
+                        // Consume the entire gesture to prevent child components (like navigation)
                         // from reacting to the release event.
                         var e = currentEvent
                         while (true) {
@@ -156,7 +156,7 @@ fun Modifier.containerGestures(
     selectionManager: SelectionManager,
     focusRequester: FocusRequester,
     viewMode: ViewMode,
-    gridItemSize: Int,
+    columns: Int,
     onZoom: (Float) -> Unit,
     onDragStart: (Offset) -> Unit,
     onDrag: (Offset) -> Unit,
@@ -166,27 +166,12 @@ fun Modifier.containerGestures(
     gridState: androidx.compose.foundation.lazy.grid.LazyGridState
 ): Modifier = composed {
     val context = LocalContext.current
-    val density = LocalDensity.current
-    var containerWidthPx by remember { mutableIntStateOf(0) }
 
-    val columnCount = when (viewMode) {
-        ViewMode.GRID -> {
-            // Calculate usable width by subtracting horizontal padding:
-            // 1. Modifier padding (32dp left + 32dp right = 64dp)
-            // 2. Content padding (8dp left + 8dp right = 16dp)
-            // Total = 80dp
-            val totalPaddingPx = with(density) { 80.dp.toPx() }
-            val gridItemSizePx = with(density) { gridItemSize.dp.toPx() }
-            val availableGridWidthPx = (containerWidthPx - totalPaddingPx).coerceAtLeast(0f)
-            (availableGridWidthPx / gridItemSizePx).toInt().coerceAtLeast(1)
-        }
-        else -> 1
-    }
+    val currentOnDragStart by rememberUpdatedState(onDragStart)
+    val currentOnDrag by rememberUpdatedState(onDrag)
+    val currentOnDragEnd by rememberUpdatedState(onDragEnd)
 
     this
-        .onGloballyPositioned { coordinates ->
-            containerWidthPx = coordinates.size.width
-        }
         .focusRequester(focusRequester)
         .focusProperties {
             left = FocusRequester.Cancel
@@ -242,11 +227,11 @@ fun Modifier.containerGestures(
 
                 when (keyEvent.key) {
                     Key.DirectionUp -> {
-                        selectionManager.moveSelection(-columnCount, shift, ctrl, clamp = false); true
+                        selectionManager.moveSelection(-columns, shift, ctrl, clamp = false); true
                     }
 
                     Key.DirectionDown -> {
-                        selectionManager.moveSelection(columnCount, shift, ctrl, clamp = false); true
+                        selectionManager.moveSelection(columns, shift, ctrl, clamp = false); true
                     }
 
 
@@ -383,15 +368,15 @@ fun Modifier.containerGestures(
                         val totalDistance = (newChange.position - down.position).getDistance()
                         if (!dragStarted && totalDistance > dragThreshold) {
                             dragStarted = true
-                            onDragStart(down.position)
+                            currentOnDragStart(down.position)
                         }
                         if (dragStarted) {
-                            onDrag(newChange.position)
+                            currentOnDrag(newChange.position)
                             newChange.consume()
                         }
                         change = newChange
                     }
-                    onDragEnd()
+                    currentOnDragEnd()
                     focusRequester.requestFocus()
                 }
             }
@@ -503,93 +488,88 @@ fun Modifier.fileDragSource(
     appState: FileExplorerState
 ): Modifier = composed {
     val context = LocalContext.current
-    // Ensures we only start the transfer once per drag session
-    var hasStartedTransfer by remember { mutableStateOf(false) }
 
-    // variable to track the state at the start of the touch
     var wasAlreadySelectedAtPress by remember { mutableStateOf(false) }
 
-    // prevent dragging if the first long-press just selected the file
-    var canDragThisSession by remember { mutableStateOf(false) }
-
-
     this
-
         .pointerInput(file) {
             awaitPointerEventScope {
                 while (true) {
-                    val event = awaitPointerEvent(PointerEventPass.Initial) // Check BEFORE selection logic
+                    val event = awaitPointerEvent(PointerEventPass.Initial)
                     if (event.type == PointerEventType.Press) {
-                        // Capture the state at the exact moment of impact
                         wasAlreadySelectedAtPress = selectionManager.isSelected(file)
-                        // Safety: Reset the gate every time a new finger touches
-                        canDragThisSession = false
                     }
                 }
             }
         }
-
         .dragAndDropSource(block = {
+            // Safely capture the drag scope so startTransfer knows where to execute
+            val dragScope = this
 
-        if (appState.isMouseInteraction) {
+            awaitEachGesture {
+                // 1. Wait for the user to press the file, and instantly check the device type
+                val down = awaitFirstDown(requireUnconsumed = false)
+                val isMouse = down.type == PointerType.Mouse
 
-            detectDragGestures(
-                onDragStart = { _ ->
-                    hasStartedTransfer = false
-                    prepareInternalDragState(file, selectionManager, appState)
-                },
-                onDrag = { _, _ ->
-                    // Once the user moves the mouse, we try to start the system drag operation
-                    if (!hasStartedTransfer) {
-                        val transferData =
-                            createDragTransferData(context, selectionManager.selectedItems)
-                        if (transferData != null) {
-                            hasStartedTransfer = true
-                            startTransfer(transferData)
+                if (isMouse) {
+                    // ==========================================
+                    // MOUSE LOGIC: Instant Drag
+                    // ==========================================
+                    var isDragging = false
+
+                    while (true) {
+                        val event = awaitPointerEvent()
+                        val change = event.changes.firstOrNull { it.id == down.id }
+                        if (change == null || !change.pressed) break
+
+                        val distance = (change.position - down.position).getDistance()
+                        if (distance > viewConfiguration.touchSlop) {
+                            isDragging = true
+                            break
                         }
                     }
-                },
-                onDragEnd = { hasStartedTransfer = false },
-                onDragCancel = { hasStartedTransfer = false }
-            )
-        } else {
 
-            detectDragGesturesAfterLongPress(
-                onDragStart = { _ ->
-                    // 3. ONLY allow drag if it was already selected WHEN PRESSED.
-                    // If the long-press JUST selected it now, this will be false.
-                    if (wasAlreadySelectedAtPress) {
-                        canDragThisSession = true
-                        hasStartedTransfer = false
+                    if (isDragging) {
                         prepareInternalDragState(file, selectionManager, appState)
-                    } else {
-                        canDragThisSession = false
-                    }
-                },
-                onDrag = { _, _ ->
-                    // 4. Check the gate before starting system transfer
-                    if (canDragThisSession && !hasStartedTransfer) {
-                        val transferData = createDragTransferData(context, selectionManager.selectedItems)
-                        if (transferData != null) {
-                            hasStartedTransfer = true
-                            startTransfer(transferData)
+                        createDragTransferData(context, selectionManager.selectedItems)?.let {
+                            // --- EXPLICITLY CALL dragScope.startTransfer ---
+                            dragScope.startTransfer(it)
                         }
                     }
-                },
-                onDragEnd = {
-                    hasStartedTransfer = false
-                    canDragThisSession = false
-                },
-                onDragCancel = {
-                    hasStartedTransfer = false
-                    canDragThisSession = false
+
+                } else {
+                    // ==========================================
+                    // TOUCH LOGIC: Long Press Drag
+                    // ==========================================
+
+                    val longPress = awaitLongPressOrCancellation(down.id)
+
+                    if (longPress != null && wasAlreadySelectedAtPress) {
+                        var isDragging = false
+
+                        while (true) {
+                            val event = awaitPointerEvent()
+                            val change = event.changes.firstOrNull { it.id == down.id }
+                            if (change == null || !change.pressed) break
+
+                            val distance = (change.position - longPress.position).getDistance()
+                            if (distance > viewConfiguration.touchSlop) {
+                                isDragging = true
+                                break
+                            }
+                        }
+
+                        if (isDragging) {
+                            prepareInternalDragState(file, selectionManager, appState)
+                            createDragTransferData(context, selectionManager.selectedItems)?.let {
+                                // --- EXPLICITLY CALL dragScope.startTransfer ---
+                                dragScope.startTransfer(it)
+                            }
+                        }
+                    }
                 }
-            )
-
-        }
-
-
-    })
+            }
+        })
 }
 
 /**
@@ -646,14 +626,14 @@ fun Modifier.fileDropTarget(
 ): Modifier = composed {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    
+
     val target = remember(appState, destPath, destSafUri) {
         object : DragAndDropTarget {
             override fun onDrop(event: DragAndDropEvent): Boolean {
                 val androidEvent = event.toAndroidDragEvent()
                 val clipData = androidEvent.clipData
                 if (clipData != null) {
-                    // Determine actual destination: 
+                    // Determine actual destination:
                     // If target is explicitly provided, only use that and ignore defaults
                     val isTargeted = destPath != null || destSafUri != null
                     val actualPath = if (isTargeted) destPath else appState.currentPath
@@ -678,12 +658,12 @@ fun Modifier.fileDropTarget(
                         context.startActivity(intent)
 
                         val isMove = (PendingCut.files.isNotEmpty() && appState.isShiftPressed)
-                        
+
                         // Ensure PendingCut.isActive matches the determined operation mode
                         if (PendingCut.files.isNotEmpty()) {
                             PendingCut.isActive = isMove
                         }
-                        
+
                         val pastedNames = pasteFromClipboard(
                             context = context,
                             currentPath = actualPath,
@@ -691,12 +671,12 @@ fun Modifier.fileDropTarget(
                             preloadedClipData = clipData
                         )
                         appState.refresh()
-                        
+
                         // If it was a Move operation, notify other windows (like the source) to refresh
                         if (isMove) {
                             GlobalEvents.triggerRefresh()
                         }
-                        
+
                         // Optionally select the newly dropped files if we are currently viewing the destination
                         if (pastedNames.isNotEmpty() && actualPath == appState.currentPath && actualSafUri == appState.currentSafUri) {
                             val pastedFiles = appState.files.filter { pastedNames.contains(it.name) }

@@ -16,6 +16,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextAlign
@@ -32,7 +33,7 @@ import com.example.continuum_explorer.utils.IconHelper.isMimeTypePreviewable
 import kotlinx.coroutines.delay
 
 /**
- * Renders a single file or folder item. 
+ * Renders a single file or folder item.
  */
 @Composable
 fun FileView(
@@ -64,13 +65,16 @@ fun FileView(
     val isNativeHovered by interactionSource.collectIsHoveredAsState()
 
     val finalIsHovered = isMouseHovered || isNativeHovered
+    val isGridView = appState.activeViewMode == ViewMode.GRID
 
-    Box {
+    // Add padding to the outer box so the user can click/drag in the empty space between grid items
+    Box(modifier = if (isGridView) Modifier.padding(4.dp) else Modifier) {
         // We put all gesture detectors on this Surface.
         // We avoid putting selection-based modifiers here so it doesn't recompose
         // and cancel active gestures (like dragging) when selection changes.
         Surface(
             color = Color.Transparent,
+            shape = if (isGridView) RoundedCornerShape(8.dp) else RectangleShape,
             modifier = Modifier
                 .fillMaxWidth()
                 .fileDragSource(file, selectionManager, appState)
@@ -100,7 +104,8 @@ fun FileView(
                 }
         ) {
             // Internal content that handles the background and actual visuals
-            Box(modifier = Modifier.selectionBackground(file, selectionManager, finalIsHovered)) {
+            val shape = if (isGridView) RoundedCornerShape(8.dp) else RectangleShape
+            Box(modifier = Modifier.selectionBackground(file, selectionManager, finalIsHovered, shape)) {
                 when (appState.activeViewMode) {
                     ViewMode.GRID -> {
                         Column(

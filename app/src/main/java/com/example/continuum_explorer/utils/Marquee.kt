@@ -1,15 +1,19 @@
 package com.example.continuum_explorer.utils
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -21,29 +25,121 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.example.continuum_explorer.model.UniversalFile
 import kotlinx.coroutines.delay
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.drawscope.Stroke
 
 /**
- * Calculates which files are inside the drag-selection rectangle and updates the selection manager.
+ * State holder for 2D Marquee selections.
  */
-fun updateMarqueeSelection(
-    start: Offset?,
-    end: Offset?,
-    itemPositions: Map<UniversalFile, Rect>,
-    selectionManager: SelectionManager
-) {
-    if (start != null && end != null) {
-        val selectionRect = Rect(
-            left = minOf(start.x, end.x),
-            top = minOf(start.y, end.y),
-            right = maxOf(start.x, end.x),
-            bottom = maxOf(start.y, end.y)
-        )
-        // Find all file items whose bounding box overlaps with the selection rectangle
-        val touchedFiles = itemPositions.filter { entry ->
-            selectionRect.overlaps(entry.value)
-        }.keys
-        selectionManager.updateSelectionFromDrag(touchedFiles)
+class Marquee {
+    var startRow by mutableIntStateOf(-1)
+        private set
+    var startCol by mutableIntStateOf(-1)
+        private set
+    var currentRow by mutableIntStateOf(-1)
+        private set
+    var currentCol by mutableIntStateOf(-1)
+        private set
+
+    /**
+     * Resets the logical grid boundaries when a new drag starts.
+     */
+    fun reset() {
+        startRow = -1
+        startCol = -1
+        currentRow = -1
+        currentCol = -1
     }
+
+    /**
+     * Calculates the logical grid bounds and returns the selected files.
+     */
+    fun updateSelection(
+        start: Offset?,
+        end: Offset?,
+        itemPositions: Map<UniversalFile, Rect>,
+        allFiles: List<UniversalFile>,
+        columnCount: Int,
+        onSelectionChange: (Set<UniversalFile>) -> Unit
+    ) {
+        if (start == null || end == null) return
+
+        // 1. Create the physical bounding box
+        val left = minOf(start.x, end.x)
+        val right = maxOf(start.x, end.x)
+        val top = minOf(start.y, end.y)
+        val bottom = maxOf(start.y, end.y)
+        val marqueeRect = Rect(left, top, right, bottom)
+
+        // 2. Lock the start anchor safely (bypasses padding issues)
+        if (startRow == -1) {
+            val startItem = itemPositions.minByOrNull { (_, rect) ->
+                val dx = rect.center.x - start.x
+                val dy = rect.center.y - start.y
+                (dx * dx) + (dy * dy)
+            }?.key
+
+            val startIndex = if (startItem != null) allFiles.indexOf(startItem) else -1
+
+            if (startIndex != -1) {
+                startRow = startIndex / columnCount
+                startCol = startIndex % columnCount
+            }
+        }
+
+        // 3. Find the current leading edge of the drag
+        val intersectingIndices = itemPositions.entries
+            .filter { marqueeRect.overlaps(it.value) }
+            .map { allFiles.indexOf(it.key) }
+            .filter { it != -1 }
+
+        if (intersectingIndices.isNotEmpty()) {
+            val draggingDown = start.y <= end.y
+            val draggingRight = start.x <= end.x
+
+            currentRow = if (draggingDown) {
+                intersectingIndices.maxOf { it / columnCount }
+            } else {
+                intersectingIndices.minOf { it / columnCount }
+            }
+
+            currentCol = if (draggingRight) {
+                intersectingIndices.maxOf { it % columnCount }
+            } else {
+                intersectingIndices.minOf { it % columnCount }
+            }
+        }
+
+        // 4. Apply the flawless 2D conversion math
+        if (startRow != -1 && currentRow != -1) {
+            val finalMinRow = kotlin.comparisons.minOf(startRow, currentRow)
+            val finalMaxRow = kotlin.comparisons.maxOf(startRow, currentRow)
+            val finalMinCol = kotlin.comparisons.minOf(startCol, currentCol)
+            val finalMaxCol = kotlin.comparisons.maxOf(startCol, currentCol)
+
+            val selectedFiles = mutableSetOf<UniversalFile>()
+            for (i in allFiles.indices) {
+                val r = i / columnCount
+                val c = i % columnCount
+
+                if (r in finalMinRow..finalMaxRow && c in finalMinCol..finalMaxCol) {
+                    selectedFiles.add(allFiles[i])
+                }
+            }
+
+            // Pass the perfectly calculated list back to the UI
+            onSelectionChange(selectedFiles)
+        }
+    }
+}
+
+/**
+ * Remembers the Marquee across recompositions.
+ */
+@Composable
+fun rememberMarquee(): Marquee {
+    return remember { Marquee() }
 }
 
 /**
@@ -79,7 +175,7 @@ fun MarqueeAutoScroller(
                 if (endPos.y < scrollThreshold) {
                     val ratio = (scrollThreshold - endPos.y) / scrollThreshold
                     scrollDelta = -maxScrollSpeed * ratio.coerceIn(0f, 1f)
-                } 
+                }
                 // Scroll down if mouse is near the bottom edge
                 else if (endPos.y > containerHeight - scrollThreshold) {
                     val ratio = (endPos.y - (containerHeight - scrollThreshold)) / scrollThreshold
@@ -111,34 +207,36 @@ fun MarqueeAutoScroller(
 @Composable
 fun MarqueeRenderer(
     dragStart: Offset?,
-    dragEnd: Offset?,
-    containerCoordinates: LayoutCoordinates?
+    dragEnd: Offset?
 ) {
-    val density = LocalDensity.current
     if (dragStart != null && dragEnd != null) {
-        val fullRect = Rect(
-            left = minOf(dragStart.x, dragEnd.x),
-            top = minOf(dragStart.y, dragEnd.y),
-            right = maxOf(dragStart.x, dragEnd.x),
-            bottom = maxOf(dragStart.y, dragEnd.y)
-        )
+        // Canvas takes up the exact size of your File Explorer box
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            val left = minOf(dragStart.x, dragEnd.x)
+            val top = minOf(dragStart.y, dragEnd.y)
+            val right = maxOf(dragStart.x, dragEnd.x)
+            val bottom = maxOf(dragStart.y, dragEnd.y)
 
-        val containerSize = containerCoordinates?.size
-        if (containerSize != null) {
-            // Clip the selection rectangle to the visible area of the container
-            val containerRect = Rect(0f, 0f, containerSize.width.toFloat(), containerSize.height.toFloat())
-            val visibleRect = fullRect.intersect(containerRect)
+            val width = right - left
+            val height = bottom - top
 
-            if (visibleRect.width > 0 && visibleRect.height > 0) {
-                Box(
-                    modifier = Modifier
-                        .offset { IntOffset(visibleRect.left.toInt(), visibleRect.top.toInt()) }
-                        .size(
-                            width = with(density) { visibleRect.width.toDp() },
-                            height = with(density) { visibleRect.height.toDp() }
-                        )
-                        .background(Color(0x332196F3)) // Semi-transparent blue
-                        .border(1.dp, Color(0xFF2196F3))
+            if (width > 0f && height > 0f) {
+                val rectTopLeft = Offset(left, top)
+                val rectSize = Size(width, height)
+
+                // 1. Paint the semi-transparent blue fill
+                drawRect(
+                    color = Color(0x332196F3),
+                    topLeft = rectTopLeft,
+                    size = rectSize
+                )
+
+                // 2. Paint the solid blue border
+                drawRect(
+                    color = Color(0xFF2196F3),
+                    topLeft = rectTopLeft,
+                    size = rectSize,
+                    style = Stroke(width = 1.dp.toPx())
                 )
             }
         }
