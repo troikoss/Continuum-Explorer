@@ -1,6 +1,9 @@
-package com.example.continuum_explorer.utils
+package com.example.continuum_explorer.managers
 
+import android.os.Environment
 import androidx.compose.runtime.mutableStateOf
+import com.example.continuum_explorer.utils.removeTrashMetadata
+import com.example.continuum_explorer.utils.saveTrashMetadata
 import java.io.File
 import java.util.Stack
 
@@ -56,7 +59,7 @@ object UndoManager {
                 currentFile.exists() && currentFile.renameTo(oldFile)
             }
             is UndoAction.Recycle -> {
-                val trashDir = File(android.os.Environment.getExternalStorageDirectory(), ".Trash")
+                val trashDir = File(Environment.getExternalStorageDirectory(), ".Trash")
                 var success = true
                 action.recycledItems.forEach { (recycledName, originalPath) ->
                     val recycledFile = File(trashDir, recycledName)
@@ -97,7 +100,7 @@ object UndoManager {
                 oldFile.exists() && oldFile.renameTo(newFile)
             }
             is UndoAction.Recycle -> {
-                val trashDir = File(android.os.Environment.getExternalStorageDirectory(), ".Trash")
+                val trashDir = File(Environment.getExternalStorageDirectory(), ".Trash")
                 var success = true
                 action.recycledItems.forEach { (recycledName, originalPath) ->
                     val originalFile = File(originalPath)

@@ -19,7 +19,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -37,6 +36,9 @@ import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import com.example.continuum_explorer.model.UniversalFile
 import com.example.continuum_explorer.model.ViewMode
+import com.example.continuum_explorer.ui.components.BackgroundContextMenu
+import com.example.continuum_explorer.ui.components.DetailsHeader
+import com.example.continuum_explorer.utils.FileExplorerState
 import com.example.continuum_explorer.utils.MarqueeAutoScroller
 import com.example.continuum_explorer.utils.MarqueeRenderer
 import com.example.continuum_explorer.utils.containerGestures

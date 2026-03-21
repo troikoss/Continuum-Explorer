@@ -1,5 +1,6 @@
-package com.example.continuum_explorer
+package com.example.continuum_explorer.ui.activities
 
+import android.content.Context
 import android.os.Bundle
 import android.text.format.Formatter
 import androidx.activity.ComponentActivity
@@ -59,13 +60,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.continuum_explorer.model.UniversalFile
 import com.example.continuum_explorer.ui.theme.FileExplorerTheme
-import com.example.continuum_explorer.utils.ArchiveSettings
-import com.example.continuum_explorer.utils.CollisionResult
-import com.example.continuum_explorer.utils.DeleteResult
-import com.example.continuum_explorer.utils.ExtractSettings
-import com.example.continuum_explorer.utils.FileOperationsManager
+import com.example.continuum_explorer.managers.ArchiveSettings
+import com.example.continuum_explorer.managers.CollisionResult
+import com.example.continuum_explorer.managers.DeleteResult
+import com.example.continuum_explorer.managers.ExtractSettings
+import com.example.continuum_explorer.managers.FileOperationsManager
 import com.example.continuum_explorer.utils.NotificationHelper
-import com.example.continuum_explorer.utils.PopupType
+import com.example.continuum_explorer.managers.PopupType
 import com.example.continuum_explorer.utils.calculateSizeRecursively
 import com.example.continuum_explorer.utils.getFileType
 import com.example.continuum_explorer.utils.getImageResolution
@@ -77,6 +78,7 @@ import kotlinx.coroutines.withContext
 import net.lingala.zip4j.model.enums.CompressionLevel
 import net.lingala.zip4j.model.enums.CompressionMethod
 import net.lingala.zip4j.model.enums.EncryptionMethod
+import java.text.NumberFormat
 import java.text.SimpleDateFormat
 import java.util.Locale
 
@@ -965,9 +967,9 @@ fun DetailRow(label: String, value: String) {
 }
 
 // Helper to format text like: "1.2 MB (1,234,567 bytes)"
-private fun formatSizeWithBytes(context: android.content.Context, sizeInBytes: Long): String {
-    val formattedSize = android.text.format.Formatter.formatFileSize(context, sizeInBytes)
-    val exactBytes = java.text.NumberFormat.getInstance().format(sizeInBytes)
+private fun formatSizeWithBytes(context: Context, sizeInBytes: Long): String {
+    val formattedSize = Formatter.formatFileSize(context, sizeInBytes)
+    val exactBytes = NumberFormat.getInstance().format(sizeInBytes)
     return "$formattedSize ($exactBytes bytes)"
 }
 

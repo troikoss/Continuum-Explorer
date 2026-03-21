@@ -1,4 +1,4 @@
-package com.example.continuum_explorer.ui
+package com.example.continuum_explorer.ui.components
 
 import android.content.Intent
 import android.widget.Toast
@@ -49,9 +49,12 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.documentfile.provider.DocumentFile
-import com.example.continuum_explorer.SettingsActivity
+import com.example.continuum_explorer.ui.activities.SettingsActivity
 import com.example.continuum_explorer.model.NavLocation
 import com.example.continuum_explorer.model.ScreenSize
+import com.example.continuum_explorer.model.UniversalFile
+import com.example.continuum_explorer.utils.FileExplorerState
+import com.example.continuum_explorer.utils.ZipUtils
 import com.example.continuum_explorer.utils.fileDropTarget
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -645,7 +648,7 @@ fun TopBar(
                                                     appState.navigateTo(newFile, null)
                                                     addressBar = false
                                                     focusManager.clearFocus()
-                                                } else if (com.example.continuum_explorer.utils.ZipUtils.isArchive(newFile.toUniversal())) {
+                                                } else if (ZipUtils.isArchive(newFile.toUniversal())) {
                                                     appState.navigateTo(null, null, archiveFile = newFile, archivePath = "")
                                                     addressBar = false
                                                     focusManager.clearFocus()
@@ -719,7 +722,7 @@ fun TopBar(
     }
 }
 
-private fun File.toUniversal() = com.example.continuum_explorer.model.UniversalFile(
+private fun File.toUniversal() = UniversalFile(
     name = name,
     isDirectory = isDirectory,
     lastModified = lastModified(),

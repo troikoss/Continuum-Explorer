@@ -1,4 +1,4 @@
-package com.example.continuum_explorer.utils
+package com.example.continuum_explorer.managers
 
 import android.content.Context
 import android.net.Uri
@@ -9,7 +9,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.lang.StringBuilder
 import java.util.regex.Pattern
+import kotlin.collections.iterator
+import kotlin.text.iterator
 
 object SearchManager {
 
@@ -102,7 +105,7 @@ object SearchManager {
             val fileKind = getFileKind(file)
             return fileKind == kind || fileKind.contains(kind)
         } else if (lowerTerm.contains("*") || lowerTerm.contains("?")) {
-            val regexBuilder = java.lang.StringBuilder()
+            val regexBuilder = StringBuilder()
             regexBuilder.append("^")
             for (c in lowerTerm) {
                 when (c) {

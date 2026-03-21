@@ -46,8 +46,15 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import com.example.continuum_explorer.model.ScreenSize
-import com.example.continuum_explorer.utils.DetailsMode
-import com.example.continuum_explorer.utils.SettingsManager
+import com.example.continuum_explorer.ui.components.CommandBar
+import com.example.continuum_explorer.ui.components.DetailsBar
+import com.example.continuum_explorer.ui.components.DetailsPane
+import com.example.continuum_explorer.ui.components.NavigationPane
+import com.example.continuum_explorer.ui.components.TabBar
+import com.example.continuum_explorer.ui.components.TopBar
+import com.example.continuum_explorer.managers.DetailsMode
+import com.example.continuum_explorer.managers.SettingsManager
+import com.example.continuum_explorer.utils.FileExplorerState
 import com.example.continuum_explorer.utils.VerticalResizeHandle
 import com.example.continuum_explorer.utils.ZipUtils
 import com.example.continuum_explorer.utils.fileDropTarget

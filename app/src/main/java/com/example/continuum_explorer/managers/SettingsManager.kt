@@ -1,8 +1,9 @@
-package com.example.continuum_explorer.utils
+package com.example.continuum_explorer.managers
 
 import android.content.Context
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
+import com.example.continuum_explorer.utils.GlobalEvents
 
 enum class DetailsMode {
     OFF,

@@ -1,4 +1,4 @@
-package com.example.continuum_explorer.ui
+package com.example.continuum_explorer.ui.components
 
 import android.content.ClipboardManager
 import android.content.Context
@@ -49,6 +49,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.InputChip
 import androidx.compose.material3.InputChipDefaults
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SuggestionChipDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -70,7 +71,8 @@ import androidx.compose.ui.unit.dp
 import com.example.continuum_explorer.model.FileColumnType
 import com.example.continuum_explorer.model.ScreenSize
 import com.example.continuum_explorer.model.ViewMode
-import com.example.continuum_explorer.utils.UndoManager
+import com.example.continuum_explorer.utils.FileExplorerState
+import com.example.continuum_explorer.managers.UndoManager
 import com.example.continuum_explorer.utils.ZipUtils
 import com.example.continuum_explorer.utils.openWith
 import com.example.continuum_explorer.utils.shareFiles
@@ -110,7 +112,7 @@ fun CommandBar(
     Surface(
         modifier = Modifier
             .fillMaxWidth(),
-        color = androidx.compose.material3.MaterialTheme.colorScheme.surfaceContainer
+        color = MaterialTheme.colorScheme.surfaceContainer
     ) {
         Row(
             modifier = Modifier

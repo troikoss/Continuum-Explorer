@@ -1,4 +1,4 @@
-package com.example.continuum_explorer
+package com.example.continuum_explorer.ui.activities
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -20,9 +20,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.continuum_explorer.ui.theme.FileExplorerTheme
-import com.example.continuum_explorer.utils.DeleteBehavior
-import com.example.continuum_explorer.utils.SettingsManager
-import com.example.continuum_explorer.utils.ThemeMode
+import com.example.continuum_explorer.managers.DeleteBehavior
+import com.example.continuum_explorer.managers.DetailsMode
+import com.example.continuum_explorer.managers.SettingsManager
+import com.example.continuum_explorer.managers.ThemeMode
 
 class SettingsActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -91,9 +92,9 @@ fun SettingsScreen(onBack: () -> Unit) {
                 headlineContent = { Text("Details (Large screens only)") },
                 supportingContent = {
                     val text = when (detailsMode) {
-                        com.example.continuum_explorer.utils.DetailsMode.OFF -> "Hidden"
-                        com.example.continuum_explorer.utils.DetailsMode.PANE -> "Side Pane"
-                        com.example.continuum_explorer.utils.DetailsMode.BAR -> "Bottom Bar"
+                        DetailsMode.OFF -> "Hidden"
+                        DetailsMode.PANE -> "Side Pane"
+                        DetailsMode.BAR -> "Bottom Bar"
                     }
                     Text(text)
                 },
@@ -230,25 +231,25 @@ fun SettingsScreen(onBack: () -> Unit) {
                         Column {
                             OptionItem(
                                 label = "Hidden",
-                                selected = detailsMode == com.example.continuum_explorer.utils.DetailsMode.OFF,
+                                selected = detailsMode == DetailsMode.OFF,
                                 onClick = {
-                                    SettingsManager.setDetailsMode(context, com.example.continuum_explorer.utils.DetailsMode.OFF)
+                                    SettingsManager.setDetailsMode(context, DetailsMode.OFF)
                                     showDetailsDialog = false
                                 }
                             )
                             OptionItem(
                                 label = "Side Pane",
-                                selected = detailsMode == com.example.continuum_explorer.utils.DetailsMode.PANE,
+                                selected = detailsMode == DetailsMode.PANE,
                                 onClick = {
-                                    SettingsManager.setDetailsMode(context, com.example.continuum_explorer.utils.DetailsMode.PANE)
+                                    SettingsManager.setDetailsMode(context, DetailsMode.PANE)
                                     showDetailsDialog = false
                                 }
                             )
                             OptionItem(
                                 label = "Bottom Bar",
-                                selected = detailsMode == com.example.continuum_explorer.utils.DetailsMode.BAR,
+                                selected = detailsMode == DetailsMode.BAR,
                                 onClick = {
-                                    SettingsManager.setDetailsMode(context, com.example.continuum_explorer.utils.DetailsMode.BAR)
+                                    SettingsManager.setDetailsMode(context, DetailsMode.BAR)
                                     showDetailsDialog = false
                                 }
                             )

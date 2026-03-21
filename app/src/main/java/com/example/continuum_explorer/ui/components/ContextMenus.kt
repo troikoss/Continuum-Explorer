@@ -1,4 +1,4 @@
-package com.example.continuum_explorer.ui
+package com.example.continuum_explorer.ui.components
 
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
@@ -44,6 +44,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -52,6 +53,7 @@ import com.example.continuum_explorer.R
 import com.example.continuum_explorer.model.FileColumnType
 import com.example.continuum_explorer.model.ScreenSize
 import com.example.continuum_explorer.model.ViewMode
+import com.example.continuum_explorer.utils.FileExplorerState
 import com.example.continuum_explorer.utils.ZipUtils
 import com.example.continuum_explorer.utils.openWith
 import com.example.continuum_explorer.utils.shareFiles
@@ -164,7 +166,7 @@ fun ItemContextMenu(
                     },
                     leadingIcon = { Icon(Icons.Default.Splitscreen, null) },
                     trailingIcon = {
-                        Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(
                                 painter = painterResource(id = R.drawable.shift),
                                 contentDescription = null,
@@ -227,7 +229,7 @@ fun ItemContextMenu(
                 },
                 leadingIcon = { Icon(Icons.Default.ContentCut, null) },
                 trailingIcon = {
-                    Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
                             painter = painterResource(id = R.drawable.control),
                             contentDescription = null,
@@ -250,7 +252,7 @@ fun ItemContextMenu(
                 },
                 leadingIcon = { Icon(Icons.Default.CopyAll, null) },
                 trailingIcon = {
-                    Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
                             painter = painterResource(id = R.drawable.control),
                             contentDescription = null,
@@ -273,7 +275,7 @@ fun ItemContextMenu(
                 },
                 leadingIcon = { Icon(Icons.Default.ContentPaste, null) },
                 trailingIcon = {
-                    Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
                             painter = painterResource(id = R.drawable.control),
                             contentDescription = null,
@@ -426,7 +428,7 @@ fun BackgroundContextMenu(
                             onDismiss()
                         },
                         trailingIcon = {
-                            Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(
                                     painter = painterResource(id = R.drawable.control),
                                     contentDescription = null,

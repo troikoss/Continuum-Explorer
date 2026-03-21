@@ -1,4 +1,4 @@
-package com.example.continuum_explorer.ui
+package com.example.continuum_explorer.utils
 
 import android.content.ClipboardManager
 import android.content.Context
@@ -15,13 +15,19 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.documentfile.provider.DocumentFile
-import com.example.continuum_explorer.MainActivity
-import com.example.continuum_explorer.PopUpActivity
+import com.example.continuum_explorer.managers.FileOperationsManager
+import com.example.continuum_explorer.managers.RecentFilesManager
+import com.example.continuum_explorer.managers.SearchManager
+import com.example.continuum_explorer.managers.SelectionManager
+import com.example.continuum_explorer.managers.SettingsManager
+import com.example.continuum_explorer.managers.UndoManager
+import com.example.continuum_explorer.ui.activities.MainActivity
+import com.example.continuum_explorer.ui.activities.PopUpActivity
 import com.example.continuum_explorer.model.*
-import com.example.continuum_explorer.utils.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -904,7 +910,7 @@ class FileExplorerState(
         context.startActivity(intent)
 
         scope.launch {
-            kotlinx.coroutines.delay(500)
+            delay(500)
             val success = renameFile(target, newName)
             withContext(Dispatchers.Main) {
                 if (success) {

@@ -1,4 +1,4 @@
-package com.example.continuum_explorer
+package com.example.continuum_explorer.ui.activities
 
 import android.os.Bundle
 import android.widget.Toast
@@ -6,7 +6,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import com.example.continuum_explorer.ui.FileExplorer
 import com.example.continuum_explorer.ui.theme.FileExplorerTheme
-import com.example.continuum_explorer.utils.SettingsManager
+import com.example.continuum_explorer.managers.SettingsManager
 
 class ArchiveViewerActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {

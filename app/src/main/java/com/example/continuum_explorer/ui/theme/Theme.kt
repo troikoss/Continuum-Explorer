@@ -13,8 +13,8 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.platform.LocalContext
-import com.example.continuum_explorer.utils.SettingsManager
-import com.example.continuum_explorer.utils.ThemeMode
+import com.example.continuum_explorer.managers.SettingsManager
+import com.example.continuum_explorer.managers.ThemeMode
 
 private val DarkColorScheme = darkColorScheme(
     primary = Purple80,

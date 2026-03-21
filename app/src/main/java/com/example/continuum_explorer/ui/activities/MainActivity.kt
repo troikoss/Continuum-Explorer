@@ -1,4 +1,4 @@
-package com.example.continuum_explorer
+package com.example.continuum_explorer.ui.activities
 
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -16,11 +16,12 @@ import coil.ImageLoader
 import coil.decode.VideoFrameDecoder
 import com.example.continuum_explorer.ui.FileExplorer
 import com.example.continuum_explorer.ui.theme.FileExplorerTheme
-import com.example.continuum_explorer.utils.SettingsManager
+import com.example.continuum_explorer.managers.SettingsManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.io.File
 import android.Manifest
+import coil.Coil
 
 class MainActivity : ComponentActivity() {
 
@@ -77,7 +78,7 @@ class MainActivity : ComponentActivity() {
                 .build()
 
             // Set this as the global loader
-            coil.Coil.setImageLoader(videoImageLoader)
+            Coil.setImageLoader(videoImageLoader)
         }
 
         setContent {

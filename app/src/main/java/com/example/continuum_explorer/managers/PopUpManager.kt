@@ -1,4 +1,4 @@
-package com.example.continuum_explorer.utils
+package com.example.continuum_explorer.managers
 
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf

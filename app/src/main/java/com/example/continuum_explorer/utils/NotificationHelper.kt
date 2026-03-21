@@ -13,7 +13,8 @@ import android.text.format.Formatter
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
-import com.example.continuum_explorer.PopUpActivity
+import com.example.continuum_explorer.managers.FileOperationsManager
+import com.example.continuum_explorer.ui.activities.PopUpActivity
 
 object NotificationHelper {
     private const val CHANNEL_ID = "file_explorer_progress"

@@ -1,4 +1,4 @@
-package com.example.continuum_explorer
+package com.example.continuum_explorer.ui.activities
 
 import android.app.Activity
 import android.content.ClipData
@@ -33,7 +33,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.FitScreen
@@ -59,7 +58,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Offset
@@ -79,6 +77,8 @@ import androidx.compose.ui.input.pointer.isTertiaryPressed
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import android.content.ClipboardManager
+import androidx.compose.animation.core.animate
+import androidx.compose.animation.core.tween
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Wallpaper
 import androidx.compose.ui.platform.LocalConfiguration
@@ -87,6 +87,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
+import androidx.core.content.FileProvider
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
@@ -99,6 +100,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
 import kotlinx.coroutines.launch
+import kotlin.math.abs
 
 class ImageViewerActivity : ComponentActivity() {
 
@@ -397,10 +399,10 @@ fun ImageViewerScreen(
                                         coroutineScope.launch {
                                             if (offset.x > swipeThreshold && idx > 0) {
                                                 // 1. Dragged right -> Animate it sliding fully to the right
-                                                androidx.compose.animation.core.animate(
+                                                animate(
                                                     initialValue = offset.x,
                                                     targetValue = screenWidthPx,
-                                                    animationSpec = androidx.compose.animation.core.tween(
+                                                    animationSpec = tween(
                                                         300
                                                     )
                                                 ) { value, _ -> offset = Offset(value, offset.y) }
@@ -411,10 +413,10 @@ fun ImageViewerScreen(
                                                 offset = Offset.Zero
                                             } else if (offset.x < -swipeThreshold && idx < siblingImages.size - 1) {
                                                 // 1. Dragged left -> Animate it sliding fully to the left
-                                                androidx.compose.animation.core.animate(
+                                                animate(
                                                     initialValue = offset.x,
                                                     targetValue = -screenWidthPx,
-                                                    animationSpec = androidx.compose.animation.core.tween(
+                                                    animationSpec = tween(
                                                         300
                                                     )
                                                 ) { value, _ -> offset = Offset(value, offset.y) }
@@ -425,10 +427,10 @@ fun ImageViewerScreen(
                                                 offset = Offset.Zero
                                             } else {
                                                 // Didn't drag far enough. Rubber-band snap back to the center!
-                                                androidx.compose.animation.core.animate(
+                                                animate(
                                                     initialValue = offset.x,
                                                     targetValue = 0f,
-                                                    animationSpec = androidx.compose.animation.core.tween(
+                                                    animationSpec = tween(
                                                         300
                                                     )
                                                 ) { value, _ -> offset = Offset(value, offset.y) }
@@ -649,7 +651,7 @@ fun ImageViewerScreen(
                                     // If your image is a standard file, we convert it securely here:
                                     val contentUri: Uri = if (uri.scheme == "file" || uri.scheme == null) {
                                         val file = File(uri.path ?: uriString)
-                                        androidx.core.content.FileProvider.getUriForFile(
+                                        FileProvider.getUriForFile(
                                             context,
                                             "${context.packageName}.provider",
                                             file
@@ -775,7 +777,7 @@ fun ImageViewerScreen(
                         // Find which thumbnail is physically closest to the center
                         for (item in layoutInfo.visibleItemsInfo) {
                             val itemCenter = item.offset + item.size / 2
-                            val distance = kotlin.math.abs(itemCenter - centerOffset)
+                            val distance = abs(itemCenter - centerOffset)
                             if (distance < minDistance) {
                                 minDistance = distance
                                 closestIndex = item.index
@@ -847,7 +849,7 @@ fun getSecureContentUri(context: Context, uriString: String): Uri {
 
     // Otherwise, it's a raw file, so convert it securely
     val file = File(uri.path ?: uriString)
-    return androidx.core.content.FileProvider.getUriForFile(
+    return FileProvider.getUriForFile(
         context,
         "${context.packageName}.provider",
         file

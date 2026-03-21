@@ -1,4 +1,4 @@
-package com.example.continuum_explorer.ui
+package com.example.continuum_explorer.ui.components
 
 import android.content.Context
 import android.net.Uri
@@ -78,7 +78,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import androidx.documentfile.provider.DocumentFile
-import com.example.continuum_explorer.utils.SettingsManager
+import com.example.continuum_explorer.model.UniversalFile
+import com.example.continuum_explorer.utils.FileExplorerState
+import com.example.continuum_explorer.managers.SettingsManager
 import com.example.continuum_explorer.utils.contextMenuDetector
 import com.example.continuum_explorer.utils.fileDropTarget
 import com.example.continuum_explorer.utils.toUniversal
@@ -533,13 +535,15 @@ private fun NavContextMenu(
                     val trashDir = File(Environment.getExternalStorageDirectory(), ".Trash")
                     appState.onOpenInNewTab?.invoke(trashDir.toUniversal())
                 } else if (isRecent) {
-                    appState.onOpenInNewTab?.invoke(com.example.continuum_explorer.model.UniversalFile(
-                        name = "Recent",
-                        isDirectory = true,
-                        lastModified = 0,
-                        length = 0,
-                        absolutePath = "recent://"
-                    ))
+                    appState.onOpenInNewTab?.invoke(
+                        UniversalFile(
+                            name = "Recent",
+                            isDirectory = true,
+                            lastModified = 0,
+                            length = 0,
+                            absolutePath = "recent://"
+                        )
+                    )
                 } else if (path != null) {
                     appState.onOpenInNewTab?.invoke(File(path).toUniversal())
                 } else if (uri != null) {

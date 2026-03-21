@@ -1,4 +1,4 @@
-package com.example.continuum_explorer.utils
+package com.example.continuum_explorer.managers
 
 import android.content.ContentResolver
 import android.content.Context

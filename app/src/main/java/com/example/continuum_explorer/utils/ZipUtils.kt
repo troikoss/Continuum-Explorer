@@ -6,7 +6,9 @@ import android.net.Uri
 import android.os.ParcelFileDescriptor
 import android.provider.OpenableColumns
 import android.widget.Toast
-import com.example.continuum_explorer.PopUpActivity
+import com.example.continuum_explorer.managers.ArchiveSettings
+import com.example.continuum_explorer.managers.FileOperationsManager
+import com.example.continuum_explorer.ui.activities.PopUpActivity
 import com.example.continuum_explorer.model.UniversalFile
 import java.io.File
 import java.io.FileOutputStream

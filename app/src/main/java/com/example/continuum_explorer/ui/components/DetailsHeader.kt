@@ -1,4 +1,4 @@
-package com.example.continuum_explorer.ui
+package com.example.continuum_explorer.ui.components
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Row
@@ -17,10 +17,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import com.example.continuum_explorer.model.FileColumnType
 import com.example.continuum_explorer.model.SortOrder
+import com.example.continuum_explorer.utils.FileExplorerState
 import com.example.continuum_explorer.utils.VerticalResizeHandle
 
 /**

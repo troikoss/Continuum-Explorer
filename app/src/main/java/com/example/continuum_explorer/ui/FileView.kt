@@ -1,6 +1,5 @@
 package com.example.continuum_explorer.ui
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.hoverable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsHoveredAsState
@@ -20,17 +19,14 @@ import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.DpOffset
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Popup
-import androidx.compose.ui.window.PopupProperties
+import com.example.continuum_explorer.managers.selectionBackground
 import com.example.continuum_explorer.model.*
+import com.example.continuum_explorer.ui.components.ItemContextMenu
 import com.example.continuum_explorer.utils.*
 import com.example.continuum_explorer.utils.IconHelper.FileThumbnail
 import com.example.continuum_explorer.utils.IconHelper.isMimeTypePreviewable
-import kotlinx.coroutines.delay
 
 /**
  * Renders a single file or folder item.

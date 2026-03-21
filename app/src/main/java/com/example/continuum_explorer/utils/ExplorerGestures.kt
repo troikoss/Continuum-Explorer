@@ -12,8 +12,6 @@ import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.awaitLongPressOrCancellation
-import androidx.compose.foundation.gestures.detectDragGestures
-import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.width
@@ -59,10 +57,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.example.continuum_explorer.PopUpActivity
+import com.example.continuum_explorer.managers.FileOperationsManager
+import com.example.continuum_explorer.managers.SelectionManager
+import com.example.continuum_explorer.ui.activities.PopUpActivity
 import com.example.continuum_explorer.model.UniversalFile
 import com.example.continuum_explorer.model.ViewMode
-import com.example.continuum_explorer.ui.FileExplorerState
 import kotlinx.coroutines.launch
 import java.io.File
 

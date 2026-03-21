@@ -24,6 +24,13 @@ import java.util.ArrayDeque
 import java.util.Properties
 import android.provider.Settings
 import android.provider.DocumentsContract
+import com.example.continuum_explorer.managers.CollisionResult
+import com.example.continuum_explorer.managers.DeleteBehavior
+import com.example.continuum_explorer.managers.DeleteResult
+import com.example.continuum_explorer.managers.FileOperationsManager
+import com.example.continuum_explorer.managers.SettingsManager
+import com.example.continuum_explorer.managers.UndoAction
+import com.example.continuum_explorer.managers.UndoManager
 
 /**
  * Extension functions to convert native File and DocumentFile types 
