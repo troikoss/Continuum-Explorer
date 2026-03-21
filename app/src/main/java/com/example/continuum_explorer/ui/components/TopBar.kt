@@ -52,10 +52,7 @@ import androidx.documentfile.provider.DocumentFile
 import com.example.continuum_explorer.ui.activities.SettingsActivity
 import com.example.continuum_explorer.model.NavLocation
 import com.example.continuum_explorer.model.ScreenSize
-import com.example.continuum_explorer.model.UniversalFile
-import com.example.continuum_explorer.utils.FileExplorerState
-import com.example.continuum_explorer.utils.ZipUtils
-import com.example.continuum_explorer.utils.fileDropTarget
+import com.example.continuum_explorer.utils.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.io.File
@@ -67,9 +64,7 @@ import java.io.File
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TopBar(
-    isLandscape: Boolean,
     onMenuClick: () -> Unit,
-    onAddStorageClick: () -> Unit,
     appState: FileExplorerState
 ) {
 
@@ -721,12 +716,3 @@ fun TopBar(
         }
     }
 }
-
-private fun File.toUniversal() = UniversalFile(
-    name = name,
-    isDirectory = isDirectory,
-    lastModified = lastModified(),
-    length = length(),
-    fileRef = this,
-    absolutePath = absolutePath
-)

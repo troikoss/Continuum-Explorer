@@ -3,10 +3,8 @@ package com.example.continuum_explorer.managers
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
@@ -249,9 +247,4 @@ fun Modifier.selectionBackground(
             color = if (isLead && !isSelected) MaterialTheme.colorScheme.primary else Color.Transparent,
             shape = shape
         )
-}
-
-@Composable
-fun rememberSelectionManager(): SelectionManager {
-    return remember { SelectionManager() }
 }

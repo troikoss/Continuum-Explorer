@@ -82,7 +82,10 @@ import com.example.continuum_explorer.model.UniversalFile
 import com.example.continuum_explorer.utils.FileExplorerState
 import com.example.continuum_explorer.managers.SettingsManager
 import com.example.continuum_explorer.utils.contextMenuDetector
+import com.example.continuum_explorer.utils.emptyRecycleBin
 import com.example.continuum_explorer.utils.fileDropTarget
+import com.example.continuum_explorer.utils.navigateTo
+import com.example.continuum_explorer.utils.openInNewWindow
 import com.example.continuum_explorer.utils.toUniversal
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -119,7 +122,7 @@ fun NavigationPane(
     // Gather all storage volumes
     val storageVolumes = remember(context) {
         val volumes = mutableListOf<StorageVolumeInfo>()
-        
+
         // Add Internal Storage (ID 6)
         val internalRoot = Environment.getExternalStorageDirectory()
         volumes.add(
@@ -211,7 +214,7 @@ fun NavigationPane(
                 itemsIndexed(
                     items = appState.appConfigs.favoritePaths,
                     key = { _, path -> path }
-                ) { index, path ->
+                ) { _, path ->
                     val file = File(path)
                     val isDragging = draggedItemId == path
                     val elevation by animateDpAsState(if (isDragging) 8.dp else 0.dp, label = "FavoriteElevation")
@@ -232,7 +235,7 @@ fun NavigationPane(
                                     // - Mouse: Drag from anywhere on the item
                                     // - Touch: Drag only from the icon area (handleWidthPx)
                                     if (down.type == PointerType.Mouse || down.position.x <= handleWidthPx) {
-                                        var pointerId = down.id
+                                        val pointerId = down.id
                                         var triggerDrag = false
                                         var distance = 0f
 
@@ -300,7 +303,7 @@ fun NavigationPane(
                 itemsIndexed(
                     items = visibleLibraryItems,
                     key = { _, id -> id }
-                ) { index, id ->
+                ) { _, id ->
                     val isDragging = draggedItemId == id
                     val elevation by animateDpAsState(if (isDragging) 8.dp else 0.dp, label = "LibraryElevation")
 
@@ -320,7 +323,7 @@ fun NavigationPane(
                                     // - Mouse: Drag from anywhere on the item
                                     // - Touch: Drag only from the icon area (handleWidthPx)
                                     if (down.type == PointerType.Mouse || down.position.x <= handleWidthPx) {
-                                        var pointerId = down.id
+                                        val pointerId = down.id
                                         var triggerDrag = false
                                         var distance = 0f
 
@@ -705,7 +708,7 @@ private fun NavSafItem(
     var menuOffset by remember { mutableStateOf(DpOffset.Zero)}
     val density = LocalDensity.current
 
-    Box(modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)) {
+    Box(modifier = modifier.padding(NavigationDrawerItemDefaults.ItemPadding)) {
         NavigationDrawerItem(
             label = { Text(label, maxLines = 1, overflow = TextOverflow.Ellipsis) },
             selected = false,

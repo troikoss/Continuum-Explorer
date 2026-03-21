@@ -12,14 +12,12 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -50,7 +48,6 @@ import kotlinx.coroutines.delay
  * The primary view for displaying files.
  * Handles layout (Grid vs List), selection marquee, and auto-scrolling.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FileContent(
     appState: FileExplorerState
@@ -65,12 +62,15 @@ fun FileContent(
         if (!appState.isSearchUIActive) {
             try {
                 focusRequester.requestFocus()
-            } catch (e: Exception) {}
+            } catch (_: Exception) {}
         }
     }
 
-    // Tracks the bounding box of every visible file item to support marquee selection
-    val itemPositions = remember { mutableStateMapOf<UniversalFile, Rect>() }
+    // PERFORMANCE OPTIMIZATION: We use a regular HashMap instead of mutableStateMapOf.
+    // This prevents the entire file list from recomposing on every single frame of a scroll.
+    // The hover and marquee logic still work because they read from this map when other 
+    // states (like mouse position or drag offsets) change.
+    val itemPositions = remember { HashMap<UniversalFile, Rect>() }
 
     // Clear positions when selection manager changes to ensure fresh tracking
     LaunchedEffect(selectionManager) {

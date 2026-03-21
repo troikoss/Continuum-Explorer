@@ -9,10 +9,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
 import java.io.File
-import java.lang.StringBuilder
 import java.util.regex.Pattern
-import kotlin.collections.iterator
-import kotlin.text.iterator
 
 object SearchManager {
 

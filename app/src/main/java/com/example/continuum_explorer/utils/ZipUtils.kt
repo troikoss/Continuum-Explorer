@@ -17,6 +17,7 @@ import java.util.ArrayDeque
 import java.util.zip.ZipInputStream
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.delay
 import net.lingala.zip4j.ZipFile
 import net.lingala.zip4j.model.ZipParameters
 
@@ -300,10 +301,6 @@ object ZipUtils {
         return structure[parentArchivePath] ?: emptyList()
     }
 
-    suspend fun extractArchive(context: Context, archive: UniversalFile, destDir: File) = withContext(Dispatchers.IO) {
-        extractArchives(context, listOf(archive), destDir, false)
-    }
-
     suspend fun extractArchives(
         context: Context,
         archives: List<UniversalFile>,
@@ -540,7 +537,7 @@ object ZipUtils {
                 lastUpdateTime = now
             }
             
-            kotlinx.coroutines.delay(100)
+            delay(100)
         }
         
         // Final check to catch exceptions

@@ -16,11 +16,13 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
+import androidx.compose.ui.layout.ContentScale
+import coil.compose.AsyncImage
 import com.example.continuum_explorer.model.UniversalFile
 import java.io.File
-import kotlin.text.lowercase
 
 /**
  * Helper to determine the appropriate icon and handle thumbnails for files and folders.
@@ -44,18 +46,18 @@ object IconHelper {
     fun FileThumbnail(
         file: UniversalFile,
         modifier: Modifier = Modifier,
-        tint: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.primary,
+        tint: Color = MaterialTheme.colorScheme.primary,
     ) {
 
         val fallbackIcon = getIconForItem (file)
 
         if (!file.isDirectory && isMimeTypePreviewable(file)) {
             // This shows the actual image/video preview
-            coil.compose.AsyncImage(
+            AsyncImage(
                 model = file.documentFileRef?.uri ?: file.fileRef?.absolutePath,
                 contentDescription = null,
                 modifier = modifier,
-                contentScale = androidx.compose.ui.layout.ContentScale.Fit,
+                contentScale = ContentScale.Fit,
                 placeholder = rememberVectorPainter(fallbackIcon),
                 error = rememberVectorPainter(fallbackIcon)
             )
@@ -74,7 +76,6 @@ object IconHelper {
     /**
      * Returns the appropriate icon for a given UniversalFile.
      */
-    @Composable
     fun getIconForItem(file: UniversalFile): ImageVector {
         if (file.isDirectory) {
             return Icons.Default.Folder
@@ -127,6 +128,4 @@ object IconHelper {
             else -> Icons.AutoMirrored.Filled.InsertDriveFile
         }
     }
-    
-    // Placeholder for thumbnail logic which can be added here later
 }

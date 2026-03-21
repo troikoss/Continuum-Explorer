@@ -131,10 +131,10 @@ fun getVideoResolution(context: Context, file: UniversalFile): String? {
         } else {
             null
         }
-    } catch (e: Exception) {
+    } catch (_: Exception) {
         null
     } finally {
-        try { retriever.release() } catch (e: Exception) {}
+        try { retriever.release() } catch (_: Exception) {}
     }
 }
 
@@ -162,17 +162,17 @@ fun getMediaDuration(context: Context, file: UniversalFile): String? {
             if (minutes >= 60) {
                 val hours = minutes / 60
                 val remainingMinutes = minutes % 60
-                String.format("%02d:%02d:%02d", hours, remainingMinutes, seconds)
+                String.format(java.util.Locale.getDefault(), "%02d:%02d:%02d", hours, remainingMinutes, seconds)
             } else {
-                String.format("%02d:%02d", minutes, seconds)
+                String.format(java.util.Locale.getDefault(), "%02d:%02d", minutes, seconds)
             }
         } else {
             null
         }
-    } catch (e: Exception) {
+    } catch (_: Exception) {
         null
     } finally {
-        try { retriever.release() } catch (e: Exception) {}
+        try { retriever.release() } catch (_: Exception) {}
     }
 }
 
@@ -198,7 +198,7 @@ fun getImageResolution(context: Context, file: UniversalFile): String {
             return "${options.outWidth}x${options.outHeight}"
         }
         return "Unknown Resolution"
-    } catch (e: Exception) {
+    } catch (_: Exception) {
         return "Unknown Resolution"
     }
 }
@@ -672,7 +672,7 @@ suspend fun deleteRecursivelyWithProgress(
             } else if (file.documentFileRef != null) {
                 file.documentFileRef.listFiles().map { it.toUniversal() }
             } else emptyList()
-        } catch (e: Exception) { emptyList() }
+        } catch (_: Exception) { emptyList() }
         children?.forEach { child ->
              if (FileOperationsManager.isCancelled.value) return@forEach
              deleteRecursivelyWithProgress(context, child, onProgress)
@@ -683,7 +683,7 @@ suspend fun deleteRecursivelyWithProgress(
              false // Deleting archive entries not supported yet
         } else if (file.fileRef != null) file.fileRef.delete()
         else file.documentFileRef?.delete() == true
-    } catch (e: Exception) { false }
+    } catch (_: Exception) { false }
     if (success) onProgress(file, length)
     return success
 }
@@ -797,7 +797,7 @@ fun getOriginalPath(recycledName: String): String? {
         val props = Properties()
         metadataFile.inputStream().use { props.load(it) }
         props.getProperty(recycledName)
-    } catch (e: Exception) { null }
+    } catch (_: Exception) { null }
 }
 
 fun removeTrashMetadata(recycledName: String) {
@@ -958,7 +958,7 @@ fun shareFiles(context: Context, files: List<UniversalFile>) {
         }
     }
     try { context.startActivity(Intent.createChooser(shareIntent, "Share via")) }
-    catch (e: Exception) { Toast.makeText(context, "No app found to share this file", Toast.LENGTH_SHORT).show() }
+    catch (_: Exception) { Toast.makeText(context, "No app found to share this file", Toast.LENGTH_SHORT).show() }
 }
 
 /**
@@ -983,7 +983,7 @@ fun openWith(context: Context, file: UniversalFile) {
     
     try {
         context.startActivity(Intent.createChooser(intent, "Open with..."))
-    } catch (e: Exception) {
+    } catch (_: Exception) {
         Toast.makeText(context, "No app found to open this file", Toast.LENGTH_SHORT).show()
     }
 }
@@ -1030,7 +1030,7 @@ fun openFile(context: Context, file: UniversalFile) {
     
     try {
         context.startActivity(intent)
-    } catch (e: Exception) {
+    } catch (_: Exception) {
         // Fallback: try opening with generic selector if type specific fails
         openWith(context, file)
     }

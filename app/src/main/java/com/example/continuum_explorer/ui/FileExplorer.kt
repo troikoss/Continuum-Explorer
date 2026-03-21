@@ -58,6 +58,8 @@ import com.example.continuum_explorer.utils.FileExplorerState
 import com.example.continuum_explorer.utils.VerticalResizeHandle
 import com.example.continuum_explorer.utils.ZipUtils
 import com.example.continuum_explorer.utils.fileDropTarget
+import com.example.continuum_explorer.utils.goUp
+import com.example.continuum_explorer.utils.navigateTo
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import java.io.File
@@ -74,7 +76,6 @@ fun FileExplorer(
     initialArchiveUri: Uri? = null
 ) {
     val context = LocalContext.current
-    val density = LocalDensity.current
     val scope = rememberCoroutineScope()
 
     val tabs = remember { mutableStateListOf<FileExplorerState>() }
@@ -135,8 +136,6 @@ fun FileExplorer(
     val safeIndex = selectedTabIndex.coerceIn(0, tabs.size - 1)
     val appState = tabs[safeIndex]
 
-    val configuration = LocalConfiguration.current
-    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
     val safLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocumentTree()
@@ -160,11 +159,6 @@ fun FileExplorer(
     val navigateToSection: (Int) -> Unit = { index ->
         val internalRoot = Environment.getExternalStorageDirectory()
         when {
-//            index == 1 -> appState.navigateTo(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), null, newRoot = internalRoot)
-//            index == 2 -> appState.navigateTo(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS), null, newRoot = internalRoot)
-//            index == 3 -> appState.navigateTo(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES), null, newRoot = internalRoot)
-//            index == 4 -> appState.navigateTo(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MUSIC), null, newRoot = internalRoot)
-//            index == 5 -> appState.navigateTo(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MOVIES), null, newRoot = internalRoot)
             index == 6 -> appState.navigateTo(internalRoot, null, newRoot = internalRoot)
             index == 7 -> {
                 val trashDir = File(internalRoot, ".Trash")
@@ -274,12 +268,8 @@ fun FileExplorer(
                         )
 
                         TopBar(
-                            isLandscape = isLandscape,
                             onMenuClick = {
                                 scope.launch { drawerState.open() }
-                            },
-                            onAddStorageClick = {
-                                safLauncher.launch(null)
                             },
                             appState = appState
                         )

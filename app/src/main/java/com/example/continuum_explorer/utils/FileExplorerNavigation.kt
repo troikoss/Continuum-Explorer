@@ -1,0 +1,248 @@
+package com.example.continuum_explorer.utils
+
+import android.net.Uri
+import android.os.Environment
+import android.widget.Toast
+import androidx.documentfile.provider.DocumentFile
+import com.example.continuum_explorer.model.NavLocation
+import java.io.File
+
+fun FileExplorerState.navigateTo(
+    newPath: File?,
+    newUri: Uri?,
+    newRoot: File? = null,
+    addToHistory: Boolean = true,
+    archiveFile: File? = null,
+    archiveUri: Uri? = null,
+    archivePath: String? = null,
+    isRecent: Boolean = false
+) {
+    val targetArchivePath = archivePath ?: ""
+
+    if (newPath == currentPath &&
+        newUri == currentSafUri &&
+        archiveFile == currentArchiveFile &&
+        archiveUri == currentArchiveUri &&
+        targetArchivePath == currentArchivePath &&
+        isRecent == isRecentMode) {
+
+        if (newRoot != null && newRoot != storageRoot) {
+            storageRoot = newRoot
+        }
+        return
+    }
+
+    if (addToHistory) {
+        backStack.add(NavLocation(currentPath, currentSafUri, currentArchiveFile, currentArchiveUri, currentArchivePath, ArrayList(safStack)))
+        forwardStack.clear()
+    }
+
+    val isNewArchive = (archiveFile != null && archiveFile != currentArchiveFile) ||
+            (archiveUri != null && archiveUri != currentArchiveUri)
+    if (isNewArchive) {
+        archiveCache = null
+    }
+
+    if (newRoot != null) {
+        storageRoot = newRoot
+    }
+    currentPath = newPath
+    currentSafUri = newUri
+    currentArchiveFile = archiveFile
+    currentArchiveUri = archiveUri
+    currentArchivePath = targetArchivePath
+    isRecentMode = isRecent
+    isSearchMode = false
+
+    scrollToItemIndex = null
+    selectionManager.reset()
+    triggerLoad()
+}
+
+fun FileExplorerState.goBack() {
+    if (backStack.isNotEmpty()) {
+        val leavingPath = currentPath
+        val leavingUri = currentSafUri
+
+        val lastLocation = backStack.removeAt(backStack.size - 1)
+        forwardStack.add(NavLocation(currentPath, currentSafUri, currentArchiveFile, currentArchiveUri, currentArchivePath, ArrayList(safStack)))
+
+        navigateTo(
+            newPath = lastLocation.path,
+            newUri = lastLocation.uri,
+            addToHistory = false,
+            archiveFile = lastLocation.archiveFile,
+            archiveUri = lastLocation.archiveUri,
+            archivePath = lastLocation.archivePath
+        )
+
+        if (lastLocation.safStack != null) {
+            safStack.clear()
+            safStack.addAll(lastLocation.safStack)
+        }
+
+        focusItemInList(leavingPath, leavingUri)
+    }
+}
+
+fun FileExplorerState.goForward() {
+    if (forwardStack.isNotEmpty()) {
+        val nextLocation = forwardStack.removeAt(forwardStack.size - 1)
+        backStack.add(NavLocation(currentPath, currentSafUri, currentArchiveFile, currentArchiveUri, currentArchivePath, ArrayList(safStack)))
+
+        navigateTo(
+            newPath = nextLocation.path,
+            newUri = nextLocation.uri,
+            addToHistory = false,
+            archiveFile = nextLocation.archiveFile,
+            archiveUri = nextLocation.archiveUri,
+            archivePath = nextLocation.archivePath
+        )
+
+        if (nextLocation.safStack != null) {
+            safStack.clear()
+            safStack.addAll(nextLocation.safStack)
+        }
+    }
+}
+
+fun FileExplorerState.getLocationName(location: NavLocation): String {
+    return if (location.archiveFile != null) {
+        val base = location.archiveFile.name
+        val inner = location.archivePath ?: ""
+        if (inner.isEmpty()) base else "$base/${inner.removeSuffix("/")}"
+    } else if (location.archiveUri != null) {
+        val base = "Archive"
+        val inner = location.archivePath ?: ""
+        if (inner.isEmpty()) base else "$base/${inner.removeSuffix("/")}"
+    } else if (location.path != null) {
+        if (location.path.absolutePath == storageRoot.absolutePath) {
+            if (storageRoot.absolutePath == Environment.getExternalStorageDirectory().absolutePath) "Internal Storage"
+            else "SD Card"
+        } else {
+            location.path.name
+        }
+    } else if (location.uri != null) {
+        if (location.safStack != null && location.safStack.isNotEmpty()) {
+            val doc = DocumentFile.fromTreeUri(context, location.uri)
+            doc?.name ?: "Unknown Folder"
+        } else {
+            getSafDisplayName(location.uri)
+        }
+    } else {
+        "New Tab"
+    }
+}
+
+fun FileExplorerState.jumpToHistory(index: Int) {
+    val allLocations = backStack.toList() +
+            listOf(NavLocation(currentPath, currentSafUri, currentArchiveFile, currentArchiveUri, currentArchivePath, ArrayList(safStack))) +
+            forwardStack.asReversed()
+
+    if (index < 0 || index >= allLocations.size) return
+
+    val target = allLocations[index]
+    val currentIndex = backStack.size
+
+    if (index == currentIndex) return
+
+    if (index < currentIndex) {
+        val toForward = allLocations.subList(index + 1, currentIndex + 1)
+        forwardStack.addAll(toForward.asReversed())
+        repeat(currentIndex - index) {
+            backStack.removeAt(backStack.size - 1)
+        }
+    } else {
+        val toBack = allLocations.subList(currentIndex, index)
+        backStack.addAll(toBack)
+        repeat(index - currentIndex) {
+            forwardStack.removeAt(forwardStack.size - 1)
+        }
+    }
+
+    navigateTo(
+        newPath = target.path,
+        newUri = target.uri,
+        addToHistory = false,
+        archiveFile = target.archiveFile,
+        archiveUri = target.archiveUri,
+        archivePath = target.archivePath
+    )
+
+    if (target.safStack != null) {
+        safStack.clear()
+        safStack.addAll(target.safStack)
+    }
+}
+
+fun FileExplorerState.goUp() {
+    var destinationPath: File? = null
+    var destinationUri: Uri? = null
+    var leavingPath: File? = null
+    var leavingUri: Uri? = null
+    var canPerformGoUp = false
+
+    var nextArchiveFile: File? = null
+    var nextArchiveUri: Uri? = null
+    var nextArchivePath: String? = null
+
+    if (currentArchiveFile != null || currentArchiveUri != null) {
+        if (currentArchivePath.isEmpty()) {
+            if (currentArchiveFile != null) {
+                destinationPath = currentArchiveFile?.parentFile
+                leavingPath = currentArchiveFile
+            }
+            if (destinationPath != null) {
+                canPerformGoUp = true
+                nextArchiveFile = null
+                nextArchiveUri = null
+            }
+        } else {
+            val parentPath = File(currentArchivePath).parent?.replace("\\", "/") ?: ""
+            nextArchivePath = if (parentPath.isEmpty() || parentPath == ".") "" else "$parentPath/"
+            nextArchiveFile = currentArchiveFile
+            nextArchiveUri = currentArchiveUri
+            canPerformGoUp = true
+        }
+    } else if (currentPath != null) {
+        if (currentPath?.absolutePath == storageRoot.absolutePath) {
+            Toast.makeText(context, "Already at storage root", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val parent = currentPath?.parentFile
+        if (parent != null && parent.exists()) {
+            leavingPath = currentPath
+            destinationPath = parent
+            canPerformGoUp = true
+        }
+    } else if (currentSafUri != null) {
+        if (safStack.isNotEmpty()) {
+            leavingUri = currentSafUri
+            destinationUri = safStack.last()
+            canPerformGoUp = true
+        } else {
+            Toast.makeText(context, "Already at picked folder root", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    if (canPerformGoUp) {
+        navigateTo(
+            newPath = destinationPath,
+            newUri = destinationUri,
+            archiveFile = nextArchiveFile,
+            archiveUri = nextArchiveUri,
+            archivePath = nextArchivePath
+        )
+        if (leavingUri != null && destinationUri != null && safStack.isNotEmpty()) {
+            safStack.removeLast()
+        }
+        focusItemInList(leavingPath, leavingUri)
+    }
+}
+
+fun FileExplorerState.focusItemInList(path: File?, uri: Uri?) {
+    if (path == null && uri == null) return
+    pendingFocusPath = path
+    pendingFocusUri = uri
+}

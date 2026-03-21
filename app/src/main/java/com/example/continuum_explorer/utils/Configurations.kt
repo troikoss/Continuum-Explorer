@@ -56,7 +56,7 @@ class FolderConfigurations(private val context: Context) {
                 try {
                     updateViewMode(ViewMode.valueOf(saved), null)
                     return
-                } catch (e: Exception) {}
+                } catch (_: Exception) {}
             }
         }
         updateViewMode(ViewMode.DETAILS, null)
@@ -94,7 +94,7 @@ class FolderConfigurations(private val context: Context) {
             return try {
                 val split = value.split(":")
                 SortParams(FileColumnType.valueOf(split[0]), SortOrder.valueOf(split[1]))
-            } catch (e: Exception) { null }
+            } catch (_: Exception) { null }
         }
 
         if (key != null) {
@@ -159,7 +159,7 @@ class FolderConfigurations(private val context: Context) {
 class AppConfigurations(private val context: Context) {
     val addedSafUris = mutableStateListOf<Uri>()
     val favoritePaths = mutableStateListOf<String>()
-    val libraryOrder = mutableStateListOf<String>("recent", "trash")
+    val libraryOrder = mutableStateListOf("recent", "trash")
     var isRecentVisible by mutableStateOf(true)
 
     var navPaneWidth by mutableStateOf(240.dp)

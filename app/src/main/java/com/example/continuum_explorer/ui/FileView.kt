@@ -41,10 +41,12 @@ fun FileView(
     focusRequester: FocusRequester
 ) {
     val selectionManager = appState.selectionManager
+    
+    // PERFORMANCE: Cache expensive computations and property lookups
     val name = file.name
     val isFolder = file.isDirectory
-    val icon = IconHelper.getIconForItem(file)
-
+    val icon = remember(file) { IconHelper.getIconForItem(file) }
+    
     val interactionSource = remember { MutableInteractionSource() }
 
     DisposableEffect(file) {
@@ -54,14 +56,23 @@ fun FileView(
     var showMenu by remember { mutableStateOf(false) }
     var menuOffset by remember { mutableStateOf(DpOffset.Zero)}
     val density = LocalDensity.current
-    val isMouseHovered = mousePosition?.let { pos ->
-        itemPositions[file]?.contains(pos)
-    } ?: false
+
+    // PERFORMANCE: mousePosition is state, but itemPositions is now a regular HashMap.
+    // This derivedStateOf will only re-evaluate when mousePosition changes.
+    // It will NOT re-evaluate on every scroll frame, which was the main lag source.
+    val isMouseHovered by remember(mousePosition) {
+        derivedStateOf {
+            mousePosition?.let { pos ->
+                itemPositions[file]?.contains(pos)
+            } ?: false
+        }
+    }
 
     val isNativeHovered by interactionSource.collectIsHoveredAsState()
 
     val finalIsHovered = isMouseHovered || isNativeHovered
-    val isGridView = appState.activeViewMode == ViewMode.GRID
+    val viewMode = appState.activeViewMode
+    val isGridView = viewMode == ViewMode.GRID
 
     // Add padding to the outer box so the user can click/drag in the empty space between grid items
     Box(modifier = if (isGridView) Modifier.padding(4.dp) else Modifier) {
@@ -102,7 +113,7 @@ fun FileView(
             // Internal content that handles the background and actual visuals
             val shape = if (isGridView) RoundedCornerShape(8.dp) else RectangleShape
             Box(modifier = Modifier.selectionBackground(file, selectionManager, finalIsHovered, shape)) {
-                when (appState.activeViewMode) {
+                when (viewMode) {
                     ViewMode.GRID -> {
                         Column(
                             modifier = Modifier
@@ -137,9 +148,10 @@ fun FileView(
                     ViewMode.CONTENT -> {
                         Column {
                             val isSelected = selectionManager.isSelected(file)
+                            val formattedSize = remember(file) { appState.formatSize(file.length) }
                             ListItem(
                                 headlineContent = { Text(name) },
-                                supportingContent = { Text(if (isFolder) "Folder" else appState.formatSize(file.length)) },
+                                supportingContent = { Text(if (isFolder) "Folder" else formattedSize) },
                                 leadingContent = {
                                     FileThumbnail(
                                         file = file,
@@ -175,8 +187,8 @@ fun FileView(
                                 appState.folderConfigs.extraColumns.forEach { column ->
                                     val width = appState.folderConfigs.columnWidths[column.type] ?: column.minWidth
                                     val text = when(column.type) {
-                                        FileColumnType.DATE -> appState.formatDate(file.lastModified)
-                                        FileColumnType.SIZE -> if (isFolder) "--" else appState.formatSize(file.length)
+                                        FileColumnType.DATE -> remember(file) { appState.formatDate(file.lastModified) }
+                                        FileColumnType.SIZE -> if (isFolder) "--" else remember(file) { appState.formatSize(file.length) }
                                         else -> ""
                                     }
 
