@@ -175,9 +175,8 @@ fun FileView(
                                     .padding(8.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Icon(
-                                    imageVector = icon,
-                                    contentDescription = null,
+                                FileThumbnail(
+                                    file = file,
                                     modifier = Modifier.size(24.dp),
                                     tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary
                                 )

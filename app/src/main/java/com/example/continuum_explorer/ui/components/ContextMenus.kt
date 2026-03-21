@@ -165,7 +165,7 @@ fun ItemContextMenu(
                     trailingIcon = {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(
-                                painter = painterResource(id = R.drawable.shift),
+                                painter = painterResource(id = R.drawable.ic_shift),
                                 contentDescription = null,
                                 modifier = Modifier.size(12.dp)
                             )
@@ -228,7 +228,7 @@ fun ItemContextMenu(
                 trailingIcon = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
-                            painter = painterResource(id = R.drawable.control),
+                            painter = painterResource(id = R.drawable.ic_control),
                             contentDescription = null,
                             modifier = Modifier.size(12.dp)
                         )
@@ -251,7 +251,7 @@ fun ItemContextMenu(
                 trailingIcon = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
-                            painter = painterResource(id = R.drawable.control),
+                            painter = painterResource(id = R.drawable.ic_control),
                             contentDescription = null,
                             modifier = Modifier.size(12.dp)
                         )
@@ -274,7 +274,7 @@ fun ItemContextMenu(
                 trailingIcon = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
-                            painter = painterResource(id = R.drawable.control),
+                            painter = painterResource(id = R.drawable.ic_control),
                             contentDescription = null,
                             modifier = Modifier.size(12.dp)
                         )
@@ -427,7 +427,7 @@ fun BackgroundContextMenu(
                         trailingIcon = {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(
-                                    painter = painterResource(id = R.drawable.control),
+                                    painter = painterResource(id = R.drawable.ic_control),
                                     contentDescription = null,
                                     modifier = Modifier.size(12.dp)
                                 )

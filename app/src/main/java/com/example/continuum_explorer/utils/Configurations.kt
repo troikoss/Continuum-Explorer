@@ -216,6 +216,7 @@ class AppConfigurations(private val context: Context) {
             favoritePaths.addAll(favoritesSet.sorted())
             saveFavorites()
         }
+        ShortcutHelper.updateFavoritesShortcuts(context, favoritePaths)
     }
     
     fun saveFavorites() {
@@ -223,6 +224,7 @@ class AppConfigurations(private val context: Context) {
         val orderedString = favoritePaths.joinToString("|")
         prefs.edit().putString("ordered_paths", orderedString).apply()
         prefs.edit().putStringSet("paths", favoritePaths.toSet()).apply()
+        ShortcutHelper.updateFavoritesShortcuts(context, favoritePaths)
     }
 
     private fun loadLibrarySettings() {

@@ -50,7 +50,7 @@ class MainActivity : ComponentActivity() {
                 requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
             }
         }
-        
+
         // Request "All Files Access" permission on Android 11+ (API 30+) exactly once on create
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             if (!Environment.isExternalStorageManager()) {
@@ -59,14 +59,18 @@ class MainActivity : ComponentActivity() {
                 startActivity(intent)
             }
         }
-        
+
         // Initialize settings
         SettingsManager.init(applicationContext)
 
-        val initialPath = intent.getStringExtra("path")
-        val initialUri = intent.getStringExtra("uri")
-        val initialArchivePath = intent.getStringExtra("archivePath")
-        val initialArchive = if (initialArchivePath != null) File(initialArchivePath) else null
+        val isNewWindow = intent.action == "com.example.continuum_explorer.OPEN_NEW_WINDOW"
+
+        val initialPath = if (isNewWindow) null else intent.getStringExtra("path")
+        val initialUri = if (isNewWindow) null else intent.getStringExtra("uri")
+        val initialArchive = if (isNewWindow) null else {
+            val path = intent.getStringExtra("archivePath")
+            if (path != null) File(path) else null
+        }
 
         // Build ImageLoader asynchronously to prevent main thread lag on startup
         lifecycleScope.launch(Dispatchers.IO) {
@@ -85,6 +89,20 @@ class MainActivity : ComponentActivity() {
             FileExplorerTheme {
                 FileExplorer(initialPath = initialPath, initialUri = initialUri, initialArchive = initialArchive)
             }
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        
+        // Handle "New Window" requests sent to an existing instance
+        if (intent.action == "com.example.continuum_explorer.OPEN_NEW_WINDOW") {
+            val newWindowIntent = Intent(intent).apply {
+                // Force a new task
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_MULTIPLE_TASK or Intent.FLAG_ACTIVITY_NEW_DOCUMENT
+            }
+            startActivity(newWindowIntent)
+            return
         }
     }
 }

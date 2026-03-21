@@ -1,3 +1,7 @@
 <resources>
     <string name="app_name">Continuum Explorer</string>
+
+    <!-- Shortcuts -->
+    <string name="shortcut_new_window_short">New Window</string>
+    <string name="shortcut_new_window_long">New Window</string>
 </resources>
