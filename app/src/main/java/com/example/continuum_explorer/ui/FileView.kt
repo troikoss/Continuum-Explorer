@@ -19,6 +19,7 @@ import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import com.example.continuum_explorer.managers.selectionBackground
@@ -31,6 +32,7 @@ import com.example.continuum_explorer.utils.IconHelper.isMimeTypePreviewable
 /**
  * Renders a single file or folder item.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FileView(
     file: UniversalFile,
@@ -70,6 +72,42 @@ fun FileView(
 
     val isNativeHovered by interactionSource.collectIsHoveredAsState()
 
+    var isOverflowing by remember { mutableStateOf(false) }
+
+    val tooltipState = rememberTooltipState()
+
+    val relativeMouseOffset = remember(mousePosition) {
+        derivedStateOf {
+            val itemRect = itemPositions[file]
+            if (mousePosition != null && itemRect != null) {
+                // Subtract the item's top-left corner from the global mouse position
+                mousePosition - itemRect.topLeft
+            } else {
+                Offset.Zero
+            }
+        }
+    }
+
+// Create a custom provider that uses that offset
+    val mouseTooltipProvider = remember(relativeMouseOffset.value) {
+        object : androidx.compose.ui.window.PopupPositionProvider {
+            override fun calculatePosition(
+                anchorBounds: androidx.compose.ui.unit.IntRect,
+                windowSize: androidx.compose.ui.unit.IntSize,
+                layoutDirection: androidx.compose.ui.unit.LayoutDirection,
+                popupContentSize: androidx.compose.ui.unit.IntSize
+            ): androidx.compose.ui.unit.IntOffset {
+                // Position the tooltip at the mouse cursor
+                // We add a small 'y' offset (like 40) so the tooltip is below the cursor
+                // and doesn't flicker by appearing right under the pointer.
+                return androidx.compose.ui.unit.IntOffset(
+                    x = anchorBounds.left + relativeMouseOffset.value.x.toInt(),
+                    y = anchorBounds.top + relativeMouseOffset.value.y.toInt() + 40
+                )
+            }
+        }
+    }
+
     val finalIsHovered = isMouseHovered || isNativeHovered
     val viewMode = appState.activeViewMode
     val isGridView = viewMode == ViewMode.GRID
@@ -79,129 +117,170 @@ fun FileView(
         // We put all gesture detectors on this Surface.
         // We avoid putting selection-based modifiers here so it doesn't recompose
         // and cancel active gestures (like dragging) when selection changes.
-        Surface(
-            color = Color.Transparent,
-            shape = if (isGridView) RoundedCornerShape(8.dp) else RectangleShape,
-            modifier = Modifier
-                .fillMaxWidth()
-                .fileDragSource(file, selectionManager, appState)
-                .then(
-                    if (isFolder) {
-                        Modifier.fileDropTarget(
-                            appState = appState,
-                            destPath = file.fileRef,
-                            destSafUri = file.documentFileRef?.uri
-                        )
-                    } else Modifier
-                )
-                .trackPosition(file, itemPositions, containerCoordinates)
-                .hoverable(interactionSource = interactionSource)
-                .itemGestures(
-                    file = file,
-                    selectionManager = selectionManager,
-                    focusRequester = focusRequester,
-                    appState = appState
-                )
-                .contextMenuDetector(enableLongPress = false, aggressive = true) { offset ->
-                    if (!selectionManager.isSelected(file)) {
-                        selectionManager.handleRowClick(file, false, false)
+        TooltipBox(
+            positionProvider = mouseTooltipProvider,
+            tooltip = {
+                if (isOverflowing) {
+                    PlainTooltip {
+                        Text(text = file.name)
                     }
-                    menuOffset = with(density) { DpOffset(offset.x.toDp(), offset.y.toDp()) }
-                    showMenu = true
                 }
-        ) {
-            // Internal content that handles the background and actual visuals
-            val shape = if (isGridView) RoundedCornerShape(8.dp) else RectangleShape
-            Box(modifier = Modifier.selectionBackground(file, selectionManager, finalIsHovered, shape)) {
-                when (viewMode) {
-                    ViewMode.GRID -> {
-                        Column(
-                            modifier = Modifier
-                                .padding(8.dp)
-                                .fillMaxWidth(),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            val isSelected = selectionManager.isSelected(file)
-                            Box(contentAlignment = Alignment.BottomEnd) {
-                                FileThumbnail(
-                                    file = file,
-                                    modifier = Modifier.size((appState.folderConfigs.gridItemSize * 0.6f).dp),
-                                    tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary
-                                )
-
-                                if (isMimeTypePreviewable(file)){
-                                    Icon(
-                                        imageVector = icon,
-                                        contentDescription = null,
-                                        modifier = Modifier
-                                            .size(24.dp)
-                                            .padding(3.dp),
-
-                                        tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary
-                                    )
-                                }
-                            }
-                            Text(text = name,textAlign = TextAlign.Center, style = MaterialTheme.typography.bodyMedium)
+            },
+            state = tooltipState
+        ){
+            Surface(
+                color = Color.Transparent,
+                shape = if (isGridView) RoundedCornerShape(8.dp) else RectangleShape,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .fileDragSource(file, selectionManager, appState)
+                    .then(
+                        if (isFolder) {
+                            Modifier.fileDropTarget(
+                                appState = appState,
+                                destPath = file.fileRef,
+                                destSafUri = file.documentFileRef?.uri
+                            )
+                        } else Modifier
+                    )
+                    .trackPosition(file, itemPositions, containerCoordinates)
+                    .hoverable(interactionSource = interactionSource)
+                    .itemGestures(
+                        file = file,
+                        selectionManager = selectionManager,
+                        focusRequester = focusRequester,
+                        appState = appState
+                    )
+                    .contextMenuDetector(enableLongPress = false, aggressive = true) { offset ->
+                        if (!selectionManager.isSelected(file)) {
+                            selectionManager.handleRowClick(file, false, false)
                         }
+                        menuOffset = with(density) { DpOffset(offset.x.toDp(), offset.y.toDp()) }
+                        showMenu = true
                     }
-
-                    ViewMode.CONTENT -> {
-                        Column {
-                            val isSelected = selectionManager.isSelected(file)
-                            val formattedSize = remember(file) { appState.formatSize(file.length) }
-                            ListItem(
-                                headlineContent = { Text(name) },
-                                supportingContent = { Text(if (isFolder) "Folder" else formattedSize) },
-                                leadingContent = {
+            ) {
+                // Internal content that handles the background and actual visuals
+                val shape = if (isGridView) RoundedCornerShape(8.dp) else RectangleShape
+                Box(
+                    modifier = Modifier.selectionBackground(
+                        file,
+                        selectionManager,
+                        finalIsHovered,
+                        shape
+                    )
+                ) {
+                    when (viewMode) {
+                        ViewMode.GRID -> {
+                            Column(
+                                modifier = Modifier
+                                    .padding(8.dp)
+                                    .fillMaxWidth(),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                val isSelected = selectionManager.isSelected(file)
+                                Box(contentAlignment = Alignment.BottomEnd) {
                                     FileThumbnail(
                                         file = file,
-                                        tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary,
-                                        modifier = Modifier.size(40.dp)
+                                        modifier = Modifier.size((appState.folderConfigs.gridItemSize * 0.6f).dp),
+                                        tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary
                                     )
-                                },
-                                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                                modifier = Modifier.padding(horizontal = 8.dp)
-                            )
-                            HorizontalDivider()
-                        }
-                    }
 
-                    ViewMode.DETAILS -> {
-                        Column {
-                            val isSelected = selectionManager.isSelected(file)
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(8.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                FileThumbnail(
-                                    file = file,
-                                    modifier = Modifier.size(24.dp),
-                                    tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary
-                                )
-                                Spacer(Modifier.width(12.dp))
-                                Text(name, modifier = Modifier.weight(1f), maxLines = 1)
+                                    if (isMimeTypePreviewable(file)) {
+                                        Icon(
+                                            imageVector = icon,
+                                            contentDescription = null,
+                                            modifier = Modifier
+                                                .size(24.dp)
+                                                .padding(3.dp),
 
-                                appState.folderConfigs.extraColumns.forEach { column ->
-                                    val width = appState.folderConfigs.columnWidths[column.type] ?: column.minWidth
-                                    val text = when(column.type) {
-                                        FileColumnType.DATE -> remember(file) { appState.formatDate(file.lastModified) }
-                                        FileColumnType.SIZE -> if (isFolder) "--" else remember(file) { appState.formatSize(file.length) }
-                                        else -> ""
+                                            tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary
+                                        )
                                     }
-
-                                    Text(
-                                        text = text,
-                                        modifier = Modifier
-                                            .width(width)
-                                            .padding(start = 32.dp),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        maxLines = 1
-                                    )
                                 }
+                                Text(
+                                    text = name,
+                                    textAlign = TextAlign.Center,
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
                             }
-                            HorizontalDivider()
+                        }
+
+                        ViewMode.CONTENT -> {
+                            Column {
+                                val isSelected = selectionManager.isSelected(file)
+                                val formattedSize =
+                                    remember(file) { appState.formatSize(file.length) }
+                                ListItem(
+                                    headlineContent = { Text(name) },
+                                    supportingContent = { Text(if (isFolder) "Folder" else formattedSize) },
+                                    leadingContent = {
+                                        FileThumbnail(
+                                            file = file,
+                                            tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary,
+                                            modifier = Modifier.size(40.dp)
+                                        )
+                                    },
+                                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                                    modifier = Modifier.padding(horizontal = 8.dp)
+                                )
+                                HorizontalDivider()
+                            }
+                        }
+
+                        ViewMode.DETAILS -> {
+                            Column {
+                                val isSelected = selectionManager.isSelected(file)
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(8.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    FileThumbnail(
+                                        file = file,
+                                        modifier = Modifier.size(24.dp),
+                                        tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary
+                                    )
+                                    Spacer(Modifier.width(12.dp))
+                                    Text(
+                                        text = name,
+                                        modifier = Modifier.weight(1f),
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        onTextLayout = { textLayoutResult ->
+                                            isOverflowing = textLayoutResult.hasVisualOverflow
+                                        }
+                                    )
+
+                                    appState.folderConfigs.extraColumns.forEach { column ->
+                                        val width = appState.folderConfigs.columnWidths[column.type]
+                                            ?: column.minWidth
+                                        val text = when (column.type) {
+                                            FileColumnType.DATE -> remember(file) {
+                                                appState.formatDate(
+                                                    file.lastModified
+                                                )
+                                            }
+
+                                            FileColumnType.SIZE -> if (isFolder) "--" else remember(
+                                                file
+                                            ) { appState.formatSize(file.length) }
+
+                                            else -> ""
+                                        }
+
+                                        Text(
+                                            text = text,
+                                            modifier = Modifier
+                                                .width(width)
+                                                .padding(start = 32.dp),
+                                            style = MaterialTheme.typography.bodySmall,
+                                            maxLines = 1
+                                        )
+                                    }
+                                }
+                                HorizontalDivider()
+                            }
                         }
                     }
                 }
