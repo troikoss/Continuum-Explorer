@@ -81,7 +81,7 @@ fun DetailsPane (
                     }
                 } else {
                     if (IconHelper.isMimeTypePreviewable(selectedItems.first())) {
-                        IconHelper.FileThumbnail(selectedItems.first())
+                        IconHelper.FileThumbnail(selectedItems.first(), isDetailView = true)
                     } else {
                         Icon(
                             imageVector = IconHelper.getIconForItem(selectedItems.first()),
@@ -200,7 +200,7 @@ fun DetailsBar(
                 }
             } else {
                 if (IconHelper.isMimeTypePreviewable(selectedItems.first())) {
-                    IconHelper.FileThumbnail(selectedItems.first(), modifier = Modifier.padding(8.dp))
+                    IconHelper.FileThumbnail(selectedItems.first(), modifier = Modifier.padding(8.dp), isDetailView = true)
                 } else {
                     Icon(
                         imageVector = IconHelper.getIconForItem(selectedItems.first()),
