@@ -1,3 +1,12 @@
+import java.io.FileInputStream
+import java.util.Properties
+
+val keystoreProperties = Properties()
+val keystorePropertiesFile = rootProject.file("local.properties")
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(FileInputStream(keystorePropertiesFile))
+}
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -5,15 +14,15 @@ plugins {
 }
 
 android {
-    namespace = "com.example.continuum_explorer"
+    namespace = "com.troikoss.continuum_explorer"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.example.continuum_explorer"
+        applicationId = "com.troikoss.continuum_explorer"
         minSdk = 26
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 26
+        versionName = "0.2.6-beta"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -26,6 +35,17 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            signingConfigs {
+                create("release") {
+                    // Read values from the properties object
+                    val storePath = keystoreProperties.getProperty("RELEASE_STORE_FILE")
+                    storeFile = if (storePath != null) file(storePath) else null
+
+                    storePassword = keystoreProperties.getProperty("RELEASE_STORE_PASSWORD")
+                    keyAlias = keystoreProperties.getProperty("RELEASE_KEY_ALIAS")
+                    keyPassword = keystoreProperties.getProperty("RELEASE_KEY_PASSWORD")
+                }
+            }
         }
     }
     compileOptions {
@@ -58,7 +78,6 @@ dependencies {
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
-    implementation(libs.androidx.compose.testing)
     implementation(libs.androidx.documentfile)
     implementation(libs.androidx.compose.ui.unit)
     implementation(libs.androidx.material3)

@@ -8,8 +8,8 @@
         android:shortcutShortLabel="@string/shortcut_new_window_short"
         android:shortcutLongLabel="@string/shortcut_new_window_long">
         <intent
-            android:action="com.example.continuum_explorer.OPEN_NEW_WINDOW"
-            android:targetPackage="com.example.continuum_explorer"
-            android:targetClass="com.example.continuum_explorer.ui.activities.MainActivity" />
+            android:action="com.troikoss.continuum_explorer.OPEN_NEW_WINDOW"
+            android:targetPackage="com.troikoss.continuum_explorer"
+            android:targetClass="com.troikoss.continuum_explorer.ui.activities.MainActivity" />
     </shortcut>
 </shortcuts>

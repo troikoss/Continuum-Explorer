@@ -1,0 +1,303 @@
+package com.troikoss.continuum_explorer.ui
+
+import androidx.compose.foundation.hoverable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsHoveredAsState
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.DpOffset
+import androidx.compose.ui.unit.dp
+import com.troikoss.continuum_explorer.managers.selectionBackground
+import com.troikoss.continuum_explorer.model.*
+import com.troikoss.continuum_explorer.ui.components.ItemContextMenu
+import com.troikoss.continuum_explorer.utils.*
+import com.troikoss.continuum_explorer.utils.IconHelper.FileThumbnail
+import com.troikoss.continuum_explorer.utils.IconHelper.isMimeTypePreviewable
+
+/**
+ * Renders a single file or folder item.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun FileView(
+    file: UniversalFile,
+    itemPositions: MutableMap<UniversalFile, Rect>,
+    containerCoordinates: LayoutCoordinates?,
+    mousePosition: Offset?,
+    scrollOffset: () -> Int,
+    appState: FileExplorerState,
+    focusRequester: FocusRequester
+) {
+    val selectionManager = appState.selectionManager
+    
+    // PERFORMANCE: Cache expensive computations and property lookups
+    val name = file.name
+    val isFolder = file.isDirectory
+    val icon = remember(file) { IconHelper.getIconForItem(file) }
+    
+    val interactionSource = remember { MutableInteractionSource() }
+
+    DisposableEffect(file) {
+        onDispose { itemPositions.remove(file) }
+    }
+
+    var showMenu by remember { mutableStateOf(false) }
+    var menuOffset by remember { mutableStateOf(DpOffset.Zero)}
+    val density = LocalDensity.current
+
+    // PERFORMANCE: mousePosition is state, but itemPositions is now a regular HashMap.
+    // This derivedStateOf will only re-evaluate when mousePosition changes.
+    // It will NOT re-evaluate on every scroll frame, which was the main lag source.
+    val isHovered by remember(mousePosition) {
+        derivedStateOf {
+            // This makes it update when you scroll
+            scrollOffset()
+
+            val currentRect = itemPositions[file]
+            if (mousePosition != null && currentRect != null) {
+                // This now checks against the LATEST mousePosition
+                currentRect.contains(mousePosition)
+            } else {
+                false
+            }
+        }
+    }
+
+    var isOverflowing by remember { mutableStateOf(false) }
+
+    val tooltipState = rememberTooltipState()
+
+    val relativeMouseOffset = remember(mousePosition) {
+        derivedStateOf {
+            val itemRect = itemPositions[file]
+            if (mousePosition != null && itemRect != null) {
+                // Subtract the item's top-left corner from the global mouse position
+                mousePosition - itemRect.topLeft
+            } else {
+                Offset.Zero
+            }
+        }
+    }
+
+// Create a custom provider that uses that offset
+    val mouseTooltipProvider = remember(relativeMouseOffset.value) {
+        object : androidx.compose.ui.window.PopupPositionProvider {
+            override fun calculatePosition(
+                anchorBounds: androidx.compose.ui.unit.IntRect,
+                windowSize: androidx.compose.ui.unit.IntSize,
+                layoutDirection: androidx.compose.ui.unit.LayoutDirection,
+                popupContentSize: androidx.compose.ui.unit.IntSize
+            ): androidx.compose.ui.unit.IntOffset {
+                // Position the tooltip at the mouse cursor
+                // We add a small 'y' offset (like 40) so the tooltip is below the cursor
+                // and doesn't flicker by appearing right under the pointer.
+                return androidx.compose.ui.unit.IntOffset(
+                    x = anchorBounds.left + relativeMouseOffset.value.x.toInt(),
+                    y = anchorBounds.top + relativeMouseOffset.value.y.toInt() + 40
+                )
+            }
+        }
+    }
+
+    val viewMode = appState.activeViewMode
+    val isGridView = viewMode == ViewMode.GRID
+
+    // Add padding to the outer box so the user can click/drag in the empty space between grid items
+    Box(modifier = if (isGridView) Modifier.padding(4.dp) else Modifier) {
+        // We put all gesture detectors on this Surface.
+        // We avoid putting selection-based modifiers here so it doesn't recompose
+        // and cancel active gestures (like dragging) when selection changes.
+        TooltipBox(
+            positionProvider = mouseTooltipProvider,
+            tooltip = {
+                if (isOverflowing) {
+                    PlainTooltip {
+                        Text(text = file.name)
+                    }
+                }
+            },
+            state = tooltipState
+        ){
+            Surface(
+                color = Color.Transparent,
+                shape = if (isGridView) RoundedCornerShape(8.dp) else RectangleShape,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .fileDragSource(file, selectionManager, appState)
+                    .then(
+                        if (isFolder) {
+                            Modifier.fileDropTarget(
+                                appState = appState,
+                                destPath = file.fileRef,
+                                destSafUri = file.documentFileRef?.uri
+                            )
+                        } else Modifier
+                    )
+                    .trackPosition(file, itemPositions, containerCoordinates)
+                    .hoverable(interactionSource = interactionSource)
+                    .itemGestures(
+                        file = file,
+                        selectionManager = selectionManager,
+                        focusRequester = focusRequester,
+                        appState = appState
+                    )
+                    .contextMenuDetector(enableLongPress = false, aggressive = true) { offset ->
+                        if (!selectionManager.isSelected(file)) {
+                            selectionManager.handleRowClick(file, false, false)
+                        }
+                        menuOffset = with(density) { DpOffset(offset.x.toDp(), offset.y.toDp()) }
+                        showMenu = true
+                    }
+            ) {
+                // Internal content that handles the background and actual visuals
+                val shape = if (isGridView) RoundedCornerShape(8.dp) else RectangleShape
+                Box(
+                    modifier = Modifier.selectionBackground(
+                        file,
+                        selectionManager,
+                        isHovered,
+                        shape
+                    )
+                ) {
+                    when (viewMode) {
+                        ViewMode.GRID -> {
+                            Column(
+                                modifier = Modifier
+                                    .padding(8.dp)
+                                    .fillMaxWidth(),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                val isSelected = selectionManager.isSelected(file)
+                                Box(contentAlignment = Alignment.BottomEnd) {
+                                    FileThumbnail(
+                                        file = file,
+                                        modifier = Modifier.size((appState.folderConfigs.gridItemSize * 0.6f).dp),
+                                        tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary
+                                    )
+
+                                    if (isMimeTypePreviewable(file)) {
+                                        Icon(
+                                            imageVector = icon,
+                                            contentDescription = null,
+                                            modifier = Modifier
+                                                .size(24.dp)
+                                                .padding(3.dp),
+
+                                            tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary
+                                        )
+                                    }
+                                }
+                                Text(
+                                    text = name,
+                                    textAlign = TextAlign.Center,
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                            }
+                        }
+
+                        ViewMode.CONTENT -> {
+                            Column {
+                                val isSelected = selectionManager.isSelected(file)
+                                val formattedSize =
+                                    remember(file) { appState.formatSize(file.length) }
+                                ListItem(
+                                    headlineContent = { Text(name) },
+                                    supportingContent = { Text(if (isFolder) "Folder" else formattedSize) },
+                                    leadingContent = {
+                                        FileThumbnail(
+                                            file = file,
+                                            tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary,
+                                            modifier = Modifier.size(40.dp)
+                                        )
+                                    },
+                                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                                    modifier = Modifier.padding(horizontal = 8.dp)
+                                )
+                                HorizontalDivider()
+                            }
+                        }
+
+                        ViewMode.DETAILS -> {
+                            Column {
+                                val isSelected = selectionManager.isSelected(file)
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(8.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    FileThumbnail(
+                                        file = file,
+                                        modifier = Modifier.size(24.dp),
+                                        tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary
+                                    )
+                                    Spacer(Modifier.width(12.dp))
+                                    Text(
+                                        text = name,
+                                        modifier = Modifier.weight(1f),
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        onTextLayout = { textLayoutResult ->
+                                            isOverflowing = textLayoutResult.hasVisualOverflow
+                                        }
+                                    )
+
+                                    appState.folderConfigs.extraColumns.forEach { column ->
+                                        val width = appState.folderConfigs.columnWidths[column.type]
+                                            ?: column.minWidth
+                                        val text = when (column.type) {
+                                            FileColumnType.DATE -> remember(file) {
+                                                appState.formatDate(
+                                                    file.lastModified
+                                                )
+                                            }
+
+                                            FileColumnType.SIZE -> if (isFolder) "--" else remember(
+                                                file
+                                            ) { appState.formatSize(file.length) }
+
+                                            else -> ""
+                                        }
+
+                                        Text(
+                                            text = text,
+                                            modifier = Modifier
+                                                .width(width)
+                                                .padding(start = 32.dp),
+                                            style = MaterialTheme.typography.bodySmall,
+                                            maxLines = 1
+                                        )
+                                    }
+                                }
+                                HorizontalDivider()
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        Box(modifier = Modifier.offset(menuOffset.x, menuOffset.y)){
+            ItemContextMenu(
+                expanded = showMenu,
+                onDismiss = { showMenu = false },
+                appState = appState
+            )
+        }
+    }
+}
