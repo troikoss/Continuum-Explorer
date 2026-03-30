@@ -22,6 +22,7 @@ import androidx.compose.material.icons.filled.DriveFileRenameOutline
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Restore
 import androidx.compose.material.icons.filled.Share
@@ -192,6 +193,17 @@ fun ItemContextMenu(
                         onDismiss()
                     },
                     leadingIcon = { Icon(if (isFav) Icons.Default.StarOutline else Icons.Default.Star, null) }
+                )
+            }
+
+            if (onlyOneSelected) {
+                DropdownMenuItem(
+                    text = { Text("Add to Home") },
+                    onClick = {
+                        onDismiss()
+                        appState.pinSelectionToHome()
+                    },
+                    leadingIcon = { Icon(Icons.Default.PushPin, null) }
                 )
                 HorizontalDivider()
             }

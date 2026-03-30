@@ -2,7 +2,12 @@ package com.troikoss.continuum_explorer.utils
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.graphics.Canvas
+import android.graphics.Paint
 import android.graphics.pdf.PdfRenderer
+import android.graphics.drawable.BitmapDrawable
+import android.graphics.drawable.Drawable
 import android.os.ParcelFileDescriptor
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -29,9 +34,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asAndroidPath
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.vector.PathParser
+import androidx.compose.ui.graphics.vector.VectorGroup
+import androidx.compose.ui.graphics.vector.VectorPath
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -39,6 +49,8 @@ import androidx.compose.ui.unit.sp
 import androidx.core.graphics.createBitmap
 import coil.compose.AsyncImage
 import com.troikoss.continuum_explorer.model.UniversalFile
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
 
@@ -47,19 +59,7 @@ import java.io.FileOutputStream
  */
 object IconHelper {
 
-    /**
-     * Checks if a file type is "thumbnailable" (Images and Videos)
-     */
-    fun isMimeTypePreviewable(file: UniversalFile): Boolean {
-        val name = file.name.lowercase()
-        return name.endsWith(".jpg") || name.endsWith(".jpeg") ||
-                name.endsWith(".png") || name.endsWith(".gif") ||
-                name.endsWith(".webp") || name.endsWith(".bmp") ||
-                name.endsWith(".mp4") || name.endsWith(".mkv") ||
-                name.endsWith(".avi") || name.endsWith(".pdf") ||
-                name.endsWith(".apk") || name.endsWith(".txt")
-    }
-
+    // --- Public UI Components ---
 
     @Composable
     fun FileThumbnail(
@@ -68,21 +68,14 @@ object IconHelper {
         tint: Color = MaterialTheme.colorScheme.primary,
         isDetailView: Boolean = false
     ) {
-
-        val fallbackIcon = getIconForItem (file)
+        val fallbackIcon = getIconForItem(file)
 
         if (!file.isDirectory && isMimeTypePreviewable(file)) {
             val name = file.name.lowercase()
             when {
-                name.endsWith(".pdf") -> {
-                    PdfThumbnail(file, fallbackIcon, modifier, tint)
-                }
-                name.endsWith(".apk") -> {
-                    ApkThumbnail(file, fallbackIcon, modifier, tint)
-                }
-                name.endsWith(".txt") -> {
-                    TextFilePreview(file, fallbackIcon, modifier, tint, isDetailView)
-                }
+                name.endsWith(".pdf") -> PdfThumbnail(file, fallbackIcon, modifier, tint)
+                name.endsWith(".apk") -> ApkThumbnail(file, fallbackIcon, modifier, tint)
+                name.endsWith(".txt") -> TextFilePreview(file, fallbackIcon, modifier, tint, isDetailView)
                 else -> {
                     AsyncImage(
                         model = file.documentFileRef?.uri ?: file.fileRef?.absolutePath,
@@ -95,7 +88,6 @@ object IconHelper {
                 }
             }
         } else {
-            // Show the regular folder/file icon
             Icon(
                 imageVector = fallbackIcon,
                 contentDescription = null,
@@ -105,14 +97,13 @@ object IconHelper {
         }
     }
 
+    // --- Icon Logic ---
 
     /**
      * Returns the appropriate icon for a given UniversalFile.
      */
     fun getIconForItem(file: UniversalFile): ImageVector {
-        if (file.isDirectory) {
-            return Icons.Default.Folder
-        }
+        if (file.isDirectory) return Icons.Default.Folder
         return getIconByFileName(file.name)
     }
 
@@ -123,25 +114,26 @@ object IconHelper {
         val name = fileName.lowercase()
         return when {
             // Archives
-            name.endsWith(".zip") || name.endsWith(".rar") || name.endsWith(".7z") || 
+            name.endsWith(".zip") || name.endsWith(".rar") || name.endsWith(".7z") ||
             name.endsWith(".tar") || name.endsWith(".gz") -> Icons.Default.FolderZip
 
             // Images
-            name.endsWith(".jpg") || name.endsWith(".jpeg") || name.endsWith(".png") || 
+            name.endsWith(".jpg") || name.endsWith(".jpeg") || name.endsWith(".png") ||
             name.endsWith(".gif") || name.endsWith(".webp") || name.endsWith(".bmp") -> Icons.Default.Image
 
             // Videos
-            name.endsWith(".mp4") || name.endsWith(".mkv") || name.endsWith(".avi") || 
+            name.endsWith(".mp4") || name.endsWith(".mkv") || name.endsWith(".avi") ||
             name.endsWith(".mov") || name.endsWith(".webm") -> Icons.Default.VideoFile
 
             // Audio
-            name.endsWith(".mp3") || name.endsWith(".wav") || name.endsWith(".ogg") || 
+            name.endsWith(".mp3") || name.endsWith(".wav") || name.endsWith(".ogg") ||
             name.endsWith(".m4a") || name.endsWith(".flac") -> Icons.Default.AudioFile
 
             // Documents
             name.endsWith(".pdf") -> Icons.Default.PictureAsPdf
-            name.endsWith(".csv") || name.endsWith(".xls") || name.endsWith(".xlsx") || name.endsWith(".ods") -> Icons.AutoMirrored.Filled.ListAlt
-            name.endsWith(".txt") || name.endsWith(".doc") || name.endsWith(".docx") || 
+            name.endsWith(".csv") || name.endsWith(".xls") || name.endsWith(".xlsx") ||
+            name.endsWith(".ods") -> Icons.AutoMirrored.Filled.ListAlt
+            name.endsWith(".txt") || name.endsWith(".doc") || name.endsWith(".docx") ||
             name.endsWith(".odt") -> Icons.Default.Description
             name.endsWith(".ppt") || name.endsWith(".pptx") || name.endsWith(".odp") -> Icons.Default.Slideshow
 
@@ -152,116 +144,58 @@ object IconHelper {
         }
     }
 
+    fun isMimeTypePreviewable(file: UniversalFile): Boolean {
+        val name = file.name.lowercase()
+        val extensions = listOf(".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp", ".mp4", ".mkv", ".avi", ".pdf", ".apk", ".txt")
+        return extensions.any { name.endsWith(it) }
+    }
+
+    // --- Internal Thumbnail Helpers ---
+
     @Composable
-    fun PdfThumbnail(
+    private fun PdfThumbnail(
         file: UniversalFile,
         fallbackIcon: ImageVector,
         modifier: Modifier = Modifier,
         tint: Color = MaterialTheme.colorScheme.primary
     ) {
-        val context = androidx.compose.ui.platform.LocalContext.current
-
-        // Determine where the thumbnail file is/should be on disk
+        val context = LocalContext.current
         val thumbFile = remember(file) { DiskCache.getCacheFile(context, file) }
-
-        // A state to track if we are ready to show the image
         var isReady by remember(file) { mutableStateOf(thumbFile.exists()) }
 
-        // If the thumbnail doesn't exist yet, render it once and save it
         LaunchedEffect(file) {
             if (!thumbFile.exists()) {
-                try {
-                    val pfd = if (file.documentFileRef != null) {
-                        context.contentResolver.openFileDescriptor(file.documentFileRef!!.uri, "r")
-                    } else {
-                        ParcelFileDescriptor.open(file.fileRef, ParcelFileDescriptor.MODE_READ_ONLY)
-                    }
-
-                    pfd?.use { descriptor ->
-                        val renderer = PdfRenderer(descriptor)
-                        renderer.openPage(0).use { page ->
-                            val bmp = createBitmap(page.width, page.height, Bitmap.Config.ARGB_8888)
-                            page.render(bmp, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
-
-                            // Save the Bitmap to the thumbFile location
-                            FileOutputStream(thumbFile).use { out ->
-                                bmp.compress(Bitmap.CompressFormat.PNG, 100, out)
-                            }
-                        }
-                        renderer.close()
-                    }
-                    isReady = true // Now Coil can load it
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                }
+                withContext(Dispatchers.IO) { renderPdfThumbnail(context, file, thumbFile) }
+                isReady = true
             }
         }
 
-        if (isReady) {
-            // HAND THE DISK FILE TO COIL
-            AsyncImage(
-                model = thumbFile,
-                contentDescription = null,
-                modifier = modifier,
-                contentScale = ContentScale.Fit,
-                // Coil's built-in placeholder while it reads from disk
-                placeholder = rememberVectorPainter(fallbackIcon),
-                error = rememberVectorPainter(fallbackIcon)
-            )
-        } else {
-            // Show the icon while we are rendering the PDF for the first time
-            Icon(
-                imageVector = fallbackIcon,
-                contentDescription = null,
-                modifier = modifier,
-                tint = tint
-            )
-        }
+        ThumbnailImage(isReady, thumbFile, fallbackIcon, modifier, tint)
     }
 
     @Composable
-    fun ApkThumbnail(
+    private fun ApkThumbnail(
         file: UniversalFile,
         fallbackIcon: ImageVector,
-        modifier: Modifier = Modifier,
-        tint: Color = MaterialTheme.colorScheme.primary
+        modifier: Modifier,
+        tint: Color
     ) {
-        val context = androidx.compose.ui.platform.LocalContext.current
+        val context = LocalContext.current
         val thumbFile = remember(file) { DiskCache.getCacheFile(context, file) }
         var isReady by remember(file) { mutableStateOf(thumbFile.exists()) }
 
         LaunchedEffect(file) {
             if (!thumbFile.exists()) {
-                try {
-                    // PackageManager needs a physical file path.
-                    // If using DocumentFile (URIs), this is more complex,
-                    // but for local files (fileRef), it's straightforward:
-                    val apkPath = file.fileRef?.absolutePath
-
-                    if (apkPath != null) {
-                        val pm = context.packageManager
-                        val info = pm.getPackageArchiveInfo(apkPath, 0)
-
-                        info?.applicationInfo?.let { appInfo ->
-                            // These two lines are "tricks" required to load icons from uninstalled APKs
-                            appInfo.sourceDir = apkPath
-                            appInfo.publicSourceDir = apkPath
-
-                            val drawable = appInfo.loadIcon(pm)
-                            val bmp = drawableToBitmap(drawable)
-
-                            FileOutputStream(thumbFile).use { out ->
-                                bmp.compress(Bitmap.CompressFormat.PNG, 100, out)
-                            }
-                            isReady = true
-                        }
-                    }
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                }
+                withContext(Dispatchers.IO) { renderApkThumbnail(context, file, thumbFile) }
+                isReady = true
             }
         }
 
+        ThumbnailImage(isReady, thumbFile, fallbackIcon, modifier, tint)
+    }
+
+    @Composable
+    private fun ThumbnailImage(isReady: Boolean, thumbFile: File, fallbackIcon: ImageVector, modifier: Modifier, tint: Color) {
         if (isReady) {
             AsyncImage(
                 model = thumbFile,
@@ -272,70 +206,40 @@ object IconHelper {
                 error = rememberVectorPainter(fallbackIcon)
             )
         } else {
-            Icon(
-                imageVector = fallbackIcon,
-                contentDescription = null,
-                modifier = modifier,
-                tint = tint
-            )
+            Icon(imageVector = fallbackIcon, contentDescription = null, modifier = modifier, tint = tint)
         }
     }
 
-    // Helper to convert Android Drawable to Bitmap
-    private fun drawableToBitmap(drawable: android.graphics.drawable.Drawable): Bitmap {
-        if (drawable is android.graphics.drawable.BitmapDrawable) return drawable.bitmap
-        val bitmap = createBitmap(
-            width = drawable.intrinsicWidth.coerceAtLeast(1),
-            height = drawable.intrinsicHeight.coerceAtLeast(1),
-            config = Bitmap.Config.ARGB_8888
-        )
-        val canvas = android.graphics.Canvas(bitmap)
-        drawable.setBounds(0, 0, canvas.width, canvas.height)
-        drawable.draw(canvas)
-        return bitmap
-    }
-
     @Composable
-    fun TextFilePreview(
+    private fun TextFilePreview(
         file: UniversalFile,
         fallbackIcon: ImageVector,
-        modifier: Modifier = Modifier,
-        tint: Color = MaterialTheme.colorScheme.primary,
+        modifier: Modifier,
+        tint: Color,
         isDetailView: Boolean
     ) {
-        val context = androidx.compose.ui.platform.LocalContext.current
-        var textSnippet by remember(file) { mutableStateOf("...") }
+        val context = LocalContext.current
+        var textSnippet by remember(file) { mutableStateOf("") }
 
-        // Read the file in a background thread
         LaunchedEffect(file) {
-            textSnippet = try {
-                val inputStream = if (file.documentFileRef != null) {
-                    // Handle modern Scoped Storage URIs
-                    context.contentResolver.openInputStream(file.documentFileRef!!.uri)
-                } else {
-                    // Handle traditional File paths
-                    file.fileRef?.inputStream()
-                }
-
-                inputStream?.use { stream ->
-                    // Efficiently read only the first 300 characters
-                    stream.bufferedReader().use { reader ->
+            textSnippet = withContext(Dispatchers.IO) {
+                try {
+                    val stream = if (file.documentFileRef != null) {
+                        context.contentResolver.openInputStream(file.documentFileRef!!.uri)
+                    } else {
+                        file.fileRef?.inputStream()
+                    }
+                    stream?.use { it.bufferedReader().use { reader ->
                         val buffer = CharArray(300)
                         val length = reader.read(buffer)
                         if (length > 0) String(buffer, 0, length) else ""
-                    }
-                } ?: ""
-            } catch (e: Exception) {
-                "Error loading preview"
+                    } } ?: ""
+                } catch (e: Exception) { "" }
             }
         }
 
-        if (isDetailView) {
-            Surface(
-                modifier = modifier,
-                color = MaterialTheme.colorScheme.surfaceVariant,
-                shape = MaterialTheme.shapes.extraSmall
-            ) {
+        if (isDetailView && textSnippet.isNotEmpty()) {
+            Surface(modifier = modifier, color = MaterialTheme.colorScheme.surfaceVariant, shape = MaterialTheme.shapes.extraSmall) {
                 Text(
                     text = textSnippet,
                     fontSize = 12.sp,
@@ -346,32 +250,114 @@ object IconHelper {
                 )
             }
         } else {
-            Icon(
-                imageVector = fallbackIcon,
-                contentDescription = null,
-                modifier = modifier,
-                tint = tint
-            )
+            Icon(imageVector = fallbackIcon, contentDescription = null, modifier = modifier, tint = tint)
         }
     }
 
+    // --- Rendering Logic ---
 
+    private fun renderPdfThumbnail(context: Context, file: UniversalFile, thumbFile: File) {
+        try {
+            val pfd = if (file.documentFileRef != null) {
+                context.contentResolver.openFileDescriptor(file.documentFileRef!!.uri, "r")
+            } else {
+                ParcelFileDescriptor.open(file.fileRef, ParcelFileDescriptor.MODE_READ_ONLY)
+            }
+
+            pfd?.use { descriptor ->
+                val renderer = PdfRenderer(descriptor)
+                renderer.openPage(0).use { page ->
+                    val bmp = createBitmap(page.width, page.height, Bitmap.Config.ARGB_8888)
+                    page.render(bmp, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+                    saveBitmapToCache(bmp, thumbFile)
+                }
+                renderer.close()
+            }
+        } catch (e: Exception) { e.printStackTrace() }
+    }
+
+    private fun renderApkThumbnail(context: Context, file: UniversalFile, thumbFile: File) {
+        try {
+            val apkPath = file.fileRef?.absolutePath ?: return
+            val pm = context.packageManager
+            val info = pm.getPackageArchiveInfo(apkPath, 0)
+            info?.applicationInfo?.let { appInfo ->
+                appInfo.sourceDir = apkPath
+                appInfo.publicSourceDir = apkPath
+                saveBitmapToCache(drawableToBitmap(appInfo.loadIcon(pm)), thumbFile)
+            }
+        } catch (e: Exception) { e.printStackTrace() }
+    }
+
+    private fun saveBitmapToCache(bitmap: Bitmap, file: File) {
+        FileOutputStream(file).use { out -> bitmap.compress(Bitmap.CompressFormat.PNG, 100, out) }
+    }
+
+    // --- Utilities ---
+
+    suspend fun getFileBitmap(context: Context, file: UniversalFile): Bitmap = withContext(Dispatchers.IO) {
+        getThumbnailBitmap(context, file) ?: getIconForItem(file).toBitmap(sizePx = 96)
+    }
+
+    private suspend fun getThumbnailBitmap(context: Context, file: UniversalFile): Bitmap? = withContext(Dispatchers.IO) {
+        if (file.isDirectory) return@withContext null
+        val thumbFile = DiskCache.getCacheFile(context, file)
+        if (!thumbFile.exists()) {
+            val name = file.name.lowercase()
+            if (name.endsWith(".pdf")) renderPdfThumbnail(context, file, thumbFile)
+            else if (name.endsWith(".apk")) renderApkThumbnail(context, file, thumbFile)
+        }
+        if (thumbFile.exists()) BitmapFactory.decodeFile(thumbFile.absolutePath) else null
+    }
+
+    fun drawableToBitmap(drawable: Drawable): Bitmap {
+        if (drawable is BitmapDrawable) return drawable.bitmap
+        val bitmap = createBitmap(drawable.intrinsicWidth.coerceAtLeast(1), drawable.intrinsicHeight.coerceAtLeast(1))
+        val canvas = Canvas(bitmap)
+        drawable.setBounds(0, 0, canvas.width, canvas.height)
+        drawable.draw(canvas)
+        return bitmap
+    }
+
+    fun ImageVector.toBitmap(sizePx: Int, tintArgb: Int = android.graphics.Color.DKGRAY): Bitmap {
+        val bitmap = createBitmap(sizePx, sizePx)
+        val canvas = Canvas(bitmap)
+        canvas.scale(sizePx / viewportWidth, sizePx / viewportHeight)
+        val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = tintArgb
+            style = Paint.Style.FILL
+        }
+        drawVectorGroup(canvas, root, paint)
+        return bitmap
+    }
+
+    private fun drawVectorGroup(canvas: Canvas, group: VectorGroup, paint: Paint) {
+        canvas.save()
+        if (group.rotation != 0f) canvas.rotate(group.rotation, group.pivotX, group.pivotY)
+        canvas.translate(group.translationX, group.translationY)
+        canvas.scale(group.scaleX, group.scaleY, group.pivotX, group.pivotY)
+
+        for (node in group) {
+            when (node) {
+                is VectorGroup -> drawVectorGroup(canvas, node, paint)
+                is VectorPath -> canvas.drawPath(PathParser().addPathNodes(node.pathData).toPath().asAndroidPath(), paint)
+            }
+        }
+        canvas.restore()
+    }
 }
 
 object DiskCache {
     fun getThumbnailFolder(context: Context): File {
-        val folder = File(context.cacheDir, "pdf_thumbnails")
+        val folder = File(context.cacheDir, "thumbnails")
         if (!folder.exists()) folder.mkdirs()
         return folder
     }
 
-    // This creates the unique name for the thumbnail file
     fun getCacheFile(context: Context, file: UniversalFile): File {
         val size = file.documentFileRef?.length() ?: file.fileRef?.length() ?: 0L
         val lastModified = file.documentFileRef?.lastModified() ?: file.fileRef?.lastModified() ?: 0L
         val uniqueId = "${file.name}_${size}_${lastModified}".hashCode().toString()
-
         return File(getThumbnailFolder(context), "$uniqueId.png")
     }
 }
-

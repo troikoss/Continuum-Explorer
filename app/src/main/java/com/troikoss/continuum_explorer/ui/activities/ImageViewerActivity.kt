@@ -646,7 +646,7 @@ fun ImageViewerScreen(
 
                     HorizontalDivider()
 
-                    // --- GROUP 3: Copy/Share/Set as Wallpaper ---
+                    // --- GROUP 3: File Operations ---
                     DropdownMenuItem(
                         text = { Text("Copy image") },
                         leadingIcon = { Icon(Icons.Default.Image, contentDescription = "Copy image") },
@@ -775,7 +775,7 @@ fun ImageViewerScreen(
 
                                 coroutineScope.launch {
                                     deleteFiles(context, listOf(file.toUniversal()))
-                                    
+
                                     if (!file.exists()) {
                                         val index = siblingImages.indexOf(currentUri)
                                         val newList = siblingImages.filter { it != currentUri }
@@ -791,7 +791,7 @@ fun ImageViewerScreen(
                             }
                         }
                     )
-                    
+
                     DropdownMenuItem(
                         text = { Text("Properties") },
                         leadingIcon = { Icon(Icons.Default.Info, contentDescription = "Properties") },

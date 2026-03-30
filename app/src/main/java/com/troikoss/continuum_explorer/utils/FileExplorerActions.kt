@@ -327,3 +327,14 @@ fun FileExplorerState.emptyRecycleBin() {
         }
     }
 }
+
+fun FileExplorerState.pinSelectionToHome() {
+    val selected = selectionManager.selectedItems.toList()
+    if (selected.size == 1) {
+        ShortcutHelper.addToHome(context, scope, selected[0])
+    } else if (selected.isEmpty()) {
+        Toast.makeText(context, "Select a file or folder to pin", Toast.LENGTH_SHORT).show()
+    } else {
+        Toast.makeText(context, "Select only one item to pin", Toast.LENGTH_SHORT).show()
+    }
+}

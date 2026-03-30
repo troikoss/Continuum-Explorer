@@ -34,6 +34,7 @@ import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.Restore
 import androidx.compose.material.icons.filled.SelectAll
 import androidx.compose.material.icons.filled.Share
@@ -409,6 +410,17 @@ fun CommandBar(
                                 if (isTouch) selectionManager.clear()
                             },
                             icon = if (isFav) Icons.Default.StarOutline else Icons.Default.Star
+                        )
+                    }
+
+                    if (onlyOneSelected) {
+                        CommandButton(
+                            text = "Add to Home",
+                            icon = Icons.Default.PushPin,
+                            onClick = { isTouch ->
+                                appState.pinSelectionToHome()
+                                if (isTouch) selectionManager.clear()
+                            }
                         )
                         VerticalDivider()
                     }
