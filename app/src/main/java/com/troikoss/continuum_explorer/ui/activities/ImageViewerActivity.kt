@@ -35,9 +35,12 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FitScreen
 import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.OpenInNew
 import androidx.compose.material.icons.filled.ZoomIn
 import androidx.compose.material.icons.filled.ZoomOut
@@ -92,10 +95,16 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import coil.compose.AsyncImage
+import com.troikoss.continuum_explorer.managers.FileOperationsManager
+import com.troikoss.continuum_explorer.utils.GlobalEvents
 import com.troikoss.continuum_explorer.model.FileColumnType
 import com.troikoss.continuum_explorer.model.SortOrder
 import com.troikoss.continuum_explorer.ui.theme.FileExplorerTheme
 import com.troikoss.continuum_explorer.utils.contextMenuDetector
+import com.troikoss.continuum_explorer.utils.deleteFiles
+import com.troikoss.continuum_explorer.utils.renameFile
+import com.troikoss.continuum_explorer.utils.toUniversal
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -719,6 +728,82 @@ fun ImageViewerScreen(
                         }
                     )
 
+                    DropdownMenuItem(
+                        text = { Text("Rename") },
+                        leadingIcon = { Icon(Icons.Default.Edit, contentDescription = "Rename") },
+                        onClick = {
+                            showMenu = false
+                            withImageFile(currentUri) { file ->
+                                val target = file.toUniversal()
+                                FileOperationsManager.openRename(target) { newName ->
+                                    FileOperationsManager.start()
+                                    FileOperationsManager.update(0, 1, "Renaming ${target.name}...")
+                                    FileOperationsManager.currentFileName.value = target.name
+
+                                    startPopUpActivity(context)
+
+                                    coroutineScope.launch {
+                                        val success = renameFile(target, newName)
+                                        if (success) {
+                                            val newFile = File(file.parentFile, newName)
+                                            val newUriString = Uri.fromFile(newFile).toString()
+                                            val index = siblingImages.indexOf(currentUri)
+                                            if (index != -1) {
+                                                siblingImages = siblingImages.toMutableList().apply { set(index, newUriString) }
+                                                currentUri = newUriString
+                                            }
+                                            GlobalEvents.triggerRefresh()
+                                        } else {
+                                            withContext(Dispatchers.Main) { Toast.makeText(context, "Rename failed", Toast.LENGTH_SHORT).show() }
+                                        }
+                                        FileOperationsManager.finish()
+                                    }
+                                }
+                                startPopUpActivity(context)
+                            }
+                        }
+                    )
+
+                    DropdownMenuItem(
+                        text = { Text("Delete") },
+                        leadingIcon = { Icon(Icons.Default.Delete, contentDescription = "Delete") },
+                        onClick = {
+                            showMenu = false
+                            withImageFile(currentUri) { file ->
+                                FileOperationsManager.start()
+                                startPopUpActivity(context)
+
+                                coroutineScope.launch {
+                                    deleteFiles(context, listOf(file.toUniversal()))
+                                    
+                                    if (!file.exists()) {
+                                        val index = siblingImages.indexOf(currentUri)
+                                        val newList = siblingImages.filter { it != currentUri }
+                                        if (newList.isEmpty()) {
+                                            activity?.finish()
+                                        } else {
+                                            siblingImages = newList
+                                            currentUri = if (index < newList.size) newList[index] else newList.last()
+                                        }
+                                        GlobalEvents.triggerRefresh()
+                                    }
+                                }
+                            }
+                        }
+                    )
+                    
+                    DropdownMenuItem(
+                        text = { Text("Properties") },
+                        leadingIcon = { Icon(Icons.Default.Info, contentDescription = "Properties") },
+                        onClick = {
+                            showMenu = false
+                            withImageFile(currentUri) { file ->
+                                FileOperationsManager.showProperties(listOf(file.toUniversal()))
+                                startPopUpActivity(context)
+                            }
+                        }
+                    )
+
                     HorizontalDivider()
 
                     // --- GROUP 4: Window Controls ---
@@ -837,6 +922,26 @@ fun ImageViewerScreen(
             }
         }
     }
+}
+
+private fun withImageFile(uriString: String?, action: (File) -> Unit) {
+    uriString?.let {
+        val uri = Uri.parse(it)
+        val path = if (uri.scheme == "file" || uri.scheme == null) uri.path ?: it else null
+        path?.let { filePath ->
+            val file = File(filePath)
+            if (file.exists()) {
+                action(file)
+            }
+        }
+    }
+}
+
+private fun startPopUpActivity(context: Context) {
+    val intent = Intent(context, PopUpActivity::class.java).apply {
+        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    }
+    context.startActivity(intent)
 }
 
 fun getSecureContentUri(context: Context, uriString: String): Uri {
