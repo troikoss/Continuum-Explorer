@@ -47,7 +47,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.graphics.createBitmap
+import coil.Coil
 import coil.compose.AsyncImage
+import coil.request.ImageRequest
+import coil.request.SuccessResult
 import com.troikoss.continuum_explorer.model.UniversalFile
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -146,9 +149,13 @@ object IconHelper {
 
     fun isMimeTypePreviewable(file: UniversalFile): Boolean {
         val name = file.name.lowercase()
-        val extensions = listOf(".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp", ".mp4", ".mkv", ".avi", ".pdf", ".apk", ".txt")
-        return extensions.any { name.endsWith(it) }
+        return PREVIEWABLE_EXTENSIONS.any { name.endsWith(it) }
     }
+
+    private val PREVIEWABLE_EXTENSIONS = setOf(
+        ".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp",
+        ".mp4", ".mkv", ".avi", ".pdf", ".apk", ".txt"
+    )
 
     // --- Internal Thumbnail Helpers ---
 
@@ -255,7 +262,6 @@ object IconHelper {
     }
 
     // --- Rendering Logic ---
-
     private fun renderPdfThumbnail(context: Context, file: UniversalFile, thumbFile: File) {
         try {
             val pfd = if (file.documentFileRef != null) {
@@ -263,15 +269,18 @@ object IconHelper {
             } else {
                 ParcelFileDescriptor.open(file.fileRef, ParcelFileDescriptor.MODE_READ_ONLY)
             }
-
             pfd?.use { descriptor ->
-                val renderer = PdfRenderer(descriptor)
-                renderer.openPage(0).use { page ->
-                    val bmp = createBitmap(page.width, page.height, Bitmap.Config.ARGB_8888)
-                    page.render(bmp, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
-                    saveBitmapToCache(bmp, thumbFile)
-                }
-                renderer.close()
+                PdfRenderer(descriptor).use { renderer ->
+                    renderer.openPage(0).use { page ->
+                        val bmp = createBitmap(page.width, page.height, Bitmap.Config.ARGB_8888)
+                        try {
+                            page.render(bmp, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+                            saveBitmapToCache(bmp, thumbFile)
+                        } finally {
+                            bmp.recycle() // was missing
+                        }
+                    }
+                } // renderer.close() now handled by .use
             }
         } catch (e: Exception) { e.printStackTrace() }
     }
@@ -301,13 +310,40 @@ object IconHelper {
 
     private suspend fun getThumbnailBitmap(context: Context, file: UniversalFile): Bitmap? = withContext(Dispatchers.IO) {
         if (file.isDirectory) return@withContext null
+
         val thumbFile = DiskCache.getCacheFile(context, file)
-        if (!thumbFile.exists()) {
-            val name = file.name.lowercase()
-            if (name.endsWith(".pdf")) renderPdfThumbnail(context, file, thumbFile)
-            else if (name.endsWith(".apk")) renderApkThumbnail(context, file, thumbFile)
+
+        // Early return if already cached on disk
+        if (thumbFile.exists()) {
+            return@withContext BitmapFactory.decodeFile(thumbFile.absolutePath)
         }
-        if (thumbFile.exists()) BitmapFactory.decodeFile(thumbFile.absolutePath) else null
+
+        val name = file.name.lowercase()
+        when {
+            name.endsWith(".pdf") -> {
+                renderPdfThumbnail(context, file, thumbFile)
+                if (thumbFile.exists()) return@withContext BitmapFactory.decodeFile(thumbFile.absolutePath)
+            }
+            name.endsWith(".apk") -> {
+                renderApkThumbnail(context, file, thumbFile)
+                if (thumbFile.exists()) return@withContext BitmapFactory.decodeFile(thumbFile.absolutePath)
+            }
+            // Images and videos — load via Coil, no disk cache needed
+            isMimeTypePreviewable(file) && !name.endsWith(".txt") -> {
+                val loader = Coil.imageLoader(context)
+                val request = ImageRequest.Builder(context)
+                    .data(file.documentFileRef?.uri ?: file.fileRef?.absolutePath)
+                    .allowHardware(false)
+                    .build()
+                val result = loader.execute(request)
+                if (result is SuccessResult) {
+                    val bitmap = drawableToBitmap(result.drawable)
+                    saveBitmapToCache(bitmap, thumbFile) // cache it so next call hits disk
+                    return@withContext bitmap
+                }
+            }
+        }
+        return@withContext null
     }
 
     fun drawableToBitmap(drawable: Drawable): Bitmap {
@@ -357,7 +393,10 @@ object DiskCache {
     fun getCacheFile(context: Context, file: UniversalFile): File {
         val size = file.documentFileRef?.length() ?: file.fileRef?.length() ?: 0L
         val lastModified = file.documentFileRef?.lastModified() ?: file.fileRef?.lastModified() ?: 0L
-        val uniqueId = "${file.name}_${size}_${lastModified}".hashCode().toString()
-        return File(getThumbnailFolder(context), "$uniqueId.png")
+        val key = "${file.absolutePath}_${size}_${lastModified}"
+        val hash = java.security.MessageDigest.getInstance("MD5")
+            .digest(key.toByteArray())
+            .joinToString("") { "%02x".format(it) }
+        return File(getThumbnailFolder(context), "$hash.png")
     }
 }

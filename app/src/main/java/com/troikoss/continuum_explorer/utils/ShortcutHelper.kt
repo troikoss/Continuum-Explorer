@@ -9,7 +9,9 @@ import com.troikoss.continuum_explorer.R
 import com.troikoss.continuum_explorer.ui.activities.MainActivity
 import com.troikoss.continuum_explorer.model.UniversalFile
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 
 /**
@@ -59,19 +61,46 @@ object ShortcutHelper {
             val name = item.name
             val path = item.fileRef?.absolutePath ?: item.documentFileRef?.uri.toString()
 
-            val intent = Intent(context, MainActivity::class.java).apply {
-                action = Intent.ACTION_VIEW
-                if (item.fileRef != null) {
-                    putExtra("path", path)
-                } else if (item.documentFileRef != null) {
-                    putExtra("uri", path)
+            val intent = if (item.isDirectory) {
+                // Folders open in the file explorer
+                Intent(context, MainActivity::class.java).apply {
+                    action = Intent.ACTION_VIEW
+                    if (item.fileRef != null) putExtra("path", path)
+                    else if (item.documentFileRef != null) putExtra("uri", path)
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or
+                            Intent.FLAG_ACTIVITY_MULTIPLE_TASK or
+                            Intent.FLAG_ACTIVITY_NEW_DOCUMENT
                 }
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_MULTIPLE_TASK or Intent.FLAG_ACTIVITY_NEW_DOCUMENT
+            } else {
+                // Files open with their default app
+                val uri = getUriForUniversalFile(context, item)
+                if (uri != null) {
+                    val mimeType = android.webkit.MimeTypeMap
+                        .getSingleton()
+                        .getMimeTypeFromExtension(
+                            android.webkit.MimeTypeMap.getFileExtensionFromUrl(uri.toString())?.lowercase()
+                        ) ?: context.contentResolver.getType(uri) ?: "*/*"
+
+                    Intent(Intent.ACTION_VIEW).apply {
+                        setDataAndType(uri, mimeType)
+                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }
+                } else {
+                    // Fallback to explorer if URI couldn't be resolved
+                    Intent(context, MainActivity::class.java).apply {
+                        action = Intent.ACTION_VIEW
+                        putExtra("path", path)
+                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                    }
+                }
             }
 
-            val icon = IconHelper.getFileBitmap(context, item)?.let {
-                IconCompat.createWithBitmap(it)
-            } ?: IconCompat.createWithResource(context, R.drawable.ic_folder)
+            val iconBitmap = withContext(Dispatchers.IO) {
+                IconHelper.getFileBitmap(context, item)
+            }
+            val icon = iconBitmap?.let { IconCompat.createWithBitmap(it) }
+                ?: IconCompat.createWithResource(context, R.drawable.ic_folder)
 
             val shortcutInfo = ShortcutInfoCompat.Builder(context, "pinned_$path")
                 .setShortLabel(name)

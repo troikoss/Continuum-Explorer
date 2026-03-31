@@ -5,15 +5,12 @@ import android.content.ClipData
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import android.os.Build
 import android.os.Bundle
 import android.os.Environment
-import android.os.OutcomeReceiver
 import android.provider.DocumentsContract
 import android.provider.MediaStore
 import android.util.Log
 import android.widget.Toast
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -91,29 +88,24 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
-import androidx.core.view.WindowCompat
-import androidx.core.view.WindowInsetsCompat
-import androidx.core.view.WindowInsetsControllerCompat
 import coil.compose.AsyncImage
 import com.troikoss.continuum_explorer.managers.FileOperationsManager
 import com.troikoss.continuum_explorer.utils.GlobalEvents
 import com.troikoss.continuum_explorer.model.FileColumnType
 import com.troikoss.continuum_explorer.model.SortOrder
 import com.troikoss.continuum_explorer.ui.theme.FileExplorerTheme
+import com.troikoss.continuum_explorer.utils.FileScannerUtils
 import com.troikoss.continuum_explorer.utils.contextMenuDetector
 import com.troikoss.continuum_explorer.utils.deleteFiles
 import com.troikoss.continuum_explorer.utils.renameFile
 import com.troikoss.continuum_explorer.utils.toUniversal
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 
-class ImageViewerActivity : ComponentActivity() {
-
-    private var isFullscreen by mutableStateOf(false)
+class ImageViewerActivity : FullscreenActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -130,134 +122,6 @@ class ImageViewerActivity : ComponentActivity() {
             }
         }
     }
-
-    private fun toggleFullscreen() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE && isInMultiWindowMode()) {
-            // Freeform window: need to expand the window first, then hide bars
-            val request = if (isFullscreen)
-                FULLSCREEN_MODE_REQUEST_EXIT
-            else
-                FULLSCREEN_MODE_REQUEST_ENTER
-
-            requestFullscreenMode(request, object : OutcomeReceiver<Void, Throwable> {
-                override fun onResult(result: Void?) {
-                    isFullscreen = !isFullscreen
-                    updateSystemBars()
-                }
-                override fun onError(error: Throwable) {
-                    // Still try to hide bars as fallback
-                    isFullscreen = !isFullscreen
-                    updateSystemBars()
-                }
-            })
-        } else {
-            // Maximized or older API: window already covers screen, just toggle bars
-            isFullscreen = !isFullscreen
-            updateSystemBars()
-        }
-    }
-
-    private fun updateSystemBars() {
-        val insetsController = WindowCompat.getInsetsController(window, window.decorView)
-        if (isFullscreen) {
-            WindowCompat.setDecorFitsSystemWindows(window, false)
-            insetsController.hide(WindowInsetsCompat.Type.systemBars())
-            insetsController.systemBarsBehavior =
-                WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-        } else {
-            WindowCompat.setDecorFitsSystemWindows(window, true)
-            insetsController.show(WindowInsetsCompat.Type.systemBars())
-        }
-    }
-}
-
-fun getSiblingImages(context: Context, uriString: String): List<String> {
-    if (uriString.isBlank()) return emptyList()
-    val uri = Uri.parse(uriString)
-    
-    var realPath: String? = null
-    
-    if (uri.scheme == null || uri.scheme == "file") {
-        realPath = uri.path ?: uriString
-    } else if (uri.scheme == "content") {
-        // Handle custom FileProvider scheme
-        if (uri.authority == "${context.packageName}.provider") {
-            val pathSegments = uri.pathSegments
-            if (pathSegments.size >= 2) {
-                val root = pathSegments[0]
-                val rest = pathSegments.subList(1, pathSegments.size).joinToString("/")
-                when (root) {
-                    "external_files" -> realPath = Environment.getExternalStorageDirectory().absolutePath + "/" + rest
-                    "root" -> realPath = "/$rest"
-                    "my_files" -> realPath = context.filesDir.absolutePath + "/" + rest
-                }
-            }
-        }
-        // Handle SAF scheme
-        if (realPath == null && DocumentsContract.isDocumentUri(context, uri)) {
-            val docId = DocumentsContract.getDocumentId(uri)
-            val split = docId.split(":")
-            val type = split[0]
-            val path = if (split.size > 1) split[1] else ""
-            realPath = if ("primary".equals(type, ignoreCase = true)) {
-                Environment.getExternalStorageDirectory().absolutePath + "/" + path
-            } else {
-                "/storage/$type/$path"
-            }
-        }
-        // Handle MediaStore
-        if (realPath == null) {
-            try {
-                val projection = arrayOf(MediaStore.MediaColumns.DATA)
-                context.contentResolver.query(uri, projection, null, null, null)?.use { cursor ->
-                    if (cursor.moveToFirst()) {
-                        val columnIndex = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.DATA)
-                        realPath = cursor.getString(columnIndex)
-                    }
-                }
-            } catch (e: Exception) {
-                Log.e("ImageViewer", "Error querying MediaStore", e)
-            }
-        }
-    }
-
-    if (realPath != null) {
-        val file = File(realPath)
-        val parent = file.parentFile
-        if (parent != null && parent.exists() && parent.isDirectory) {
-
-            // Read sort params using the folder path as key, same as FolderConfigurations does
-            val prefs = context.getSharedPreferences("folder_sort_params", Context.MODE_PRIVATE)
-            val saved = prefs.getString(parent.absolutePath, null)
-            val sortColumn: FileColumnType
-            val sortOrder: SortOrder
-            if (saved != null) {
-                val split = saved.split(":")
-                sortColumn = try { FileColumnType.valueOf(split[0]) } catch (e: Exception) { FileColumnType.NAME }
-                sortOrder = try { SortOrder.valueOf(split[1]) } catch (e: Exception) { SortOrder.Ascending }
-            } else {
-                sortColumn = FileColumnType.NAME
-                sortOrder = SortOrder.Ascending
-            }
-
-            val imageExtensions = setOf("jpg", "jpeg", "png", "gif", "webp", "bmp")
-            val files = parent.listFiles()
-            if (files != null) {
-                val filtered = files.filter {
-                    it.isFile && imageExtensions.contains(it.extension.lowercase())
-                }
-                val sorted = when (sortColumn) {
-                    FileColumnType.NAME -> filtered.sortedBy { it.name.lowercase() }
-                    FileColumnType.DATE -> filtered.sortedBy { it.lastModified() }
-                    FileColumnType.SIZE -> filtered.sortedBy { it.length() }
-                }
-                val ordered = if (sortOrder == SortOrder.Descending) sorted.reversed() else sorted
-                return ordered.map { Uri.fromFile(it).toString() }
-            }
-        }
-    }
-
-    return listOf(uriString)
 }
 
 @Composable
@@ -289,7 +153,8 @@ fun ImageViewerScreen(
     LaunchedEffect(initialImageUri) {
         if (initialImageUri != null) {
             withContext(Dispatchers.IO) {
-                val images = getSiblingImages(context, initialImageUri)
+                val extensions = setOf("jpg", "jpeg", "png", "gif", "webp", "bmp")
+                val images = FileScannerUtils.getSiblingFiles(context, initialImageUri, extensions)
                 withContext(Dispatchers.Main) {
                     siblingImages = images
                     val initialFileSegment = Uri.parse(initialImageUri).lastPathSegment
@@ -385,7 +250,7 @@ fun ImageViewerScreen(
                     .pointerInput(Unit) {
                         detectTapGestures(
                             onDoubleTap = {
-                                onToggleFullscreen()  // <-- call the lambda here
+                                onToggleFullscreen()  // \u003c-- call the lambda here
                             }
                         )
                     }

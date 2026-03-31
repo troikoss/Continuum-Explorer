@@ -24,6 +24,10 @@ import java.util.ArrayDeque
 import java.util.Properties
 import android.provider.Settings
 import android.provider.DocumentsContract
+import android.provider.MediaStore
+import androidx.annotation.OptIn
+import androidx.media3.common.util.Log
+import androidx.media3.common.util.UnstableApi
 import com.troikoss.continuum_explorer.managers.CollisionResult
 import com.troikoss.continuum_explorer.managers.DeleteBehavior
 import com.troikoss.continuum_explorer.managers.DeleteResult
@@ -31,6 +35,8 @@ import com.troikoss.continuum_explorer.managers.FileOperationsManager
 import com.troikoss.continuum_explorer.managers.SettingsManager
 import com.troikoss.continuum_explorer.managers.UndoAction
 import com.troikoss.continuum_explorer.managers.UndoManager
+import com.troikoss.continuum_explorer.model.FileColumnType
+import com.troikoss.continuum_explorer.model.SortOrder
 
 /**
  * Extension functions to convert native File and DocumentFile types 
@@ -1045,5 +1051,100 @@ object PendingCut {
     fun clear() {
         files = emptyList()
         isActive = false
+    }
+}
+
+object FileScannerUtils {
+
+    fun getSiblingFiles(context: Context, uriString: String, extensions: Set<String>): List<String> {
+        if (uriString.isBlank()) return emptyList()
+        val uri = Uri.parse(uriString)
+
+        var realPath: String? = null
+
+        if (uri.scheme == null || uri.scheme == "file") {
+            realPath = uri.path ?: uriString
+        } else if (uri.scheme == "content") {
+            // Handle custom FileProvider scheme
+            if (uri.authority == "${context.packageName}.provider") {
+                val pathSegments = uri.pathSegments
+                if (pathSegments.size >= 2) {
+                    val root = pathSegments[0]
+                    val rest = pathSegments.subList(1, pathSegments.size).joinToString("/")
+                    when (root) {
+                        "external_files" -> realPath =
+                            Environment.getExternalStorageDirectory().absolutePath + "/" + rest
+
+                        "root" -> realPath = "/$rest"
+                        "my_files" -> realPath = context.filesDir.absolutePath + "/" + rest
+                    }
+                }
+            }
+            // Handle SAF scheme
+            if (realPath == null && DocumentsContract.isDocumentUri(context, uri)) {
+                val docId = DocumentsContract.getDocumentId(uri)
+                val split = docId.split(":")
+                val type = split[0]
+                val path = if (split.size > 1) split[1] else ""
+                realPath = if ("primary".equals(type, ignoreCase = true)) {
+                    Environment.getExternalStorageDirectory().absolutePath + "/" + path
+                } else {
+                    "/storage/$type/$path"
+                }
+            }
+            // Handle MediaStore
+            if (realPath == null) {
+                try {
+                    val projection = arrayOf(MediaStore.MediaColumns.DATA)
+                    context.contentResolver.query(uri, projection, null, null, null)
+                        ?.use { cursor ->
+                            if (cursor.moveToFirst()) {
+                                val columnIndex =
+                                    cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.DATA)
+                                realPath = cursor.getString(columnIndex)
+                            }
+                        }
+                } catch (e: Exception) {
+                    android.util.Log.e("FileScannerUtils", "Error querying MediaStore", e)
+                }
+            }
+        }
+
+        if (realPath != null) {
+            val file = File(realPath)
+            val parent = file.parentFile
+            if (parent != null && parent.exists() && parent.isDirectory) {
+
+                // Read sort params using the folder path as key
+                val prefs = context.getSharedPreferences("folder_sort_params", Context.MODE_PRIVATE)
+                val saved = prefs.getString(parent.absolutePath, null)
+                val sortColumn: FileColumnType
+                val sortOrder: SortOrder
+                if (saved != null) {
+                    val split = saved.split(":")
+                    sortColumn = try { FileColumnType.valueOf(split[0]) } catch (e: Exception) { FileColumnType.NAME }
+                    sortOrder = try { SortOrder.valueOf(split[1]) } catch (e: Exception) { SortOrder.Ascending }
+                } else {
+                    sortColumn = FileColumnType.NAME
+                    sortOrder = SortOrder.Ascending
+                }
+
+                val files = parent.listFiles()
+                if (files != null) {
+                    val filtered = files.filter {
+                        it.isFile && extensions.contains(it.extension.lowercase())
+                    }
+                    val sorted = when (sortColumn) {
+                        FileColumnType.NAME -> filtered.sortedBy { it.name.lowercase() }
+                        FileColumnType.DATE -> filtered.sortedBy { it.lastModified() }
+                        FileColumnType.SIZE -> filtered.sortedBy { it.length() }
+                    }
+                    val ordered = if (sortOrder == SortOrder.Descending) sorted.reversed() else sorted
+                    return ordered.map { Uri.fromFile(it).toString() }
+                }
+            }
+        }
+
+        return listOf(uriString)
     }
 }

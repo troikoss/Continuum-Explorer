@@ -1,12 +1,3 @@
-import java.io.FileInputStream
-import java.util.Properties
-
-val keystoreProperties = Properties()
-val keystorePropertiesFile = rootProject.file("local.properties")
-if (keystorePropertiesFile.exists()) {
-    keystoreProperties.load(FileInputStream(keystorePropertiesFile))
-}
-
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -35,17 +26,6 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            signingConfigs {
-                create("release") {
-                    // Read values from the properties object
-                    val storePath = keystoreProperties.getProperty("RELEASE_STORE_FILE")
-                    storeFile = if (storePath != null) file(storePath) else null
-
-                    storePassword = keystoreProperties.getProperty("RELEASE_STORE_PASSWORD")
-                    keyAlias = keystoreProperties.getProperty("RELEASE_KEY_ALIAS")
-                    keyPassword = keystoreProperties.getProperty("RELEASE_KEY_PASSWORD")
-                }
-            }
         }
     }
     compileOptions {
@@ -66,6 +46,8 @@ android {
 }
 
 dependencies {
+    implementation("androidx.media3:media3-exoplayer:1.5.1")
+    implementation("androidx.media3:media3-ui:1.5.1")
     implementation("io.coil-kt:coil-compose:2.6.0")
     implementation("io.coil-kt:coil-video:2.6.0")
     implementation("androidx.compose.material:material-icons-extended")
