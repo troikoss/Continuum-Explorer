@@ -7,6 +7,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -52,7 +53,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.PointerType
 import androidx.compose.ui.input.pointer.isPrimaryPressed
@@ -96,6 +105,8 @@ fun VideoPlayerScreen(
     onToggleFullscreen: () -> Unit
 ) {
     val context = LocalContext.current
+    val focusRequester = remember { FocusRequester() }
+
     val exoPlayer = remember { ExoPlayer.Builder(context).build() }
 
     var isPlaying by remember { mutableStateOf(false) }
@@ -113,6 +124,11 @@ fun VideoPlayerScreen(
 
     var showSkipBackIndicator by remember { mutableStateOf(false) }
     var showSkipForwardIndicator by remember { mutableStateOf(false) }
+    var showPauseIndicator by remember { mutableStateOf(false) }
+    var showPlayIndicator by remember { mutableStateOf(false) }
+
+    var volume by remember { mutableStateOf(1f) }
+
 
     DisposableEffect(exoPlayer) {
         val listener = object : Player.Listener {
@@ -185,6 +201,24 @@ fun VideoPlayerScreen(
         }
     }
 
+    LaunchedEffect(showPauseIndicator) {
+        if (showPauseIndicator) {
+            delay(600)
+            showPauseIndicator = false
+        }
+    }
+
+    LaunchedEffect(showPlayIndicator) {
+        if (showPlayIndicator) {
+            delay(600)
+            showPlayIndicator = false
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        focusRequester.requestFocus()
+    }
+
     DisposableEffect(Unit) {
         onDispose { exoPlayer.release() }
     }
@@ -196,6 +230,22 @@ fun VideoPlayerScreen(
                 .fillMaxSize()
                 .background(Color.Black)
                 .padding(innerPadding)
+                .focusRequester(focusRequester)  // attach the requester
+                .focusable()
+                .videoKeyboardControls(
+                    exoPlayer = exoPlayer,
+                    volume = volume,
+                    onVolumeChange = { volume = it },
+                    onToggleFullscreen = onToggleFullscreen,
+                    onShowSkipBackIndicator = { showSkipBackIndicator = true },
+                    onShowSkipForwardIndicator = { showSkipForwardIndicator = true },
+                    onShowPauseIndicator = { showPauseIndicator = true },
+                    onShowPlayIndicator = { showPlayIndicator = true },
+                    onShowUi = {
+                        isUiVisible = true
+                        hideTimerTrigger++
+                    }
+                )
         ) {
 
             // The Video
@@ -208,9 +258,16 @@ fun VideoPlayerScreen(
                         exoPlayer = exoPlayer,
                         onUiVisibilityChange = { isUiVisible = it },
                         onHideTimerTrigger = { hideTimerTrigger++ },
-                        onToggleFullscreen = onToggleFullscreen
+                        onToggleFullscreen = onToggleFullscreen,
+                        onShowPauseIndicator = { showPauseIndicator = true },
+                        onShowPlayIndicator = { showPlayIndicator = true },
+                        onShowSkipBackIndicator = { showSkipBackIndicator = true },    // new
+                        onShowSkipForwardIndicator = { showSkipForwardIndicator = true }, // new
+                        onShowUi = {
+                            isUiVisible = true
+                            hideTimerTrigger++
+                        }
                     )
-
             ) {
                 AndroidView(
                     factory = { ctx ->
@@ -223,33 +280,36 @@ fun VideoPlayerScreen(
                 )
             }
 
-            // Left skip hitbox
-            Box(
-                modifier = Modifier
-                    .fillMaxHeight()
-                    .fillMaxWidth(0.3f)
-                    .align(Alignment.CenterStart)
-                    .skipGesture(onDoubleTap = {
-                        val newPos = (exoPlayer.currentPosition - 10000).coerceAtLeast(0)
-                        exoPlayer.seekTo(newPos)
-                        currentPosition = newPos
-                        showSkipBackIndicator = true
-                    })
-            )
 
-            // Right skip hitbox
-            Box(
-                modifier = Modifier
-                    .fillMaxHeight()
-                    .fillMaxWidth(0.3f)
-                    .align(Alignment.CenterEnd)
-                    .skipGesture(onDoubleTap = {
-                        val newPos = (exoPlayer.currentPosition + 10000).coerceAtMost(exoPlayer.duration)
-                        exoPlayer.seekTo(newPos)
-                        currentPosition = newPos
-                        showSkipForwardIndicator = true
-                    })
-            )
+            // Pause indicator
+            AnimatedVisibility(
+                visible = showPauseIndicator,
+                enter = fadeIn(),
+                exit = fadeOut(),
+                modifier = Modifier.align(Alignment.Center)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.PauseCircle,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(96.dp)
+                )
+            }
+
+            // Play indicator
+            AnimatedVisibility(
+                visible = showPlayIndicator,
+                enter = fadeIn(),
+                exit = fadeOut(),
+                modifier = Modifier.align(Alignment.Center)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.PlayCircle,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(96.dp)
+                )
+            }
 
             // Skip back indicator
             AnimatedVisibility(
@@ -287,29 +347,6 @@ fun VideoPlayerScreen(
                         contentDescription = null,
                         tint = Color.White,
                         modifier = Modifier.size(64.dp)
-                    )
-                }
-            }
-
-
-            // Center play/pause button
-            AnimatedVisibility(
-                visible = isUiVisible,
-                enter = fadeIn(),
-                exit = fadeOut(),
-                modifier = Modifier.align(Alignment.Center)
-            ) {
-                IconButton(
-                    onClick = {
-                        if (isPlaying) exoPlayer.pause() else exoPlayer.play()
-                    },
-                    modifier = Modifier.size(80.dp)
-                ) {
-                    Icon(
-                        imageVector = if (isPlaying) Icons.Default.PauseCircle else Icons.Default.PlayCircle,
-                        contentDescription = "Play/Pause",
-                        tint = Color.White,
-                        modifier = Modifier.size(80.dp)
                     )
                 }
             }
@@ -355,7 +392,8 @@ fun VideoPlayerScreen(
                         valueRange = 0f..totalDuration.toFloat().coerceAtLeast(1f),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 8.dp),
+                            .padding(horizontal = 8.dp)
+                            .nonFocusable(),
                         colors = SliderDefaults.colors(
                             thumbColor = Color.Red,      // The little circle
                             activeTrackColor = Color.Red // The line behind the circle
@@ -371,8 +409,15 @@ fun VideoPlayerScreen(
                         // Play/Pause Button
                         IconButton(
                             onClick = {
-                                if (isPlaying) exoPlayer.pause() else exoPlayer.play()
-                            }
+                                if (isPlaying) {
+                                    exoPlayer.pause()
+                                    showPauseIndicator = true
+                                } else {
+                                    exoPlayer.play()
+                                    showPlayIndicator = true
+                                }
+                            },
+                            modifier = Modifier.nonFocusable()
                         ) {
                             Icon(
                                 imageVector = if (isPlaying) Icons.Default.PauseCircle else Icons.Default.PlayCircle,
@@ -495,11 +540,20 @@ fun Modifier.videoGestures(
     exoPlayer: ExoPlayer,
     onUiVisibilityChange: (Boolean) -> Unit,
     onHideTimerTrigger: () -> Unit,
-    onToggleFullscreen: () -> Unit
+    onToggleFullscreen: () -> Unit,
+    onShowPauseIndicator: () -> Unit,
+    onShowPlayIndicator: () -> Unit,
+    onShowSkipBackIndicator: () -> Unit,   // add these
+    onShowSkipForwardIndicator: () -> Unit,
+    onShowUi: () -> Unit
+
 ): Modifier = composed {
+    val scope = rememberCoroutineScope()
+
     var lastClickTime by remember { mutableLongStateOf(0L) }
     var pendingClickJob by remember { mutableStateOf<Job?>(null) }
-    val scope = rememberCoroutineScope()
+    var lastTapTime by remember { mutableLongStateOf(0L) }
+    var lastTapX by remember { mutableStateOf(0f) }
 
     val currentIsUiVisible by rememberUpdatedState(isUiVisible)
     val currentIsPlaying by rememberUpdatedState(isPlaying)
@@ -518,12 +572,59 @@ fun Modifier.videoGestures(
 
                     if ((isTouch || isStylus) && event.type == PointerEventType.Press) {
                         firstChange.consume()
-                        if (currentIsUiVisible) {
-                            currentOnUiVisibilityChange(false)
+                        val currentTime = System.currentTimeMillis()
+                        val tapX = firstChange.position.x
+                        val width = size.width.toFloat()
+                        if (currentTime - lastTapTime < 300) {
+                            pendingClickJob?.cancel()
+                            pendingClickJob = null
+                            when {
+                                tapX < width * 0.3f -> {
+                                    // Left side — skip back
+                                    val newPos =
+                                        (exoPlayer.currentPosition - 10000).coerceAtLeast(0)
+                                    exoPlayer.seekTo(newPos)
+                                    onShowSkipBackIndicator()
+                                    onShowUi()
+                                }
+
+                                tapX > width * 0.7f -> {
+                                    // Right side — skip forward
+                                    val newPos = (exoPlayer.currentPosition + 10000)
+                                        .coerceAtMost(exoPlayer.duration)
+                                    exoPlayer.seekTo(newPos)
+                                    onShowSkipForwardIndicator()
+                                    onShowUi()
+                                }
+
+                                else -> {
+                                    onShowUi()
+                                    // Center double tap
+                                    if (currentIsPlaying) {
+                                        exoPlayer.pause()
+                                        onShowPauseIndicator()
+                                    } else {
+                                        exoPlayer.play()
+                                        onShowPlayIndicator()
+                                    }
+                                }
+                            }
                         } else {
-                            currentOnUiVisibilityChange(true)
-                            currentOnHideTimerTrigger()
+                            // Single tap — wait to see if a double tap follows
+                            pendingClickJob?.cancel()
+                            pendingClickJob = scope.launch {
+                                delay(300)
+                                // No double tap came, so handle single tap
+                                if (currentIsUiVisible) {
+                                    currentOnUiVisibilityChange(false)
+                                } else {
+                                    currentOnUiVisibilityChange(true)
+                                    currentOnHideTimerTrigger()
+                                }
+                            }
                         }
+                        lastTapTime = currentTime
+                        lastTapX = tapX
                     }
                 }
             }
@@ -554,7 +655,13 @@ fun Modifier.videoGestures(
                                 delay(300)
                                 currentOnUiVisibilityChange(true)
                                 currentOnHideTimerTrigger()
-                                if (currentIsPlaying) exoPlayer.pause() else exoPlayer.play()
+                                if (currentIsPlaying) {
+                                    exoPlayer.pause()
+                                    onShowPauseIndicator()
+                                } else {
+                                    exoPlayer.play()
+                                    onShowPlayIndicator()
+                                }
                             }
                         }
                         lastClickTime = currentTime
@@ -565,31 +672,81 @@ fun Modifier.videoGestures(
         }
 }
 
-fun Modifier.skipGesture(
-    onDoubleTap: () -> Unit
-): Modifier = composed {
-    var lastTapTime by remember { mutableLongStateOf(0L) }
+fun Modifier.videoKeyboardControls(
+    exoPlayer: ExoPlayer,
+    volume: Float,
+    onVolumeChange: (Float) -> Unit,
+    onToggleFullscreen: () -> Unit,
+    onShowSkipBackIndicator: () -> Unit,
+    onShowSkipForwardIndicator: () -> Unit,
+    onShowPauseIndicator: () -> Unit,
+    onShowPlayIndicator: () -> Unit,
+    onShowUi: () -> Unit
+): Modifier = this.onKeyEvent { keyEvent ->
+    // Only handle key down events to avoid firing twice
+    if (keyEvent.type != KeyEventType.KeyDown) return@onKeyEvent false
+    when (keyEvent.key) {
 
-    this.pointerInput(Unit) {
-        awaitPointerEventScope {
-            while (true) {
-                val event = awaitPointerEvent()
-                val firstChange = event.changes.firstOrNull() ?: continue
-                val isTouch = firstChange.type == PointerType.Touch
-                val isStylus = firstChange.type == PointerType.Stylus
+        // Play / Pause
+        Key.Spacebar, Key.MediaPlay, Key.MediaPause, Key.MediaPlayPause -> {
+            onShowUi()
+            if (exoPlayer.isPlaying) {
+                exoPlayer.pause()
+                onShowPauseIndicator()
+            } else {
+                exoPlayer.play()
+                onShowPlayIndicator()
 
-                if ((isTouch || isStylus) && event.type == PointerEventType.Press) {
-                    val currentTime = System.currentTimeMillis()
-                    if (currentTime - lastTapTime < 300) {
-                        // Double tap - consume and skip
-                        firstChange.consume()
-                        onDoubleTap()
-                    }
-                    // Single tap - do NOT consume, let it fall through
-                    lastTapTime = currentTime
-                }
             }
+            true
         }
+
+        // Seek forward 10 seconds
+        Key.DirectionRight, Key.MediaFastForward -> {
+            onShowUi()
+            val newPos = (exoPlayer.currentPosition + 10000)
+                .coerceAtMost(exoPlayer.duration)
+            exoPlayer.seekTo(newPos)
+            onShowSkipForwardIndicator()
+            true
+        }
+
+        // Seek back 10 seconds
+        Key.DirectionLeft, Key.MediaRewind -> {
+            onShowUi()
+            val newPos = (exoPlayer.currentPosition - 10000)
+                .coerceAtLeast(0)
+            exoPlayer.seekTo(newPos)
+            onShowSkipBackIndicator()
+            true
+        }
+
+        // Volume up
+        Key.DirectionUp -> {
+            val newVolume = (volume + 0.1f).coerceAtMost(1f)
+            onVolumeChange(newVolume)
+            true
+        }
+
+        // Volume down
+        Key.DirectionDown -> {
+            val newVolume = (volume - 0.1f).coerceAtLeast(0f)
+            onVolumeChange(newVolume)
+            true
+        }
+
+        // Toggle fullscreen
+        Key.F -> {
+            onToggleFullscreen()
+            true
+        }
+
+        // Mute / Unmute
+        Key.M -> {
+            onVolumeChange(if (volume > 0f) 0f else 1f)
+            true
+        } else -> false // Let unhandled keys propagate
     }
 }
 
+fun Modifier.nonFocusable() = this.focusProperties { canFocus = false }
