@@ -138,7 +138,18 @@ fun FileView(
                 shape = if (isGridView) RoundedCornerShape(8.dp) else RectangleShape,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .fileDragSource(file, selectionManager, appState)
+                    .fileDragSource(
+                        file = file,
+                        selectionManager = selectionManager,
+                        appState = appState,
+                        onShowContextMenu = { offset ->
+                            menuOffset = with(density) { DpOffset(offset.x.toDp(), offset.y.toDp()) }
+                            showMenu = true
+                        },
+                        onDismissContextMenu = {
+                            showMenu = false
+                        }
+                    )
                     .then(
                         if (isFolder) {
                             Modifier.fileDropTarget(

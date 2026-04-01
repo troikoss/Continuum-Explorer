@@ -274,9 +274,11 @@ fun FileExplorer(
                             appState = appState
                         )
 
-                        CommandBar(
-                            appState = appState
-                        )
+                        if (SettingsManager.isCommandBarVisible.value) {
+                            CommandBar(
+                                appState = appState
+                            )
+                        }
                     }
                 }
             ) { innerPadding ->

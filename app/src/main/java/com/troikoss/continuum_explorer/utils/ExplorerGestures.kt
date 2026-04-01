@@ -60,6 +60,7 @@ import com.troikoss.continuum_explorer.managers.SelectionManager
 import com.troikoss.continuum_explorer.ui.activities.PopUpActivity
 import com.troikoss.continuum_explorer.model.UniversalFile
 import com.troikoss.continuum_explorer.model.ViewMode
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.io.File
 
@@ -482,7 +483,9 @@ fun Modifier.itemGestures(
 fun Modifier.fileDragSource(
     file: UniversalFile,
     selectionManager: SelectionManager,
-    appState: FileExplorerState
+    appState: FileExplorerState,
+    onShowContextMenu: ((Offset) -> Unit)? = null,
+    onDismissContextMenu: (() -> Unit)? = null
 ): Modifier = composed {
     val context = LocalContext.current
 
@@ -500,67 +503,61 @@ fun Modifier.fileDragSource(
             }
         }
         .dragAndDropSource(block = {
-            // Safely capture the drag scope so startTransfer knows where to execute
             val dragScope = this
 
             awaitEachGesture {
-                // 1. Wait for the user to press the file, and instantly check the device type
                 val down = awaitFirstDown(requireUnconsumed = false)
                 val isMouse = down.type == PointerType.Mouse
 
                 if (isMouse) {
-                    // ==========================================
-                    // MOUSE LOGIC: Instant Drag
-                    // ==========================================
+                    // MOUSE LOGIC: unchanged
                     var isDragging = false
-
                     while (true) {
                         val event = awaitPointerEvent()
                         val change = event.changes.firstOrNull { it.id == down.id }
                         if (change == null || !change.pressed) break
-
-                        val distance = (change.position - down.position).getDistance()
-                        if (distance > viewConfiguration.touchSlop) {
+                        if ((change.position - down.position).getDistance() > viewConfiguration.touchSlop) {
                             isDragging = true
                             break
                         }
                     }
-
                     if (isDragging) {
                         prepareInternalDragState(file, selectionManager, appState)
                         createDragTransferData(context, selectionManager.selectedItems)?.let {
-                            // --- EXPLICITLY CALL dragScope.startTransfer ---
                             dragScope.startTransfer(it)
                         }
                     }
 
                 } else {
-                    // ==========================================
-                    // TOUCH LOGIC: Long Press Drag
-                    // ==========================================
-
+                    // TOUCH LOGIC
                     val longPress = awaitLongPressOrCancellation(down.id)
 
                     if (longPress != null && wasAlreadySelectedAtPress) {
-                        var isDragging = false
 
-                        while (true) {
-                            val event = awaitPointerEvent()
-                            val change = event.changes.firstOrNull { it.id == down.id }
-                            if (change == null || !change.pressed) break
+                        if (onShowContextMenu != null) {
+                            onShowContextMenu(longPress.position)
 
-                            val distance = (change.position - longPress.position).getDistance()
-                            if (distance > viewConfiguration.touchSlop) {
-                                isDragging = true
-                                break
+                            var isDragging = false
+                            while (true) {
+                                val event = awaitPointerEvent()
+                                val change = event.changes.firstOrNull { it.id == down.id }
+                                if (change == null || !change.pressed) {
+                                    // Finger lifted — leave menu open
+                                    break
+                                }
+                                if ((change.position - longPress.position).getDistance() > viewConfiguration.touchSlop) {
+                                    // Finger moved — dismiss menu and start drag
+                                    isDragging = true
+                                    onDismissContextMenu?.invoke()
+                                    break
+                                }
                             }
-                        }
 
-                        if (isDragging) {
-                            prepareInternalDragState(file, selectionManager, appState)
-                            createDragTransferData(context, selectionManager.selectedItems)?.let {
-                                // --- EXPLICITLY CALL dragScope.startTransfer ---
-                                dragScope.startTransfer(it)
+                            if (isDragging) {
+                                prepareInternalDragState(file, selectionManager, appState)
+                                createDragTransferData(context, selectionManager.selectedItems)?.let {
+                                    dragScope.startTransfer(it)
+                                }
                             }
                         }
                     }

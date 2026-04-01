@@ -44,6 +44,7 @@ fun SettingsScreen(onBack: () -> Unit) {
     val isDefaultArchiveViewerEnabled = SettingsManager.isDefaultArchiveViewerEnabled.value
     val themeMode = SettingsManager.themeMode.value
     val detailsMode = SettingsManager.detailsMode.value
+    val isCommandBarVisible = SettingsManager.isCommandBarVisible.value
 
     var showDeleteDialog by remember { mutableStateOf(false) }
     var showThemeDialog by remember { mutableStateOf(false) }
@@ -99,6 +100,16 @@ fun SettingsScreen(onBack: () -> Unit) {
                     Text(text)
                 },
                 modifier = Modifier.clickable { showDetailsDialog = true }
+            )
+            ListItem(
+                headlineContent = { Text("Show Command Bar") },
+                supportingContent = { Text("Toolbar with file operation buttons below the address bar.") },
+                trailingContent = {
+                    Switch(
+                        checked = isCommandBarVisible,
+                        onCheckedChange = { SettingsManager.setCommandBarVisible(context, it) }
+                    )
+                }
             )
 
             HorizontalDivider()
