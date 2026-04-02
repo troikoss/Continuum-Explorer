@@ -1,6 +1,9 @@
 package com.troikoss.continuum_explorer.ui.activities
 
 import android.annotation.SuppressLint
+import android.graphics.Bitmap
+import android.media.MediaMetadataRetriever
+import android.net.Uri
 import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.compose.animation.AnimatedVisibility
@@ -41,15 +44,26 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.Text
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -59,6 +73,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
@@ -76,6 +95,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
@@ -91,7 +111,10 @@ import com.troikoss.continuum_explorer.ui.theme.FileExplorerTheme
 import com.troikoss.continuum_explorer.utils.FileScannerUtils
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.util.Locale
 
 
@@ -187,6 +210,10 @@ fun VideoPlayerScreen(
 
     // ── Loop ────────────────────────────────────────────────────────────────
     var loopEnabled by remember { mutableStateOf(false) }
+
+    // ── Thumbnail preview ────────────────────────────────────────────────────
+    val thumbnailCache = remember { mutableStateMapOf<Long, ImageBitmap>() }
+    var seekbarHoverFraction by remember { mutableStateOf<Float?>(null) }
 
     // ── Tracks ──────────────────────────────────────────────────────────────
     var audioTracks    by remember { mutableStateOf<List<TrackOption>>(emptyList()) }
@@ -299,6 +326,39 @@ fun VideoPlayerScreen(
     LaunchedEffect(showPauseIndicator)       { if (showPauseIndicator)       { delay(600); showPauseIndicator       = false } }
     LaunchedEffect(showPlayIndicator)        { if (showPlayIndicator)        { delay(600); showPlayIndicator        = false } }
 
+    // ── Thumbnail generation ────────────────────────────────────────────────
+    // Keyed only on the URI so ExoPlayer duration fluctuations don't cancel mid-generation.
+    LaunchedEffect(initialVideoUri) {
+        if (initialVideoUri == null) return@LaunchedEffect
+        // Wait for the player to report a valid duration before extracting frames.
+        while (totalDuration <= 0L) { delay(200) }
+        val duration = totalDuration
+        val count = 50
+        val interval = duration / count
+        val retriever = MediaMetadataRetriever()
+        try {
+            withContext(Dispatchers.IO) { retriever.setDataSource(context, Uri.parse(initialVideoUri)) }
+            for (i in 0..count) {
+                val ms = (i * interval).coerceAtMost(duration)
+                val bmp = withContext(Dispatchers.IO) {
+                    retriever.getFrameAtTime(ms * 1000L, MediaMetadataRetriever.OPTION_CLOSEST_SYNC)
+                }
+                if (bmp != null) {
+                    val scaled = withContext(Dispatchers.IO) {
+                        val s = Bitmap.createScaledBitmap(bmp, 160, 90, true)
+                        if (s !== bmp) bmp.recycle()
+                        s
+                    }
+                    thumbnailCache[ms] = scaled.asImageBitmap()
+                }
+            }
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+        } finally {
+            withContext(Dispatchers.IO) { retriever.release() }
+        }
+    }
+
     LaunchedEffect(Unit) { focusRequester.requestFocus() }
     DisposableEffect(Unit) { onDispose { exoPlayer.release() } }
 
@@ -392,8 +452,7 @@ fun VideoPlayerScreen(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .alpha(0.85f)
-                        .background(Color.Black)
+                        .background(Color.Black.copy(alpha = 0.85f))
                         .pointerInput(Unit) {
                             awaitPointerEventScope {
                                 while (true) {
@@ -410,23 +469,116 @@ fun VideoPlayerScreen(
                         }
                         .pointerInput(Unit) { detectTapGestures(onTap = { hideTimerTrigger++ }) }
                 ) {
-                    // Seekbar
-                    Slider(
-                        value = currentPosition.toFloat(),
-                        onValueChange = { newPos ->
-                            currentPosition = newPos.toLong()
-                            exoPlayer.seekTo(currentPosition)
-                        },
-                        valueRange = 0f..totalDuration.toFloat().coerceAtLeast(1f),
+                    // Preview card — zero layout height so it floats above the bar without
+                    // pushing the Column upward. The layout modifier reports h=0 to the parent
+                    // while placing the content at y=-contentHeight (above its anchor).
+                    if (seekbarHoverFraction != null && totalDuration > 0L) {
+                        BoxWithConstraints(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .layout { measurable, constraints ->
+                                    val p = measurable.measure(constraints.copy(minHeight = 0))
+                                    layout(constraints.maxWidth, 0) { p.place(0, -p.height) }
+                                }
+                        ) {
+                            val fraction = seekbarHoverFraction!!
+                            val hoverMs = (fraction * totalDuration).toLong()
+                            val bitmap = thumbnailCache.keys
+                                .minByOrNull { k -> if (k >= hoverMs) k - hoverMs else hoverMs - k }
+                                ?.let { thumbnailCache[it] }
+                            val previewW = 240.dp
+                            val previewImageH = 136.dp
+                            val padDp = 8.dp
+                            val thumbXDp = padDp + (maxWidth - padDp * 2) * fraction
+                            val previewXDp = (thumbXDp - previewW / 2).coerceIn(0.dp, maxWidth - previewW)
+                            Column(
+                                modifier = Modifier
+                                    .offset(x = previewXDp)
+                                    .width(previewW)
+                                    .border(1.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(6.dp))
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(Color(0xDD000000)),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                if (bitmap != null) {
+                                    Image(
+                                        bitmap = bitmap,
+                                        contentDescription = null,
+                                        contentScale = ContentScale.Crop,
+                                        modifier = Modifier.fillMaxWidth().height(previewImageH)
+                                    )
+                                } else {
+                                    Box(Modifier.fillMaxWidth().height(previewImageH).background(Color.DarkGray))
+                                }
+                                Text(
+                                    text = formatTime(hoverMs),
+                                    color = Color.White,
+                                    fontSize = 11.sp,
+                                    modifier = Modifier.padding(vertical = 3.dp)
+                                )
+                            }
+                        }
+                    }
+
+                    // Seekbar track
+                    Box(
                         modifier = Modifier
                             .fillMaxWidth()
+                            .height(24.dp)
                             .padding(horizontal = 8.dp)
-                            .nonFocusable(),
-                        colors = SliderDefaults.colors(
-                            thumbColor       = Color.Red,
-                            activeTrackColor = Color.Red
-                        )
-                    )
+                            .nonFocusable()
+                            .pointerInput(Unit) {
+                                awaitPointerEventScope {
+                                    while (true) {
+                                        val event = awaitPointerEvent()
+                                        if (event.changes.any { it.type == PointerType.Mouse }) {
+                                            when (event.type) {
+                                                PointerEventType.Move -> seekbarHoverFraction =
+                                                    (event.changes.first().position.x / size.width).coerceIn(0f, 1f)
+                                                PointerEventType.Exit -> seekbarHoverFraction = null
+                                                else -> {}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            .pointerInput(totalDuration) {
+                                detectTapGestures { offset ->
+                                    val fraction = (offset.x / size.width).coerceIn(0f, 1f)
+                                    currentPosition = (fraction * totalDuration).toLong()
+                                    exoPlayer.seekTo(currentPosition)
+                                    hideTimerTrigger++
+                                }
+                            }
+                            .pointerInput("drag", totalDuration) {
+                                detectHorizontalDragGestures(
+                                    onDragStart = { offset ->
+                                        seekbarHoverFraction = (offset.x / size.width).coerceIn(0f, 1f)
+                                    },
+                                    onHorizontalDrag = { change, _ ->
+                                        change.consume()
+                                        val fraction = (change.position.x / size.width).coerceIn(0f, 1f)
+                                        seekbarHoverFraction = fraction
+                                        currentPosition = (fraction * totalDuration).toLong()
+                                        exoPlayer.seekTo(currentPosition)
+                                        hideTimerTrigger++
+                                    },
+                                    onDragEnd = { seekbarHoverFraction = null },
+                                    onDragCancel = { seekbarHoverFraction = null }
+                                )
+                            }
+                    ) {
+                        Canvas(modifier = Modifier.fillMaxSize()) {
+                            val trackH = 3.dp.toPx()
+                            val cy = size.height / 2f
+                            val fraction = if (totalDuration > 0L) currentPosition.toFloat() / totalDuration else 0f
+                            val activeX = (fraction * size.width).coerceIn(0f, size.width)
+                            val thumbR = if (seekbarHoverFraction != null) 6.dp.toPx() else 4.dp.toPx()
+                            drawLine(Color.White.copy(alpha = 0.3f), Offset(0f, cy), Offset(size.width, cy), trackH, cap = StrokeCap.Round)
+                            if (activeX > 0f) drawLine(Color.Red, Offset(0f, cy), Offset(activeX, cy), trackH, cap = StrokeCap.Round)
+                            drawCircle(Color.White, thumbR, Offset(activeX, cy))
+                        }
+                    }
 
                     // Controls row
                     Row(modifier = Modifier.padding(8.dp)) {
@@ -515,7 +667,7 @@ fun VideoPlayerScreen(
                                             trailingIcon = {
                                                 Row {
                                                     Text("${playbackSpeed}×", color = Color.Gray)
-                                                    Icon(Icons.Default.KeyboardArrowRight, null)
+                                                    Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null)
                                                 }
                                             },
                                             onClick = { optionsScreen = "SPEED" }
@@ -534,7 +686,7 @@ fun VideoPlayerScreen(
                                                             color = Color.Gray
                                                         )
                                                     }
-                                                    Icon(Icons.Default.KeyboardArrowRight, null)
+                                                    Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null)
                                                 }
                                             },
                                             onClick = { optionsScreen = "AUDIO" },
@@ -549,7 +701,7 @@ fun VideoPlayerScreen(
                                                 Row {
                                                     val sel = subtitleTracks.firstOrNull { it.isSelected }
                                                     Text(sel?.label ?: "Off", color = Color.Gray)
-                                                    Icon(Icons.Default.KeyboardArrowRight, null)
+                                                    Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null)
                                                 }
                                             },
                                             onClick = { optionsScreen = "SUBTITLES" },
@@ -563,7 +715,7 @@ fun VideoPlayerScreen(
                                             trailingIcon = {
                                                 Row {
                                                     Text(resizeMode.label, color = Color.Gray)
-                                                    Icon(Icons.Default.KeyboardArrowRight, null)
+                                                    Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null)
                                                 }
                                             },
                                             onClick = { optionsScreen = "ASPECT" }
