@@ -164,6 +164,8 @@
     <string name="settings_details_bar">Bottom Bar</string>
     <string name="settings_show_command_bar">Show Command Bar</string>
     <string name="settings_show_command_bar_desc">Toolbar with file operation buttons below the address bar.</string>
+    <string name="settings_show_hidden_files">Show hidden files/folders</string>
+    <string name="settings_show_hidden_files_desc">Show files and folders that start with a dot.</string>
     <string name="settings_file_ops">File Operations</string>
     <string name="settings_deletion_behavior">Deletion Behavior</string>
     <string name="settings_del_ask">Ask each time</string>
@@ -180,6 +182,8 @@
     <string name="settings_language_english">English</string>
     <string name="settings_language_turkish">Turkish</string>
     <string name="settings_language_french">French</string>
+    <string name="settings_language_portuguese">Portuguese</string>
+    <string name="settings_language_spanish">Spanish</string>
     <string name="settings_choose_language">Choose Language</string>
 
     <!-- Context Menus/Command Bar -->
@@ -304,8 +308,5 @@
     <string name="details_header_name">Name</string>
     <string name="details_header_size">Size</string>
     <string name="details_header_date">Date</string>
-
-
-
 
 </resources>

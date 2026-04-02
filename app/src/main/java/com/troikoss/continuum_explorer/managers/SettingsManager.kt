@@ -35,6 +35,7 @@ object SettingsManager {
     private const val KEY_DETAILS_MODE = "details_mode"
 
     private const val KEY_COMMAND_BAR_VISIBLE = "command_bar_visible"
+    private const val KEY_SHOW_HIDDEN_FILES = "show_hidden_files"
 
     private val _deleteBehavior = mutableStateOf(DeleteBehavior.ASK)
     val deleteBehavior: State<DeleteBehavior> = _deleteBehavior
@@ -50,6 +51,9 @@ object SettingsManager {
 
     private val _isCommandBarVisible = mutableStateOf(true)
     val isCommandBarVisible: State<Boolean> = _isCommandBarVisible
+
+    private val _showHiddenFiles = mutableStateOf(false)
+    val showHiddenFiles: State<Boolean> = _showHiddenFiles
 
     // Derived state: enabled if behavior is not PERMANENT
     private val _isRecycleBinEnabled = mutableStateOf(true)
@@ -90,6 +94,7 @@ object SettingsManager {
         }
 
         _isCommandBarVisible.value = prefs.getBoolean(KEY_COMMAND_BAR_VISIBLE, true)
+        _showHiddenFiles.value = prefs.getBoolean(KEY_SHOW_HIDDEN_FILES, false)
 
         _isDefaultArchiveViewerEnabled.value = prefs.getBoolean(KEY_DEFAULT_ARCHIVE_VIEWER, true)
     }
@@ -125,6 +130,13 @@ object SettingsManager {
         _isCommandBarVisible.value = visible
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         prefs.edit().putBoolean(KEY_COMMAND_BAR_VISIBLE, visible).apply()
+        GlobalEvents.triggerConfigUpdate()
+    }
+
+    fun setShowHiddenFiles(context: Context, show: Boolean) {
+        _showHiddenFiles.value = show
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putBoolean(KEY_SHOW_HIDDEN_FILES, show).apply()
         GlobalEvents.triggerConfigUpdate()
     }
 

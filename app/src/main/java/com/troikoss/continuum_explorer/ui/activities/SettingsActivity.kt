@@ -48,6 +48,7 @@ fun SettingsScreen(onBack: () -> Unit) {
     val language = SettingsManager.language.value
     val detailsMode = SettingsManager.detailsMode.value
     val isCommandBarVisible = SettingsManager.isCommandBarVisible.value
+    val showHiddenFiles = SettingsManager.showHiddenFiles.value
 
     var showDeleteDialog by remember { mutableStateOf(false) }
     var showThemeDialog by remember { mutableStateOf(false) }
@@ -100,6 +101,8 @@ fun SettingsScreen(onBack: () -> Unit) {
                         "tr" -> stringResource(R.string.settings_language_turkish)
                         "en" -> stringResource(R.string.settings_language_english)
                         "fr" -> stringResource(R.string.settings_language_french)
+                        "pt" -> stringResource(R.string.settings_language_portuguese)
+                        "es" -> stringResource(R.string.settings_language_spanish)
                         else -> stringResource(R.string.settings_language_system)
                     }
                     Text(text)
@@ -126,6 +129,17 @@ fun SettingsScreen(onBack: () -> Unit) {
                     Switch(
                         checked = isCommandBarVisible,
                         onCheckedChange = { SettingsManager.setCommandBarVisible(context, it) }
+                    )
+                }
+            )
+
+            ListItem(
+                headlineContent = { Text(stringResource(R.string.settings_show_hidden_files)) },
+                supportingContent = { Text(stringResource(R.string.settings_show_hidden_files_desc)) },
+                trailingContent = {
+                    Switch(
+                        checked = showHiddenFiles,
+                        onCheckedChange = { SettingsManager.setShowHiddenFiles(context, it) }
                     )
                 }
             )
@@ -279,6 +293,22 @@ fun SettingsScreen(onBack: () -> Unit) {
                                 selected = language == "fr",
                                 onClick = {
                                     SettingsManager.setLanguage(context, "fr")
+                                    showLanguageDialog = false
+                                }
+                            )
+                            OptionItem(
+                                label = stringResource(R.string.settings_language_portuguese),
+                                selected = language == "pt",
+                                onClick = {
+                                    SettingsManager.setLanguage(context, "pt")
+                                    showLanguageDialog = false
+                                }
+                            )
+                            OptionItem(
+                                label = stringResource(R.string.settings_language_spanish),
+                                selected = language == "es",
+                                onClick = {
+                                    SettingsManager.setLanguage(context, "es")
                                     showLanguageDialog = false
                                 }
                             )

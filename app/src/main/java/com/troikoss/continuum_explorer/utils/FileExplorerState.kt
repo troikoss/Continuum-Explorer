@@ -17,6 +17,7 @@ import com.troikoss.continuum_explorer.R
 import com.troikoss.continuum_explorer.managers.RecentFilesManager
 import com.troikoss.continuum_explorer.managers.SearchManager
 import com.troikoss.continuum_explorer.managers.SelectionManager
+import com.troikoss.continuum_explorer.managers.SettingsManager
 import com.troikoss.continuum_explorer.model.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -124,6 +125,8 @@ class FileExplorerState(
         scope.launch {
             GlobalEvents.configChangeEvent.collect {
                 appConfigs.reload()
+                // If a configuration changed (like hidden files toggle), refresh the list
+                refresh()
             }
         }
     }
@@ -246,6 +249,8 @@ class FileExplorerState(
         loadingJob?.cancel()
         loadingJob = scope.launch {
             val sortParams = folderConfigs.sortParams
+            val showHidden = SettingsManager.showHiddenFiles.value
+
             withContext(Dispatchers.Main) {
                 isSearchMode = true
                 isLoading = true
@@ -273,8 +278,10 @@ class FileExplorerState(
                     currentArchivePath = currentArchivePath
                 )
 
+                val filtered = results.filter { if (showHidden) true else !it.name.startsWith(".") }
+
                 val sorted = withContext(Dispatchers.IO) {
-                    sortFiles(results, sortParams)
+                    sortFiles(filtered, sortParams)
                 }
 
                 withContext(Dispatchers.Main) {
@@ -349,8 +356,9 @@ class FileExplorerState(
             archiveCache = null
         }
 
-        // Capture sort params on the calling thread (usually Main)
+        // Capture sort params and settings on the calling thread (usually Main)
         val sortParams = folderConfigs.sortParams
+        val showHidden = SettingsManager.showHiddenFiles.value
 
         try {
             val sortedList: List<UniversalFile> = withContext(Dispatchers.IO) {
@@ -373,7 +381,9 @@ class FileExplorerState(
                     emptyList()
                 }
                 
-                if (isRecentMode) universalList else sortFiles(universalList, sortParams)
+                val filteredList = if (showHidden) universalList else universalList.filter { !it.name.startsWith(".") }
+                
+                if (isRecentMode) filteredList else sortFiles(filteredList, sortParams)
             }
 
             withContext(Dispatchers.Main) {

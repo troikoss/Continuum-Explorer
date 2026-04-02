@@ -163,6 +163,8 @@
     <string name="settings_details_bar">Barre inférieure</string>
     <string name="settings_show_command_bar">Afficher la barre de commandes</string>
     <string name="settings_show_command_bar_desc">Barre d\'outils avec boutons d\'opérations sur les fichiers sous la barre d\'adresse.</string>
+    <string name="settings_show_hidden_files">Afficher les fichiers/dossiers cachés</string>
+    <string name="settings_show_hidden_files_desc">Afficher les fichiers et dossiers commençant par un point.</string>
     <string name="settings_file_ops">Opérations sur les fichiers</string>
     <string name="settings_deletion_behavior">Comportement de suppression</string>
     <string name="settings_del_ask">Demander à chaque fois</string>
@@ -179,6 +181,7 @@
     <string name="settings_language_english">Anglais</string>
     <string name="settings_language_turkish">Turc</string>
     <string name="settings_language_french">Français</string>
+    <string name="settings_language_spanish">Espagnol</string>
     <string name="settings_choose_language">Choisir la langue</string>
 
     <!-- Context Menus/Command Bar -->
@@ -192,7 +195,7 @@
     <string name="menu_remove_favorites">Retirer des favoris</string>
     <string name="menu_add_favorites">Ajouter aux favoris</string>
     <string name="menu_add_home">Ajouter à l\'accueil</string>
-    <string name="menu_extract">Extraire&#8230;</string>
+    <string name="menu_extract">Extraer&#8230;</string>
     <string name="menu_compress">Compresser&#8230;</string>
     <string name="menu_cut">Couper</string>
     <string name="menu_copy">Copier</string>
@@ -299,5 +302,6 @@
     <string name="details_header_name">Nom</string>
     <string name="details_header_size">Taille</string>
     <string name="details_header_date">Date</string>
+    <string name="settings_language_portuguese">Portugais</string>
 
 </resources>

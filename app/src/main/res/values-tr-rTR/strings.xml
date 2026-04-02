@@ -146,6 +146,8 @@
     <string name="settings_details_bar">Alt Çubuk</string>
     <string name="settings_show_command_bar">Komut Çubuğunu Göster</string>
     <string name="settings_show_command_bar_desc">Adres çubuğunun altında, dosya işlem düğmelerinin bulunduğu araç çubuğu.</string>
+    <string name="settings_show_hidden_files">Gizli dosya/klasörleri göster</string>
+    <string name="settings_show_hidden_files_desc">Nokta ile başlayan dosya ve klasörleri göster.</string>
     <string name="settings_file_ops">Dosya İşlemleri</string>
     <string name="settings_deletion_behavior">Silme Davranışı</string>
     <string name="settings_del_ask">Her zaman sor</string>
@@ -162,6 +164,7 @@
     <string name="settings_language_english">İngilizce</string>
     <string name="settings_language_turkish">Türkçe</string>
     <string name="settings_language_french">Fransızca</string>
+    <string name="settings_language_spanish">İspanyolca</string>
     <string name="settings_choose_language">Dil Seç</string>
     <string name="menu_restore">Geri Yükle</string>
     <string name="menu_delete_permanently">Kalıcı Sil</string>
@@ -268,4 +271,5 @@
     <string name="details_header_name">Ad</string>
     <string name="details_header_size">Boyut</string>
     <string name="details_header_date">Tarih</string>
+    <string name="settings_language_portuguese">Portekizce</string>
 </resources>
