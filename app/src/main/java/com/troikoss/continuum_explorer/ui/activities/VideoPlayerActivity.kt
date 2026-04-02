@@ -37,6 +37,9 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material.icons.filled.Subtitles
+import androidx.compose.material.icons.automirrored.filled.VolumeDown
+import androidx.compose.material.icons.automirrored.filled.VolumeOff
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -214,6 +217,8 @@ fun VideoPlayerScreen(
     // ── Thumbnail preview ────────────────────────────────────────────────────
     val thumbnailCache = remember { mutableStateMapOf<Long, ImageBitmap>() }
     var seekbarHoverFraction by remember { mutableStateOf<Float?>(null) }
+    var thumbnailAspectRatio by remember { mutableFloatStateOf(16f / 9f) }
+    var currentVideoUri by remember { mutableStateOf(initialVideoUri) }
 
     // ── Tracks ──────────────────────────────────────────────────────────────
     var audioTracks    by remember { mutableStateOf<List<TrackOption>>(emptyList()) }
@@ -261,6 +266,9 @@ fun VideoPlayerScreen(
                 hasPrev = player.hasPreviousMediaItem()
             }
             override fun onTracksChanged(tracks: Tracks) { buildTrackLists(tracks) }
+            override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+                currentVideoUri = mediaItem?.localConfiguration?.uri?.toString()
+            }
         }
         exoPlayer.addListener(listener)
         onDispose { exoPlayer.removeListener(listener) }
@@ -269,6 +277,11 @@ fun VideoPlayerScreen(
     // ── Apply loop setting ──────────────────────────────────────────────────
     LaunchedEffect(loopEnabled) {
         exoPlayer.repeatMode = if (loopEnabled) Player.REPEAT_MODE_ONE else Player.REPEAT_MODE_OFF
+    }
+
+    // ── Apply volume ────────────────────────────────────────────────────────
+    LaunchedEffect(volume) {
+        exoPlayer.volume = volume
     }
 
     // ── Apply playback speed ────────────────────────────────────────────────
@@ -287,7 +300,10 @@ fun VideoPlayerScreen(
             val videoExtensions = setOf("mp4", "mkv", "webm", "avi", "mov")
             val allVideos = FileScannerUtils.getSiblingFiles(context, initialVideoUri, videoExtensions)
             allVideos.forEach { uri -> exoPlayer.addMediaItem(MediaItem.fromUri(uri)) }
-            val startIndex = allVideos.indexOf(initialVideoUri).coerceAtLeast(0)
+            val targetName = Uri.parse(initialVideoUri).lastPathSegment
+            val startIndex = if (targetName != null)
+                allVideos.indexOfFirst { Uri.parse(it).lastPathSegment == targetName }.coerceAtLeast(0)
+            else 0
             exoPlayer.seekTo(startIndex, 0L)
             exoPlayer.prepare()
             exoPlayer.playWhenReady = true
@@ -327,17 +343,30 @@ fun VideoPlayerScreen(
     LaunchedEffect(showPlayIndicator)        { if (showPlayIndicator)        { delay(600); showPlayIndicator        = false } }
 
     // ── Thumbnail generation ────────────────────────────────────────────────
-    // Keyed only on the URI so ExoPlayer duration fluctuations don't cancel mid-generation.
-    LaunchedEffect(initialVideoUri) {
-        if (initialVideoUri == null) return@LaunchedEffect
-        // Wait for the player to report a valid duration before extracting frames.
-        while (totalDuration <= 0L) { delay(200) }
-        val duration = totalDuration
+    // Re-runs whenever the active media item changes (next/prev skip).
+    LaunchedEffect(currentVideoUri) {
+        thumbnailCache.clear()
+        thumbnailAspectRatio = 16f / 9f
+        val uri = currentVideoUri ?: return@LaunchedEffect
+        // Wait for ExoPlayer to report a valid duration (works paused or playing).
+        while (exoPlayer.duration <= 0L) { delay(200) }
+        val duration = exoPlayer.duration
         val count = 50
         val interval = duration / count
         val retriever = MediaMetadataRetriever()
         try {
-            withContext(Dispatchers.IO) { retriever.setDataSource(context, Uri.parse(initialVideoUri)) }
+            val (thumbW, thumbH) = withContext(Dispatchers.IO) {
+                retriever.setDataSource(context, Uri.parse(uri))
+                val w = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH)?.toIntOrNull() ?: 160
+                val h = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT)?.toIntOrNull() ?: 90
+                val rotation = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_ROTATION)?.toIntOrNull() ?: 0
+                // Swap dimensions for portrait-rotated videos
+                if (rotation == 90 || rotation == 270) Pair(h, w) else Pair(w, h)
+            }
+            val aspect = thumbW.toFloat() / thumbH.toFloat().coerceAtLeast(1f)
+            thumbnailAspectRatio = aspect
+            val scaledW = 160
+            val scaledH = (scaledW / aspect).toInt().coerceAtLeast(1)
             for (i in 0..count) {
                 val ms = (i * interval).coerceAtMost(duration)
                 val bmp = withContext(Dispatchers.IO) {
@@ -345,7 +374,7 @@ fun VideoPlayerScreen(
                 }
                 if (bmp != null) {
                     val scaled = withContext(Dispatchers.IO) {
-                        val s = Bitmap.createScaledBitmap(bmp, 160, 90, true)
+                        val s = Bitmap.createScaledBitmap(bmp, scaledW, scaledH, true)
                         if (s !== bmp) bmp.recycle()
                         s
                     }
@@ -486,8 +515,9 @@ fun VideoPlayerScreen(
                             val bitmap = thumbnailCache.keys
                                 .minByOrNull { k -> if (k >= hoverMs) k - hoverMs else hoverMs - k }
                                 ?.let { thumbnailCache[it] }
-                            val previewW = 240.dp
-                            val previewImageH = 136.dp
+                            // Fit within a 240×135 box, never narrower than 80dp
+                            val previewW = (135.dp * thumbnailAspectRatio).coerceIn(80.dp, 240.dp)
+                            val previewImageH = previewW / thumbnailAspectRatio
                             val padDp = 8.dp
                             val thumbXDp = padDp + (maxWidth - padDp * 2) * fraction
                             val previewXDp = (thumbXDp - previewW / 2).coerceIn(0.dp, maxWidth - previewW)
@@ -613,6 +643,55 @@ fun VideoPlayerScreen(
                                 modifier = Modifier.size(48.dp))
                         }
 
+                        // Volume icon — tap to mute/unmute
+                        IconButton(
+                            onClick = { volume = if (volume > 0f) 0f else 1f },
+                            modifier = Modifier.nonFocusable()
+                        ) {
+                            Icon(
+                                imageVector = when {
+                                    volume == 0f  -> Icons.AutoMirrored.Filled.VolumeOff
+                                    volume < 0.5f -> Icons.AutoMirrored.Filled.VolumeDown
+                                    else          -> Icons.AutoMirrored.Filled.VolumeUp
+                                },
+                                contentDescription = "Volume",
+                                tint = Color.White,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+
+                        // Volume slider
+                        Box(
+                            modifier = Modifier
+                                .width(80.dp)
+                                .height(24.dp)
+                                .align(Alignment.CenterVertically)
+                                .nonFocusable()
+                                .pointerInput(Unit) {
+                                    detectTapGestures { offset ->
+                                        volume = (offset.x / size.width).coerceIn(0f, 1f)
+                                    }
+                                }
+                                .pointerInput(Unit) {
+                                    detectHorizontalDragGestures { change, _ ->
+                                        change.consume()
+                                        volume = (change.position.x / size.width).coerceIn(0f, 1f)
+                                    }
+                                }
+                        ) {
+                            Canvas(modifier = Modifier.fillMaxSize()) {
+                                val trackH = 3.dp.toPx()
+                                val cy = size.height / 2f
+                                val activeX = (volume * size.width).coerceIn(0f, size.width)
+                                val thumbR = 4.dp.toPx()
+                                drawLine(Color.White.copy(alpha = 0.3f), Offset(0f, cy), Offset(size.width, cy), trackH, cap = StrokeCap.Round)
+                                if (activeX > 0f) drawLine(Color.White, Offset(0f, cy), Offset(activeX, cy), trackH, cap = StrokeCap.Round)
+                                drawCircle(Color.White, thumbR, Offset(activeX, cy))
+                            }
+                        }
+
+                        Spacer(Modifier.width(16.dp))
+
                         // Loop indicator
                         if (loopEnabled) {
                             Icon(Icons.Default.Repeat, "Loop",
@@ -620,8 +699,10 @@ fun VideoPlayerScreen(
                                 modifier = Modifier
                                     .size(20.dp)
                                     .align(Alignment.CenterVertically)
-                                    .padding(start = 4.dp))
+                            )
                         }
+
+                        Spacer(Modifier.width(16.dp))
 
                         // Timestamp
                         Text(
@@ -629,7 +710,6 @@ fun VideoPlayerScreen(
                             color = Color.White,
                             modifier = Modifier
                                 .align(Alignment.CenterVertically)
-                                .padding(start = 8.dp)
                         )
 
                         Spacer(Modifier.weight(1f))
