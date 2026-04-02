@@ -23,8 +23,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.troikoss.continuum_explorer.R
 import com.troikoss.continuum_explorer.utils.IconHelper
 import com.troikoss.continuum_explorer.utils.getFileType
 import com.troikoss.continuum_explorer.utils.getImageResolution
@@ -77,7 +79,7 @@ fun DetailsPane (
                             modifier = Modifier.size(100.dp)
                         )
                     } else {
-                        Text("Invalid Path")
+                        Text(stringResource(R.string.msg_invalid_path))
                     }
                 } else {
                     if (IconHelper.isMimeTypePreviewable(selectedItems.first())) {
@@ -94,8 +96,8 @@ fun DetailsPane (
 
             val infoLabel = when {
                 selectionCount == 1 -> selectedItems.first().name
-                selectionCount > 1 -> "$selectionCount items selected"
-                else -> if (totalFiles == 1) "1 item" else "$totalFiles items"
+                selectionCount > 1 -> stringResource(R.string.prop_selected_count, selectionCount)
+                else -> if (totalFiles == 1) stringResource(R.string.details_item_count_singular) else stringResource(R.string.details_item_count_plural, totalFiles)
             }
 
             Column(modifier = Modifier.padding(16.dp)) {
@@ -110,13 +112,13 @@ fun DetailsPane (
                     Spacer(modifier = Modifier.height(4.dp))
                     val date = appState.formatDate(selectedItems.first().lastModified)
                     Text(
-                        text = "Date Modified: $date",
+                        text = stringResource(R.string.details_date_modified, date),
                         fontSize = 14.sp
                     )
                     if (!selectedItems.first().isDirectory) {
                         val size = appState.formatSize(selectedItems.first().length)
                         Text(
-                            text = "Size: $size",
+                            text = stringResource(R.string.details_size, size),
                             fontSize = 14.sp
                         )
                     }
@@ -150,14 +152,14 @@ fun DetailsPane (
 
                     if (resolution != null) {
                         Text(
-                            text = "Resolution: $resolution",
+                            text = stringResource(R.string.details_resolution, resolution!!),
                             fontSize = 14.sp
                         )
                     }
 
                     if (duration != null) {
                         Text(
-                            text = "Duration: $duration",
+                            text = stringResource(R.string.details_duration, duration!!),
                             fontSize = 14.sp
                         )
                     }
@@ -196,7 +198,7 @@ fun DetailsBar(
                         modifier = Modifier.size(50.dp)
                     )
                 } else {
-                    Text("Invalid Path")
+                    Text(stringResource(R.string.msg_invalid_path))
                 }
             } else {
                 if (IconHelper.isMimeTypePreviewable(selectedItems.first())) {
@@ -212,8 +214,8 @@ fun DetailsBar(
         }
         val infoLabel = when {
             selectionCount == 1 -> selectedItems.first().name
-            selectionCount > 1 -> "$selectionCount items selected"
-            else -> if (totalFiles == 1) "1 item" else "$totalFiles items"
+            selectionCount > 1 -> stringResource(R.string.prop_selected_count, selectionCount)
+            else -> if (totalFiles == 1) stringResource(R.string.details_item_count_singular) else stringResource(R.string.details_item_count_plural, totalFiles)
         }
 
         Column (
@@ -249,7 +251,7 @@ fun DetailsBar(
                 val date = appState.formatDate(selectedItems.first().lastModified)
 
                 Text(
-                    text = "Date Modified: $date",
+                    text = stringResource(R.string.details_date_modified, date),
                     fontSize = 14.sp,
                     modifier = Modifier.weight(1f)
                 )
@@ -257,7 +259,7 @@ fun DetailsBar(
                 if (!selectedItems.first().isDirectory) {
                     val size = appState.formatSize(selectedItems.first().length)
                     Text(
-                        text = "Size: $size",
+                        text = stringResource(R.string.details_size, size),
                         fontSize = 14.sp,
                         modifier = Modifier.weight(1f)
                     )
@@ -300,7 +302,7 @@ fun DetailsBar(
 
                 if (resolution != null) {
                     Text(
-                        text = "Resolution: $resolution",
+                        text = stringResource(R.string.details_resolution, resolution!!),
                         fontSize = 14.sp,
                         modifier = Modifier.weight(1f)
 
@@ -309,7 +311,7 @@ fun DetailsBar(
 
                 if (duration != null) {
                     Text(
-                        text = "Duration: $duration",
+                        text = stringResource(R.string.details_duration, duration!!),
                         fontSize = 14.sp,
                         modifier = Modifier.weight(1f)
                     )

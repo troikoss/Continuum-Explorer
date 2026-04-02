@@ -17,8 +17,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.troikoss.continuum_explorer.R
 import com.troikoss.continuum_explorer.ui.theme.FileExplorerTheme
 import com.troikoss.continuum_explorer.managers.DeleteBehavior
 import com.troikoss.continuum_explorer.managers.DetailsMode
@@ -43,21 +45,23 @@ fun SettingsScreen(onBack: () -> Unit) {
     val deleteBehavior = SettingsManager.deleteBehavior.value
     val isDefaultArchiveViewerEnabled = SettingsManager.isDefaultArchiveViewerEnabled.value
     val themeMode = SettingsManager.themeMode.value
+    val language = SettingsManager.language.value
     val detailsMode = SettingsManager.detailsMode.value
     val isCommandBarVisible = SettingsManager.isCommandBarVisible.value
 
     var showDeleteDialog by remember { mutableStateOf(false) }
     var showThemeDialog by remember { mutableStateOf(false) }
+    var showLanguageDialog by remember { mutableStateOf(false) }
     var showShortcutsDialog by remember { mutableStateOf(false) }
     var showDetailsDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Settings") },
+                title = { Text(stringResource(R.string.settings)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 }
             )
@@ -70,19 +74,19 @@ fun SettingsScreen(onBack: () -> Unit) {
                 .verticalScroll(rememberScrollState())
         ) {
             Text(
-                "Appearance",
+                stringResource(R.string.settings_appearance),
                 style = MaterialTheme.typography.titleSmall,
                 color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.padding(16.dp)
             )
 
             ListItem(
-                headlineContent = { Text("Theme") },
+                headlineContent = { Text(stringResource(R.string.settings_theme)) },
                 supportingContent = {
                     val text = when (themeMode) {
-                        ThemeMode.SYSTEM -> "System default"
-                        ThemeMode.LIGHT -> "Light mode"
-                        ThemeMode.DARK -> "Dark mode"
+                        ThemeMode.SYSTEM -> stringResource(R.string.settings_theme_system)
+                        ThemeMode.LIGHT -> stringResource(R.string.settings_theme_light)
+                        ThemeMode.DARK -> stringResource(R.string.settings_theme_dark)
                     }
                     Text(text)
                 },
@@ -90,20 +94,34 @@ fun SettingsScreen(onBack: () -> Unit) {
             )
 
             ListItem(
-                headlineContent = { Text("Details (Large screens only)") },
+                headlineContent = { Text(stringResource(R.string.settings_language)) },
+                supportingContent = {
+                    val text = when (language) {
+                        "tr" -> stringResource(R.string.settings_language_turkish)
+                        "en" -> stringResource(R.string.settings_language_english)
+                        "fr" -> stringResource(R.string.settings_language_french)
+                        else -> stringResource(R.string.settings_language_system)
+                    }
+                    Text(text)
+                },
+                modifier = Modifier.clickable { showLanguageDialog = true }
+            )
+
+            ListItem(
+                headlineContent = { Text(stringResource(R.string.settings_details_large)) },
                 supportingContent = {
                     val text = when (detailsMode) {
-                        DetailsMode.OFF -> "Hidden"
-                        DetailsMode.PANE -> "Side Pane"
-                        DetailsMode.BAR -> "Bottom Bar"
+                        DetailsMode.OFF -> stringResource(R.string.settings_details_hidden)
+                        DetailsMode.PANE -> stringResource(R.string.settings_details_pane)
+                        DetailsMode.BAR -> stringResource(R.string.settings_details_bar)
                     }
                     Text(text)
                 },
                 modifier = Modifier.clickable { showDetailsDialog = true }
             )
             ListItem(
-                headlineContent = { Text("Show Command Bar") },
-                supportingContent = { Text("Toolbar with file operation buttons below the address bar.") },
+                headlineContent = { Text(stringResource(R.string.settings_show_command_bar)) },
+                supportingContent = { Text(stringResource(R.string.settings_show_command_bar_desc)) },
                 trailingContent = {
                     Switch(
                         checked = isCommandBarVisible,
@@ -115,19 +133,19 @@ fun SettingsScreen(onBack: () -> Unit) {
             HorizontalDivider()
 
             Text(
-                "File Operations", 
+                stringResource(R.string.settings_file_ops), 
                 style = MaterialTheme.typography.titleSmall,
                 color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.padding(16.dp)
             )
             
             ListItem(
-                headlineContent = { Text("Deletion Behavior") },
+                headlineContent = { Text(stringResource(R.string.settings_deletion_behavior)) },
                 supportingContent = { 
                     val text = when(deleteBehavior) {
-                        DeleteBehavior.ASK -> "Ask each time"
-                        DeleteBehavior.RECYCLE -> "Move to Recycle Bin"
-                        DeleteBehavior.PERMANENT -> "Delete permanently"
+                        DeleteBehavior.ASK -> stringResource(R.string.settings_del_ask)
+                        DeleteBehavior.RECYCLE -> stringResource(R.string.settings_del_recycle)
+                        DeleteBehavior.PERMANENT -> stringResource(R.string.settings_del_permanent)
                     }
                     Text(text)
                 },
@@ -135,8 +153,8 @@ fun SettingsScreen(onBack: () -> Unit) {
             )
 
             ListItem(
-                headlineContent = { Text("Use Internal Archive Viewer") },
-                supportingContent = { Text("Open zip files directly inside the app instead of launching external apps.") },
+                headlineContent = { Text(stringResource(R.string.settings_internal_archive)) },
+                supportingContent = { Text(stringResource(R.string.settings_internal_archive_desc)) },
                 trailingContent = {
                     Switch(
                         checked = isDefaultArchiveViewerEnabled,
@@ -148,8 +166,8 @@ fun SettingsScreen(onBack: () -> Unit) {
             HorizontalDivider()
 
             ListItem(
-                headlineContent = { Text("Shortcut Cheatsheet") },
-                supportingContent = { Text("View available keyboard and mouse shortcuts") },
+                headlineContent = { Text(stringResource(R.string.shortcuts_title)) },
+                supportingContent = { Text(stringResource(R.string.settings_shortcuts_desc)) },
                 leadingContent = { Icon(Icons.Default.Keyboard, contentDescription = null) },
                 modifier = Modifier.clickable { showShortcutsDialog = true }
             )
@@ -157,11 +175,11 @@ fun SettingsScreen(onBack: () -> Unit) {
             if (showDeleteDialog) {
                 AlertDialog(
                     onDismissRequest = { showDeleteDialog = false },
-                    title = { Text("Choose Deletion Behavior") },
+                    title = { Text(stringResource(R.string.settings_choose_del_behavior)) },
                     text = {
                         Column {
                             OptionItem(
-                                label = "Ask each time",
+                                label = stringResource(R.string.settings_del_ask),
                                 selected = deleteBehavior == DeleteBehavior.ASK,
                                 onClick = { 
                                     SettingsManager.setDeleteBehavior(context, DeleteBehavior.ASK)
@@ -169,7 +187,7 @@ fun SettingsScreen(onBack: () -> Unit) {
                                 }
                             )
                             OptionItem(
-                                label = "Move to Recycle Bin",
+                                label = stringResource(R.string.settings_del_recycle),
                                 selected = deleteBehavior == DeleteBehavior.RECYCLE,
                                 onClick = { 
                                     SettingsManager.setDeleteBehavior(context, DeleteBehavior.RECYCLE)
@@ -177,7 +195,7 @@ fun SettingsScreen(onBack: () -> Unit) {
                                 }
                             )
                             OptionItem(
-                                label = "Delete permanently",
+                                label = stringResource(R.string.settings_del_permanent),
                                 selected = deleteBehavior == DeleteBehavior.PERMANENT,
                                 onClick = { 
                                     SettingsManager.setDeleteBehavior(context, DeleteBehavior.PERMANENT)
@@ -188,7 +206,7 @@ fun SettingsScreen(onBack: () -> Unit) {
                     },
                     confirmButton = {
                         TextButton(onClick = { showDeleteDialog = false }) {
-                            Text("Cancel")
+                            Text(stringResource(R.string.cancel))
                         }
                     }
                 )
@@ -197,11 +215,11 @@ fun SettingsScreen(onBack: () -> Unit) {
             if (showThemeDialog) {
                 AlertDialog(
                     onDismissRequest = { showThemeDialog = false },
-                    title = { Text("Choose Theme") },
+                    title = { Text(stringResource(R.string.settings_choose_theme)) },
                     text = {
                         Column {
                             OptionItem(
-                                label = "System default",
+                                label = stringResource(R.string.settings_theme_system),
                                 selected = themeMode == ThemeMode.SYSTEM,
                                 onClick = {
                                     SettingsManager.setThemeMode(context, ThemeMode.SYSTEM)
@@ -209,7 +227,7 @@ fun SettingsScreen(onBack: () -> Unit) {
                                 }
                             )
                             OptionItem(
-                                label = "Light mode",
+                                label = stringResource(R.string.settings_theme_light),
                                 selected = themeMode == ThemeMode.LIGHT,
                                 onClick = {
                                     SettingsManager.setThemeMode(context, ThemeMode.LIGHT)
@@ -217,7 +235,7 @@ fun SettingsScreen(onBack: () -> Unit) {
                                 }
                             )
                             OptionItem(
-                                label = "Dark mode",
+                                label = stringResource(R.string.settings_theme_dark),
                                 selected = themeMode == ThemeMode.DARK,
                                 onClick = {
                                     SettingsManager.setThemeMode(context, ThemeMode.DARK)
@@ -228,7 +246,55 @@ fun SettingsScreen(onBack: () -> Unit) {
                     },
                     confirmButton = {
                         TextButton(onClick = { showThemeDialog = false }) {
-                            Text("Cancel")
+                            Text(stringResource(R.string.cancel))
+                        }
+                    }
+                )
+            }
+
+            if (showLanguageDialog) {
+                AlertDialog(
+                    onDismissRequest = { showLanguageDialog = false },
+                    title = { Text(stringResource(R.string.settings_choose_language)) },
+                    text = {
+                        Column {
+                            OptionItem(
+                                label = stringResource(R.string.settings_language_system),
+                                selected = language == "system",
+                                onClick = {
+                                    SettingsManager.setLanguage(context, "system")
+                                    showLanguageDialog = false
+                                }
+                            )
+                            OptionItem(
+                                label = stringResource(R.string.settings_language_english),
+                                selected = language == "en",
+                                onClick = {
+                                    SettingsManager.setLanguage(context, "en")
+                                    showLanguageDialog = false
+                                }
+                            )
+                            OptionItem(
+                                label = stringResource(R.string.settings_language_french),
+                                selected = language == "fr",
+                                onClick = {
+                                    SettingsManager.setLanguage(context, "fr")
+                                    showLanguageDialog = false
+                                }
+                            )
+                            OptionItem(
+                                label = stringResource(R.string.settings_language_turkish),
+                                selected = language == "tr",
+                                onClick = {
+                                    SettingsManager.setLanguage(context, "tr")
+                                    showLanguageDialog = false
+                                }
+                            )
+                        }
+                    },
+                    confirmButton = {
+                        TextButton(onClick = { showLanguageDialog = false }) {
+                            Text(stringResource(R.string.cancel))
                         }
                     }
                 )
@@ -237,11 +303,11 @@ fun SettingsScreen(onBack: () -> Unit) {
             if (showDetailsDialog) {
                 AlertDialog(
                     onDismissRequest = { showDetailsDialog = false },
-                    title = { Text("Choose Details Mode") },
+                    title = { Text(stringResource(R.string.settings_choose_details_mode)) },
                     text = {
                         Column {
                             OptionItem(
-                                label = "Hidden",
+                                label = stringResource(R.string.settings_details_hidden),
                                 selected = detailsMode == DetailsMode.OFF,
                                 onClick = {
                                     SettingsManager.setDetailsMode(context, DetailsMode.OFF)
@@ -249,7 +315,7 @@ fun SettingsScreen(onBack: () -> Unit) {
                                 }
                             )
                             OptionItem(
-                                label = "Side Pane",
+                                label = stringResource(R.string.settings_details_pane),
                                 selected = detailsMode == DetailsMode.PANE,
                                 onClick = {
                                     SettingsManager.setDetailsMode(context, DetailsMode.PANE)
@@ -257,7 +323,7 @@ fun SettingsScreen(onBack: () -> Unit) {
                                 }
                             )
                             OptionItem(
-                                label = "Bottom Bar",
+                                label = stringResource(R.string.settings_details_bar),
                                 selected = detailsMode == DetailsMode.BAR,
                                 onClick = {
                                     SettingsManager.setDetailsMode(context, DetailsMode.BAR)
@@ -268,7 +334,7 @@ fun SettingsScreen(onBack: () -> Unit) {
                     },
                     confirmButton = {
                         TextButton(onClick = { showDetailsDialog = false }) {
-                            Text("Cancel")
+                            Text(stringResource(R.string.cancel))
                         }
                     }
                 )
@@ -277,50 +343,50 @@ fun SettingsScreen(onBack: () -> Unit) {
             if (showShortcutsDialog) {
                 AlertDialog(
                     onDismissRequest = { showShortcutsDialog = false },
-                    title = { Text("Shortcuts Cheatsheet") },
+                    title = { Text(stringResource(R.string.shortcuts_title)) },
                     text = {
                         Column(
                             modifier = Modifier
                                 .verticalScroll(rememberScrollState())
                                 .fillMaxWidth()
                         ) {
-                            ShortcutCategory("Navigation & Selection")
-                            ShortcutItem("Arrow Keys", "Move selection")
-                            ShortcutItem("Home / End", "Go to start / end of list")
-                            ShortcutItem("Page Up / Down", "Scroll page up / down")
-                            ShortcutItem("Ctrl + A", "Select all")
-                            ShortcutItem("Backspace", "Go back to parent folder")
+                            ShortcutCategory(stringResource(R.string.shortcuts_nav_selection))
+                            ShortcutItem(stringResource(R.string.shortcuts_arrow_keys), stringResource(R.string.shortcuts_arrow_keys_desc))
+                            ShortcutItem(stringResource(R.string.shortcuts_home_end), stringResource(R.string.shortcuts_home_end_desc))
+                            ShortcutItem(stringResource(R.string.shortcuts_page_up_down), stringResource(R.string.shortcuts_page_up_down_desc))
+                            ShortcutItem(stringResource(R.string.shortcuts_ctrl_a), stringResource(R.string.shortcuts_ctrl_a_desc))
+                            ShortcutItem(stringResource(R.string.shortcuts_backspace), stringResource(R.string.shortcuts_backspace_desc))
 
                             Spacer(modifier = Modifier.height(16.dp))
-                            ShortcutCategory("File Operations")
-                            ShortcutItem("Enter", "Open file or folder")
-                            ShortcutItem("Ctrl + Enter", "Open in new tab")
-                            ShortcutItem("Shift + Enter", "Open in new window")
-                            ShortcutItem("Ctrl + C / X / V", "Copy / Cut / Paste")
-                            ShortcutItem("Delete", "Delete (Shift + Delete for permanent)")
-                            ShortcutItem("F2", "Rename")
-                            ShortcutItem("F5", "Refresh")
+                            ShortcutCategory(stringResource(R.string.shortcuts_file_ops))
+                            ShortcutItem(stringResource(R.string.shortcuts_enter), stringResource(R.string.shortcuts_enter_desc))
+                            ShortcutItem(stringResource(R.string.shortcuts_ctrl_enter), stringResource(R.string.shortcuts_ctrl_enter_desc))
+                            ShortcutItem(stringResource(R.string.shortcuts_shift_enter), stringResource(R.string.shortcuts_shift_enter_desc))
+                            ShortcutItem(stringResource(R.string.shortcuts_ctrl_cvx), stringResource(R.string.shortcuts_ctrl_cvx_desc))
+                            ShortcutItem(stringResource(R.string.shortcuts_delete), stringResource(R.string.shortcuts_delete_desc))
+                            ShortcutItem(stringResource(R.string.shortcuts_f2), stringResource(R.string.shortcuts_f2_desc))
+                            ShortcutItem(stringResource(R.string.shortcuts_f5), stringResource(R.string.shortcuts_f5_desc))
 
                             Spacer(modifier = Modifier.height(16.dp))
-                            ShortcutCategory("App Actions")
-                            ShortcutItem("Ctrl + N", "New window")
-                            ShortcutItem("Ctrl + W", "Close window")
-                            ShortcutItem("Ctrl + Z / Y", "Undo / Redo")
-                            ShortcutItem("Ctrl + Mouse Wheel", "Zoom in / out")
-                            ShortcutItem("Ctrl + /", "Shortcut Cheatsheet")
+                            ShortcutCategory(stringResource(R.string.shortcuts_app_actions))
+                            ShortcutItem(stringResource(R.string.shortcuts_ctrl_n), stringResource(R.string.shortcuts_ctrl_n_desc))
+                            ShortcutItem(stringResource(R.string.shortcuts_ctrl_w), stringResource(R.string.shortcuts_ctrl_w_desc))
+                            ShortcutItem(stringResource(R.string.shortcuts_ctrl_zy), stringResource(R.string.shortcuts_ctrl_zy_desc))
+                            ShortcutItem(stringResource(R.string.shortcuts_ctrl_wheel), stringResource(R.string.shortcuts_ctrl_wheel_desc))
+                            ShortcutItem(stringResource(R.string.shortcuts_ctrl_slash), stringResource(R.string.shortcuts_ctrl_slash_desc))
 
                             Spacer(modifier = Modifier.height(16.dp))
-                            ShortcutCategory("Mouse")
-                            ShortcutItem("Right Click", "Context menu")
-                            ShortcutItem("Middle Click", "Open in new tab")
-                            ShortcutItem("Shift + Middle Click", "Open in new window")
-                            ShortcutItem("Drag", "Copy")
-                            ShortcutItem("Shift + Drag", "Move")
+                            ShortcutCategory(stringResource(R.string.shortcuts_mouse))
+                            ShortcutItem(stringResource(R.string.shortcuts_right_click), stringResource(R.string.shortcuts_right_click_desc))
+                            ShortcutItem(stringResource(R.string.shortcuts_middle_click), stringResource(R.string.shortcuts_middle_click_desc))
+                            ShortcutItem(stringResource(R.string.shortcuts_shift_middle_click), stringResource(R.string.shortcuts_shift_middle_click_desc))
+                            ShortcutItem(stringResource(R.string.shortcuts_drag), stringResource(R.string.shortcuts_drag_desc))
+                            ShortcutItem(stringResource(R.string.shortcuts_shift_drag), stringResource(R.string.shortcuts_shift_drag_desc))
                         }
                     },
                     confirmButton = {
                         TextButton(onClick = { showShortcutsDialog = false }) {
-                            Text("Close")
+                            Text(stringResource(R.string.close))
                         }
                     }
                 )

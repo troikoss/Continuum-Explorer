@@ -49,6 +49,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.troikoss.continuum_explorer.R
 import com.troikoss.continuum_explorer.model.FileColumnType
@@ -76,7 +77,7 @@ fun ItemContextMenu(
     ) {
         if (isInRecycleBin) {
             DropdownMenuItem(
-                text = { Text("Restore") },
+                text = { Text(stringResource(R.string.menu_restore)) },
                 onClick = {
                     appState.restoreSelection()
                     onDismiss()
@@ -85,7 +86,7 @@ fun ItemContextMenu(
             )
 
             DropdownMenuItem(
-                text = { Text("Delete Permanently") },
+                text = { Text(stringResource(R.string.menu_delete_permanently)) },
                 onClick = {
                     appState.deleteSelection(forcePermanent = true)
                     onDismiss()
@@ -94,7 +95,7 @@ fun ItemContextMenu(
             )
 
             DropdownMenuItem(
-                text = { Text("Properties") },
+                text = { Text(stringResource(R.string.menu_properties)) },
                 onClick = {
                     onDismiss()
                     appState.showProperties()
@@ -110,7 +111,7 @@ fun ItemContextMenu(
             if (onlyOneSelected) {
                 val item = selectedItems.first()
                 DropdownMenuItem(
-                    text = { Text("Open") },
+                    text = { Text(stringResource(R.string.menu_open)) },
                     onClick = {
                         onDismiss()
                         appState.open(item)
@@ -127,7 +128,7 @@ fun ItemContextMenu(
 
                 if (!hasDirectories) {
                     DropdownMenuItem(
-                        text = { Text("Open With...") },
+                        text = { Text(stringResource(R.string.menu_open_with)) },
                         onClick = {
                             onDismiss()
                             openWith(context, selectedItems.first())
@@ -141,7 +142,7 @@ fun ItemContextMenu(
 
             if (hasDirectories || hasArchive) {
                 DropdownMenuItem(
-                    text = { Text("Open in New Tab") },
+                    text = { Text(stringResource(R.string.menu_open_new_tab)) },
                     onClick = {
                         onDismiss()
                         appState.openInNewTab(selectedItems)
@@ -157,7 +158,7 @@ fun ItemContextMenu(
                 )
 
                 DropdownMenuItem(
-                    text = { Text("Open in New Window") },
+                    text = { Text(stringResource(R.string.menu_open_new_window)) },
                     onClick = {
                         onDismiss()
                         appState.openInNewWindow(selectedItems)
@@ -186,7 +187,7 @@ fun ItemContextMenu(
                 val isFav = appState.appConfigs.isFavorite(path)
                 
                 DropdownMenuItem(
-                    text = { Text(if (isFav) "Remove from Favorites" else "Add to Favorites") },
+                    text = { Text(if (isFav) stringResource(R.string.menu_remove_favorites) else stringResource(R.string.menu_add_favorites)) },
                     onClick = {
                         if (isFav) appState.appConfigs.removeFavorite(path)
                         else appState.appConfigs.addFavorite(path)
@@ -198,7 +199,7 @@ fun ItemContextMenu(
 
             if (onlyOneSelected) {
                 DropdownMenuItem(
-                    text = { Text("Add to Home") },
+                    text = { Text(stringResource(R.string.menu_add_home)) },
                     onClick = {
                         onDismiss()
                         appState.pinSelectionToHome()
@@ -210,7 +211,7 @@ fun ItemContextMenu(
 
             if (hasArchive) {
                 DropdownMenuItem(
-                    text = { Text("Extract...") },
+                    text = { Text(stringResource(R.string.menu_extract)) },
                     onClick = {
                         onDismiss()
                         appState.extractSelection()
@@ -220,10 +221,10 @@ fun ItemContextMenu(
             }
 
             DropdownMenuItem(
-                text = { Text("Compress...") },
+                text = { Text(stringResource(R.string.menu_compress)) },
                 onClick = {
-                    onDismiss()
                     appState.compressSelection()
+                    onDismiss()
                 },
                 leadingIcon = { Icon(Icons.Default.Archive, null) }
             )
@@ -231,7 +232,7 @@ fun ItemContextMenu(
             HorizontalDivider()
 
             DropdownMenuItem(
-                text = { Text("Cut") },
+                text = { Text(stringResource(R.string.menu_cut)) },
                 onClick = {
                     appState.cutSelection()
                     onDismiss()
@@ -254,7 +255,7 @@ fun ItemContextMenu(
             )
 
             DropdownMenuItem(
-                text = { Text("Copy") },
+                text = { Text(stringResource(R.string.menu_copy)) },
                 onClick = {
                     appState.copySelection()
                     onDismiss()
@@ -277,7 +278,7 @@ fun ItemContextMenu(
             )
 
             DropdownMenuItem(
-                text = { Text("Paste") },
+                text = { Text(stringResource(R.string.menu_paste)) },
                 onClick = {
                     appState.paste()
                     onDismiss()
@@ -302,7 +303,7 @@ fun ItemContextMenu(
             HorizontalDivider()
 
             DropdownMenuItem(
-                text = { Text("Rename") },
+                text = { Text(stringResource(R.string.menu_rename)) },
                 onClick = {
                     appState.renameSelection()
                     onDismiss()
@@ -318,7 +319,7 @@ fun ItemContextMenu(
             )
             if ( !hasDirectories ) {
                 DropdownMenuItem(
-                    text = { Text("Share") },
+                    text = { Text(stringResource(R.string.menu_share)) },
                     onClick = {
                         shareFiles(context, selectedItems)
                         onDismiss()
@@ -328,7 +329,7 @@ fun ItemContextMenu(
             }
 
             DropdownMenuItem(
-                text = { Text("Delete") },
+                text = { Text(stringResource(R.string.menu_delete)) },
                 onClick = {
                     appState.deleteSelection()
                     onDismiss()
@@ -344,7 +345,7 @@ fun ItemContextMenu(
             )
 
             DropdownMenuItem(
-                text = { Text("Properties") },
+                text = { Text(stringResource(R.string.menu_properties)) },
                 onClick = {
                     onDismiss()
                     appState.showProperties()
@@ -381,7 +382,7 @@ fun BackgroundContextMenu(
             "MAIN" -> {
                 if (!isInRecycleBin) {
                     DropdownMenuItem(
-                        text = { Text("New") },
+                        text = { Text(stringResource(R.string.menu_new)) },
                         leadingIcon = { Icon(Icons.Default.Add, null) },
                         trailingIcon = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) },
                         onClick = { currentScreen = "NEW" }
@@ -389,14 +390,14 @@ fun BackgroundContextMenu(
                 }
 
                 DropdownMenuItem(
-                    text = { Text("Sort") },
+                    text = { Text(stringResource(R.string.menu_sort)) },
                     leadingIcon = { Icon(Icons.AutoMirrored.Filled.List, null) },
                     trailingIcon = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) },
                     onClick = { currentScreen = "SORT" }
                 )
 
                 DropdownMenuItem(
-                    text = { Text("View") },
+                    text = { Text(stringResource(R.string.menu_view)) },
                     leadingIcon = { Icon(Icons.Default.ViewModule, null) },
                     trailingIcon = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) },
                     onClick = { currentScreen = "VIEW" }
@@ -406,14 +407,14 @@ fun BackgroundContextMenu(
 
                 if (isInRecycleBin) {
                     DropdownMenuItem(
-                        text = { Text("Empty Recycle Bin") },
+                        text = { Text(stringResource(R.string.menu_empty_recycle_bin)) },
                         leadingIcon = { Icon(Icons.Default.DeleteForever, null) },
                         onClick = { appState.emptyRecycleBin() }
                     )
                 }
 
                 DropdownMenuItem(
-                    text = { Text("Refresh") },
+                    text = { Text(stringResource(R.string.menu_refresh)) },
                     leadingIcon = { Icon(Icons.Default.Refresh, null) },
                     onClick = {
                         appState.refresh()
@@ -430,7 +431,7 @@ fun BackgroundContextMenu(
 
                 if (!isInRecycleBin) {
                     DropdownMenuItem(
-                        text = { Text("Paste") },
+                        text = { Text(stringResource(R.string.menu_paste)) },
                         leadingIcon = { Icon(Icons.Default.ContentPaste, null) },
                         onClick = {
                             appState.paste()
@@ -456,14 +457,14 @@ fun BackgroundContextMenu(
 
             "NEW" -> {
                 DropdownMenuItem(
-                    text = { Text("Back", color = MaterialTheme.colorScheme.primary) },
+                    text = { Text(stringResource(R.string.back), color = MaterialTheme.colorScheme.primary) },
                     leadingIcon = { Icon(Icons.AutoMirrored.Filled.ArrowBack, null, tint = MaterialTheme.colorScheme.primary) },
                     onClick = { currentScreen = "MAIN" }
                 )
                 HorizontalDivider()
 
                 DropdownMenuItem(
-                    text = { Text("Folder") },
+                    text = { Text(stringResource(R.string.menu_folder)) },
                     leadingIcon = { Icon(Icons.Default.Folder, null) },
                     onClick = {
                         appState.createNewFolder()
@@ -471,7 +472,7 @@ fun BackgroundContextMenu(
                     }
                 )
                 DropdownMenuItem(
-                    text = { Text("Text Document") },
+                    text = { Text(stringResource(R.string.menu_text_document)) },
                     leadingIcon = { Icon(Icons.AutoMirrored.Filled.InsertDriveFile, null) },
                     onClick = {
                         appState.createNewFile()
@@ -482,14 +483,14 @@ fun BackgroundContextMenu(
 
             "SORT" -> {
                 DropdownMenuItem(
-                    text = { Text("Back", color = MaterialTheme.colorScheme.primary) },
+                    text = { Text(stringResource(R.string.back), color = MaterialTheme.colorScheme.primary) },
                     leadingIcon = { Icon(Icons.AutoMirrored.Filled.ArrowBack, null, tint = MaterialTheme.colorScheme.primary) },
                     onClick = { currentScreen = "MAIN" }
                 )
                 HorizontalDivider()
 
                 DropdownMenuItem(
-                    text = { Text("By Name") },
+                    text = { Text(stringResource(R.string.menu_by_name)) },
                     leadingIcon = { Icon(Icons.Default.TextFormat, null) },
                     trailingIcon = { appState.folderConfigs.SortArrow(FileColumnType.NAME) },
                     onClick = {
@@ -498,7 +499,7 @@ fun BackgroundContextMenu(
                     }
                 )
                 DropdownMenuItem(
-                    text = { Text("By Date") },
+                    text = { Text(stringResource(R.string.menu_by_date)) },
                     leadingIcon = { Icon(Icons.Default.DateRange, null) },
                     trailingIcon = { appState.folderConfigs.SortArrow(FileColumnType.DATE) },
                     onClick = {
@@ -507,7 +508,7 @@ fun BackgroundContextMenu(
                     }
                 )
                 DropdownMenuItem(
-                    text = { Text("By Size") },
+                    text = { Text(stringResource(R.string.menu_by_size)) },
                     leadingIcon = { Icon(Icons.AutoMirrored.Filled.List, null) },
                     trailingIcon = { appState.folderConfigs.SortArrow(FileColumnType.SIZE) },
                     onClick = {
@@ -519,7 +520,7 @@ fun BackgroundContextMenu(
 
             "VIEW" -> {
                 DropdownMenuItem(
-                    text = { Text("Back", color = MaterialTheme.colorScheme.primary) },
+                    text = { Text(stringResource(R.string.back), color = MaterialTheme.colorScheme.primary) },
                     leadingIcon = { Icon(Icons.AutoMirrored.Filled.ArrowBack, null, tint = MaterialTheme.colorScheme.primary) },
                     onClick = { currentScreen = "MAIN" }
                 )
@@ -527,7 +528,7 @@ fun BackgroundContextMenu(
 
                 if (appState.getScreenSize() != ScreenSize.SMALL) {
                     DropdownMenuItem(
-                        text = { Text("Details") },
+                        text = { Text(stringResource(R.string.menu_details)) },
                         leadingIcon = { Icon(Icons.AutoMirrored.Filled.ListAlt, null) },
                         trailingIcon = { if (appState.activeViewMode == ViewMode.DETAILS) { Icon(Icons.Default.Done, null) }},
                         onClick = {
@@ -537,7 +538,7 @@ fun BackgroundContextMenu(
                     )
                 }
                 DropdownMenuItem(
-                    text = { Text("Grid") },
+                    text = { Text(stringResource(R.string.menu_grid)) },
                     leadingIcon = { Icon(Icons.Default.ViewModule, null) },
                     trailingIcon = { if (appState.activeViewMode == ViewMode.GRID) { Icon(Icons.Default.Done, null) }},
                     onClick = {
@@ -546,7 +547,7 @@ fun BackgroundContextMenu(
                     }
                 )
                 DropdownMenuItem(
-                    text = { Text("Content") },
+                    text = { Text(stringResource(R.string.menu_content)) },
                     leadingIcon = { Icon(Icons.AutoMirrored.Filled.List, null) },
                     trailingIcon = { if (appState.activeViewMode == ViewMode.CONTENT) { Icon(Icons.Default.Done, null) }},
                     onClick = {

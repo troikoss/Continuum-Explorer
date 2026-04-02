@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.Environment
 import android.widget.Toast
+import com.troikoss.continuum_explorer.R
 import com.troikoss.continuum_explorer.managers.FileOperationsManager
 import com.troikoss.continuum_explorer.managers.SettingsManager
 import com.troikoss.continuum_explorer.managers.UndoManager
@@ -44,7 +45,7 @@ fun FileExplorerState.open(item: UniversalFile) {
                 archivePath = ""
             )
         } else if (item.isArchiveEntry) {
-            Toast.makeText(context, "Cannot open file inside archive yet", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, context.getString(R.string.msg_not_supported_archive), Toast.LENGTH_SHORT).show()
         } else {
             openFile(context, item)
         }
@@ -169,7 +170,7 @@ fun FileExplorerState.extractSelection() {
         }
         context.startActivity(intent)
 
-        val displayTitle = if (selectedArchives.size == 1) selectedArchives[0].name else "${selectedArchives.size} archives"
+        val displayTitle = if (selectedArchives.size == 1) selectedArchives[0].name else context.getString(R.string.delete_items_count, selectedArchives.size)
         val settings = FileOperationsManager.requestExtractOptions(displayTitle)
         if (settings.isCancelled) return@launch
 
@@ -219,15 +220,15 @@ fun FileExplorerState.renameSelection() {
         }
         context.startActivity(intent)
     } else if (selected.isEmpty()) {
-        Toast.makeText(context, "Select a file to rename", Toast.LENGTH_SHORT).show()
+        Toast.makeText(context, context.getString(R.string.msg_select_rename), Toast.LENGTH_SHORT).show()
     } else {
-        Toast.makeText(context, "Select only one file to rename", Toast.LENGTH_SHORT).show()
+        Toast.makeText(context, context.getString(R.string.msg_select_one_rename), Toast.LENGTH_SHORT).show()
     }
 }
 
 fun FileExplorerState.confirmRename(target: UniversalFile, newName: String) {
     FileOperationsManager.start()
-    FileOperationsManager.update(0, 1, "Renaming ${target.name}...")
+    FileOperationsManager.update(0, 1, context.getString(R.string.op_renaming, target.name))
     FileOperationsManager.currentFileName.value = target.name
 
     val intent = Intent(context, PopUpActivity::class.java).apply {
@@ -246,7 +247,7 @@ fun FileExplorerState.confirmRename(target: UniversalFile, newName: String) {
                 if (newFile != null) selectionManager.select(newFile)
                 GlobalEvents.triggerRefresh()
             } else {
-                Toast.makeText(context, "Rename failed", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, context.getString(R.string.msg_rename_failed), Toast.LENGTH_SHORT).show()
             }
             FileOperationsManager.finish()
         }
@@ -264,7 +265,7 @@ fun FileExplorerState.createNewFolder() {
                     if (newFile != null) selectionManager.select(newFile)
                     GlobalEvents.triggerRefresh()
                 } else {
-                    Toast.makeText(context, "Failed to create folder", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, context.getString(R.string.msg_failed_create_folder), Toast.LENGTH_SHORT).show()
                 }
             }
         }
@@ -286,7 +287,7 @@ fun FileExplorerState.createNewFile() {
                     if (newFile != null) selectionManager.select(newFile)
                     GlobalEvents.triggerRefresh()
                 } else {
-                    Toast.makeText(context, "Failed to create file", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, context.getString(R.string.msg_failed_create_file), Toast.LENGTH_SHORT).show()
                 }
             }
         }
@@ -297,10 +298,10 @@ fun FileExplorerState.createNewFile() {
     context.startActivity(intent)
 }
 
-fun FileExplorerState.showProperties() {
-    val selected = selectionManager.selectedItems.toList()
-    if (selected.isNotEmpty()) {
-        FileOperationsManager.showProperties(selected)
+fun FileExplorerState.showProperties(items: List<UniversalFile>? = null) {
+    val targets = items ?: selectionManager.selectedItems.toList()
+    if (targets.isNotEmpty()) {
+        FileOperationsManager.showProperties(targets)
         val intent = Intent(context, PopUpActivity::class.java).apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
@@ -323,7 +324,7 @@ fun FileExplorerState.emptyRecycleBin() {
             refresh()
             GlobalEvents.triggerRefresh()
         } else {
-            Toast.makeText(context, "Recycle Bin is already empty", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, context.getString(R.string.msg_recycle_bin_empty), Toast.LENGTH_SHORT).show()
         }
     }
 }
@@ -333,8 +334,8 @@ fun FileExplorerState.pinSelectionToHome() {
     if (selected.size == 1) {
         ShortcutHelper.addToHome(context, scope, selected[0])
     } else if (selected.isEmpty()) {
-        Toast.makeText(context, "Select a file or folder to pin", Toast.LENGTH_SHORT).show()
+        Toast.makeText(context, context.getString(R.string.msg_select_pin), Toast.LENGTH_SHORT).show()
     } else {
-        Toast.makeText(context, "Select only one item to pin", Toast.LENGTH_SHORT).show()
+        Toast.makeText(context, context.getString(R.string.msg_select_one_pin), Toast.LENGTH_SHORT).show()
     }
 }

@@ -42,6 +42,7 @@ import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -49,6 +50,7 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.documentfile.provider.DocumentFile
+import com.troikoss.continuum_explorer.R
 import com.troikoss.continuum_explorer.ui.activities.SettingsActivity
 import com.troikoss.continuum_explorer.model.NavLocation
 import com.troikoss.continuum_explorer.model.ScreenSize
@@ -174,7 +176,7 @@ fun TopBar(
         Row (modifier = Modifier.padding(8.dp), verticalAlignment = CenterVertically) {
             if (appState.getScreenSize() == ScreenSize.SMALL) {
                 IconButton(onClick = onMenuClick) {
-                    Icon(Icons.Default.Menu, contentDescription = "Menu")
+                    Icon(Icons.Default.Menu, contentDescription = stringResource(R.string.menu))
                 }
             }
             
@@ -186,7 +188,7 @@ fun TopBar(
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Back",
+                        contentDescription = stringResource(R.string.back),
                         tint = if (appState.backStack.isNotEmpty()) MaterialTheme.colorScheme.onSurface
                         else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
                     )
@@ -198,7 +200,7 @@ fun TopBar(
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                        contentDescription = "Forward",
+                        contentDescription = stringResource(R.string.forward),
                         tint = if (appState.forwardStack.isNotEmpty()) MaterialTheme.colorScheme.onSurface
                         else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
                     )
@@ -216,7 +218,7 @@ fun TopBar(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.KeyboardArrowDown,
-                                contentDescription = "History",
+                                contentDescription = stringResource(R.string.history),
                                 modifier = Modifier.size(16.dp),
                                 tint = if (appState.backStack.isNotEmpty() || appState.forwardStack.isNotEmpty()) MaterialTheme.colorScheme.onSurface
                                 else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
@@ -304,7 +306,7 @@ fun TopBar(
                 ) {
                     Icon(
                         imageVector = Icons.Default.ArrowUpward,
-                        contentDescription = "Up",
+                        contentDescription = stringResource(R.string.up),
                         tint = if (appState.canGoUp) MaterialTheme.colorScheme.onSurface
                         else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
                     )
@@ -313,12 +315,12 @@ fun TopBar(
                 // REFRESH / CANCEL BUTTON
                 if (showCancelButton) {
                     IconButton(onClick = { appState.cancelLoading() }) {
-                        Icon(Icons.Default.Close, contentDescription = "Cancel Loading")
+                        Icon(Icons.Default.Close, contentDescription = stringResource(R.string.cancel))
                     }
                 } else {
                     // Show Refresh button if not loading, or if loading hasn't reached the 400ms mark yet
                     IconButton(onClick = { if (!appState.isLoading) appState.refresh() }) {
-                        Icon(Icons.Default.Refresh, contentDescription = "Refresh")
+                        Icon(Icons.Default.Refresh, contentDescription = stringResource(R.string.menu_refresh))
                     }
                 }
             }
@@ -376,7 +378,7 @@ fun TopBar(
                             decorationBox = { innerTextField ->
                                 if (searchQuery.text.isEmpty()) {
                                     Text(
-                                        text = "Search...",
+                                        text = stringResource(R.string.search_hint),
                                         style = MaterialTheme.typography.bodyMedium.copy(
                                             fontSize = 14.sp,
                                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
@@ -389,7 +391,7 @@ fun TopBar(
 
                         Box {
                             IconButton(onClick = { searchOptionsMenuExpanded = true }) {
-                                Icon(Icons.Default.ArrowDropDown, contentDescription = "Search Options")
+                                Icon(Icons.Default.ArrowDropDown, contentDescription = stringResource(R.string.dialog_search_options))
                             }
 
                             DropdownMenu(
@@ -401,7 +403,7 @@ fun TopBar(
                             ) {
                                 if (searchKindMenuExpanded) {
                                     DropdownMenuItem(
-                                        text = { Text("Back") },
+                                        text = { Text(stringResource(R.string.back)) },
                                         leadingIcon = { Icon(Icons.AutoMirrored.Filled.ArrowBack, null) },
                                         onClick = { searchKindMenuExpanded = false }
                                     )
@@ -420,7 +422,7 @@ fun TopBar(
                                     }
                                 } else {
                                     DropdownMenuItem(
-                                        text = { Text("Search all subfolders") },
+                                        text = { Text(stringResource(R.string.search_subfolders)) },
                                         trailingIcon = {
                                             Checkbox(checked = searchSubfolders, onCheckedChange = null)
                                         },
@@ -428,12 +430,12 @@ fun TopBar(
                                     )
                                     HorizontalDivider()
                                     DropdownMenuItem(
-                                        text = { Text("kind: (File type)") },
+                                        text = { Text(stringResource(R.string.search_kind)) },
                                         onClick = { searchKindMenuExpanded = true },
                                         trailingIcon = { Icon(Icons.Default.ChevronRight, null) }
                                     )
                                     DropdownMenuItem(
-                                        text = { Text("AND") },
+                                        text = { Text(stringResource(R.string.search_and)) },
                                         onClick = {
                                             searchQuery = TextFieldValue(searchQuery.text + " AND ")
                                             searchOptionsMenuExpanded = false
@@ -441,7 +443,7 @@ fun TopBar(
                                         }
                                     )
                                     DropdownMenuItem(
-                                        text = { Text("OR") },
+                                        text = { Text(stringResource(R.string.search_or)) },
                                         onClick = {
                                             searchQuery = TextFieldValue(searchQuery.text + " OR ")
                                             searchOptionsMenuExpanded = false
@@ -449,7 +451,7 @@ fun TopBar(
                                         }
                                     )
                                     DropdownMenuItem(
-                                        text = { Text("NOT") },
+                                        text = { Text(stringResource(R.string.search_not)) },
                                         onClick = {
                                             searchQuery = TextFieldValue(searchQuery.text + " NOT ")
                                             searchOptionsMenuExpanded = false
@@ -457,7 +459,7 @@ fun TopBar(
                                         }
                                     )
                                     DropdownMenuItem(
-                                        text = { Text("*.ext (Extension)") },
+                                        text = { Text(stringResource(R.string.search_ext)) },
                                         onClick = {
                                             searchQuery = TextFieldValue(searchQuery.text + "*.zip ")
                                             searchOptionsMenuExpanded = false
@@ -477,7 +479,7 @@ fun TopBar(
                         }) {
                             Icon(
                                 Icons.Default.Close,
-                                contentDescription = "Close",
+                                contentDescription = stringResource(R.string.close),
                                 modifier = Modifier.size(20.dp),
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -505,7 +507,7 @@ fun TopBar(
                     ) {
                         if (appState.currentPath != null || appState.currentArchiveFile != null) {
                             visibleSegments.forEachIndexed { index, folderName ->
-                                val displayName = if (folderName == "0") "Internal Storage" else folderName
+                                val displayName = if (folderName == "0") stringResource(R.string.nav_internal_storage) else folderName
                                 
                                 val realIndex = if (zeroIndex != -1) zeroIndex + index else index
                                 val targetPathSegments = allSegments.take(realIndex + 1)
@@ -577,7 +579,7 @@ fun TopBar(
                             val safItems = appState.safStack.toList() + listOfNotNull(appState.currentSafUri)
                             safItems.forEachIndexed { index, uri ->
                                 val doc = DocumentFile.fromTreeUri(context, uri)
-                                val displayName = doc?.name ?: "Unknown"
+                                val displayName = doc?.name ?: stringResource(R.string.unknown)
 
                                 val leavingUri = if (index + 1 < safItems.size) safItems[index + 1] else null
 
@@ -605,7 +607,7 @@ fun TopBar(
                             }
                         } else {
                             Text(
-                                text = "Home",
+                                text = stringResource(R.string.home),
                                 modifier = Modifier.padding(12.dp),
                                 style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp),
                                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
@@ -648,17 +650,17 @@ fun TopBar(
                                                     addressBar = false
                                                     focusManager.clearFocus()
                                                 } else {
-                                                    Toast.makeText(context, "Not a directory or archive", Toast.LENGTH_SHORT).show()
+                                                    Toast.makeText(context, context.getString(R.string.msg_not_dir_archive), Toast.LENGTH_SHORT).show()
                                                 }
                                             } else {
-                                                Toast.makeText(context, "File or directory not found", Toast.LENGTH_SHORT).show()
+                                                Toast.makeText(context, context.getString(R.string.msg_file_not_found), Toast.LENGTH_SHORT).show()
                                             }
                                         } else {
                                             addressBar = false
                                             focusManager.clearFocus()
                                         }
                                     } else {
-                                        Toast.makeText(context, "Invalid path", Toast.LENGTH_SHORT).show()
+                                        Toast.makeText(context, context.getString(R.string.msg_invalid_path), Toast.LENGTH_SHORT).show()
                                         textPathValue = TextFieldValue(currentPathString)
                                     }
                                 }
@@ -671,7 +673,7 @@ fun TopBar(
                         }) {
                             Icon(
                                 Icons.Default.Close,
-                                contentDescription = "Close",
+                                contentDescription = stringResource(R.string.close),
                                 modifier = Modifier.size(20.dp),
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -688,11 +690,11 @@ fun TopBar(
                     addressBar = false
                 }
             }) {
-                Icon(Icons.Default.Search, contentDescription = "Search")
+                Icon(Icons.Default.Search, contentDescription = stringResource(R.string.search))
             }
             Box {
                 IconButton(onClick = { optionsMenuExpanded = true }) {
-                    Icon(Icons.Default.MoreVert, contentDescription = "Options")
+                    Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.options))
                 }
 
                 DropdownMenu(
@@ -701,7 +703,7 @@ fun TopBar(
                 ) {
 
                     DropdownMenuItem(
-                        text = { Text("Settings") },
+                        text = { Text(stringResource(R.string.settings)) },
                         onClick = {
                             optionsMenuExpanded = false
                             val intent = Intent(context, SettingsActivity::class.java).apply {
@@ -709,7 +711,7 @@ fun TopBar(
                             }
                             context.startActivity(intent)
                         },
-                        leadingIcon = { Icon(Icons.Default.Settings, "Settings") }
+                        leadingIcon = { Icon(Icons.Default.Settings, stringResource(R.string.settings)) }
                     )
                 }
             }

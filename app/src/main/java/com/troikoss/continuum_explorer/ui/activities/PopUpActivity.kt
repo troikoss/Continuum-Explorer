@@ -50,6 +50,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -58,6 +59,7 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.troikoss.continuum_explorer.R
 import com.troikoss.continuum_explorer.model.UniversalFile
 import com.troikoss.continuum_explorer.ui.theme.FileExplorerTheme
 import com.troikoss.continuum_explorer.managers.ArchiveSettings
@@ -148,7 +150,7 @@ fun PropertiesContent(onClose: () -> Unit) {
             .fillMaxWidth()
     ) {
         Text(
-            text = "Properties",
+            text = stringResource(R.string.properties),
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold
         )
@@ -216,13 +218,13 @@ fun PropertiesContent(onClose: () -> Unit) {
                 }
             }
 
-            PropertyRow("Name:", file.name)
-            PropertyRow("Type:", fileType)
+            PropertyRow(stringResource(R.string.prop_name), file.name)
+            PropertyRow(stringResource(R.string.prop_type), fileType)
             
             if (isCalculatingSize) {
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 4.dp)) {
                     Text(
-                        text = "Size:",
+                        text = stringResource(R.string.prop_size),
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.SemiBold,
                         modifier = Modifier.width(80.dp),
@@ -230,29 +232,29 @@ fun PropertiesContent(onClose: () -> Unit) {
                     )
                     CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Calculating...", style = MaterialTheme.typography.bodyMedium)
+                    Text(stringResource(R.string.calculating), style = MaterialTheme.typography.bodyMedium)
                 }
             } else {
-                PropertyRow("Size:", formatSizeWithBytes(context, calculatedSize ?: 0L))
-                PropertyRow("Size on disk:", formatSizeWithBytes(context, calculatedSizeOnDisk ?: 0L))
+                PropertyRow(stringResource(R.string.prop_size), formatSizeWithBytes(context, calculatedSize ?: 0L))
+                PropertyRow(stringResource(R.string.prop_size_on_disk), formatSizeWithBytes(context, calculatedSizeOnDisk ?: 0L))
             }
             
-            PropertyRow("Location:", file.absolutePath)
-            PropertyRow("Modified:", formattedDate)
+            PropertyRow(stringResource(R.string.prop_location), file.absolutePath)
+            PropertyRow(stringResource(R.string.prop_modified), formattedDate)
 
             if (isLoadingExtra) {
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Loading metadata...", style = MaterialTheme.typography.bodySmall)
+                    Text(stringResource(R.string.prop_loading_metadata), style = MaterialTheme.typography.bodySmall)
                 }
             } else if (extraRes != null || extraDur != null) {
                 Spacer(modifier = Modifier.height(8.dp))
                 HorizontalDivider()
                 Spacer(modifier = Modifier.height(8.dp))
-                if (extraRes != null) PropertyRow("Resolution:", extraRes!!)
-                if (extraDur != null) PropertyRow("Duration:", extraDur!!)
+                if (extraRes != null) PropertyRow(stringResource(R.string.prop_resolution), extraRes!!)
+                if (extraDur != null) PropertyRow(stringResource(R.string.prop_duration), extraDur!!)
             }
         } else {
             // Multiple files
@@ -279,13 +281,13 @@ fun PropertiesContent(onClose: () -> Unit) {
             val dirsCount = targets.count { it.isDirectory }
             val filesCount = targets.size - dirsCount
 
-            PropertyRow("Items:", "${targets.size} selected")
-            PropertyRow("Contains:", "$dirsCount Folders, $filesCount Files")
+            PropertyRow(stringResource(R.string.prop_items), stringResource(R.string.prop_selected_count, targets.size))
+            PropertyRow(stringResource(R.string.prop_contains), "${stringResource(R.string.prop_folders_count, dirsCount)}, ${stringResource(R.string.prop_files_count, filesCount)}")
 
             if (isCalculatingSize) {
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 4.dp)) {
                     Text(
-                        text = "Total Size:",
+                        text = stringResource(R.string.prop_total_size),
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.SemiBold,
                         modifier = Modifier.width(80.dp),
@@ -293,11 +295,11 @@ fun PropertiesContent(onClose: () -> Unit) {
                     )
                     CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Calculating...", style = MaterialTheme.typography.bodyMedium)
+                    Text(stringResource(R.string.calculating), style = MaterialTheme.typography.bodyMedium)
                 }
             } else {
-                PropertyRow("Total Size:", formatSizeWithBytes(context, totalSize ?: 0L))
-                PropertyRow("Size on disk:", formatSizeWithBytes(context, totalSizeOnDisk ?: 0L))
+                PropertyRow(stringResource(R.string.prop_total_size), formatSizeWithBytes(context, totalSize ?: 0L))
+                PropertyRow(stringResource(R.string.prop_size_on_disk), formatSizeWithBytes(context, totalSizeOnDisk ?: 0L))
             }
         }
 
@@ -307,7 +309,7 @@ fun PropertiesContent(onClose: () -> Unit) {
                 onClick = onClose,
                 modifier = Modifier.focusRequester(focusRequester)
             ) {
-                Text("Close")
+                Text(stringResource(R.string.close))
             }
         }
     }
@@ -342,49 +344,49 @@ fun ShortcutsContent(onClose: () -> Unit) {
             .fillMaxWidth()
     ) {
         Text(
-            text = "Shortcuts Cheatsheet",
+            text = stringResource(R.string.shortcuts_title),
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold
         )
         Spacer(modifier = Modifier.height(16.dp))
 
-        ShortcutCategory("Navigation & Selection")
-        ShortcutItem("Arrow Keys", "Move selection")
-        ShortcutItem("Home / End", "Go to start / end of list")
-        ShortcutItem("Page Up / Down", "Scroll page up / down")
-        ShortcutItem("Ctrl + A", "Select all")
-        ShortcutItem("Backspace", "Go back to parent folder")
+        ShortcutCategory(stringResource(R.string.shortcuts_nav_selection))
+        ShortcutItem(stringResource(R.string.shortcuts_arrow_keys), stringResource(R.string.shortcuts_arrow_keys_desc))
+        ShortcutItem(stringResource(R.string.shortcuts_home_end), stringResource(R.string.shortcuts_home_end_desc))
+        ShortcutItem(stringResource(R.string.shortcuts_page_up_down), stringResource(R.string.shortcuts_page_up_down_desc))
+        ShortcutItem(stringResource(R.string.shortcuts_ctrl_a), stringResource(R.string.shortcuts_ctrl_a_desc))
+        ShortcutItem(stringResource(R.string.shortcuts_backspace), stringResource(R.string.shortcuts_backspace_desc))
 
         Spacer(modifier = Modifier.height(16.dp))
-        ShortcutCategory("File Operations")
-        ShortcutItem("Enter", "Open file or folder")
-        ShortcutItem("Ctrl + Enter", "Open in new tab")
-        ShortcutItem("Shift + Enter", "Open in new window")
-        ShortcutItem("Ctrl + C / X / V", "Copy / Cut / Paste")
-        ShortcutItem("Delete", "Delete (Shift + Delete for permanent)")
-        ShortcutItem("F2", "Rename")
-        ShortcutItem("F5", "Refresh")
+        ShortcutCategory(stringResource(R.string.shortcuts_file_ops))
+        ShortcutItem(stringResource(R.string.shortcuts_enter), stringResource(R.string.shortcuts_enter_desc))
+        ShortcutItem(stringResource(R.string.shortcuts_ctrl_enter), stringResource(R.string.shortcuts_ctrl_enter_desc))
+        ShortcutItem(stringResource(R.string.shortcuts_shift_enter), stringResource(R.string.shortcuts_shift_enter_desc))
+        ShortcutItem(stringResource(R.string.shortcuts_ctrl_cvx), stringResource(R.string.shortcuts_ctrl_cvx_desc))
+        ShortcutItem(stringResource(R.string.shortcuts_delete), stringResource(R.string.shortcuts_delete_desc))
+        ShortcutItem(stringResource(R.string.shortcuts_f2), stringResource(R.string.shortcuts_f2_desc))
+        ShortcutItem(stringResource(R.string.shortcuts_f5), stringResource(R.string.shortcuts_f5_desc))
 
         Spacer(modifier = Modifier.height(16.dp))
-        ShortcutCategory("App Actions")
-        ShortcutItem("Ctrl + N", "New window")
-        ShortcutItem("Ctrl + W", "Close window")
-        ShortcutItem("Ctrl + Z / Y", "Undo / Redo")
-        ShortcutItem("Ctrl + Mouse Wheel", "Zoom in / out")
-        ShortcutItem("Ctrl + /", "Shortcut Cheatsheet")
+        ShortcutCategory(stringResource(R.string.shortcuts_app_actions))
+        ShortcutItem(stringResource(R.string.shortcuts_ctrl_n), stringResource(R.string.shortcuts_ctrl_n_desc))
+        ShortcutItem(stringResource(R.string.shortcuts_ctrl_w), stringResource(R.string.shortcuts_ctrl_w_desc))
+        ShortcutItem(stringResource(R.string.shortcuts_ctrl_zy), stringResource(R.string.shortcuts_ctrl_zy_desc))
+        ShortcutItem(stringResource(R.string.shortcuts_ctrl_wheel), stringResource(R.string.shortcuts_ctrl_wheel_desc))
+        ShortcutItem(stringResource(R.string.shortcuts_ctrl_slash), stringResource(R.string.shortcuts_ctrl_slash_desc))
 
         Spacer(modifier = Modifier.height(16.dp))
-        ShortcutCategory("Mouse")
-        ShortcutItem("Right Click", "Context menu")
-        ShortcutItem("Middle Click", "Open in new tab")
-        ShortcutItem("Shift + Middle Click", "Open in new window")
-        ShortcutItem("Drag", "Copy")
-        ShortcutItem("Shift + Drag", "Move")
+        ShortcutCategory(stringResource(R.string.shortcuts_mouse))
+        ShortcutItem(stringResource(R.string.shortcuts_right_click), stringResource(R.string.shortcuts_right_click_desc))
+        ShortcutItem(stringResource(R.string.shortcuts_middle_click), stringResource(R.string.shortcuts_middle_click_desc))
+        ShortcutItem(stringResource(R.string.shortcuts_shift_middle_click), stringResource(R.string.shortcuts_shift_middle_click_desc))
+        ShortcutItem(stringResource(R.string.shortcuts_drag), stringResource(R.string.shortcuts_drag_desc))
+        ShortcutItem(stringResource(R.string.shortcuts_shift_drag), stringResource(R.string.shortcuts_shift_drag_desc))
 
         Spacer(modifier = Modifier.height(24.dp))
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
             Button(onClick = onClose) {
-                Text("Close")
+                Text(stringResource(R.string.close))
             }
         }
     }
@@ -429,7 +431,7 @@ fun ArchiveOptionsContent(onClose: () -> Unit) {
 
     Column(modifier = Modifier.padding(16.dp).verticalScroll(scrollState)) {
         Text(
-            text = "Create Archive",
+            text = stringResource(R.string.archive_create),
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold
         )
@@ -438,7 +440,7 @@ fun ArchiveOptionsContent(onClose: () -> Unit) {
         OutlinedTextField(
             value = nameState,
             onValueChange = { nameState = it },
-            label = { Text("Archive Name") },
+            label = { Text(stringResource(R.string.archive_name)) },
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
@@ -457,7 +459,7 @@ fun ArchiveOptionsContent(onClose: () -> Unit) {
                 value = compressionMethod.name,
                 onValueChange = {},
                 readOnly = true,
-                label = { Text("Compression Method") },
+                label = { Text(stringResource(R.string.archive_comp_method)) },
                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expCompMethod) },
                 modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable).fillMaxWidth()
             )
@@ -490,7 +492,7 @@ fun ArchiveOptionsContent(onClose: () -> Unit) {
                 onValueChange = {},
                 readOnly = true,
                 enabled = compressionMethod == CompressionMethod.DEFLATE,
-                label = { Text("Compression Level") },
+                label = { Text(stringResource(R.string.archive_comp_level)) },
                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expCompLevel) },
                 modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable).fillMaxWidth()
             )
@@ -522,7 +524,7 @@ fun ArchiveOptionsContent(onClose: () -> Unit) {
                 value = encryptionMethod.name,
                 onValueChange = {},
                 readOnly = true,
-                label = { Text("Encryption Method") },
+                label = { Text(stringResource(R.string.archive_enc_method)) },
                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expEncMethod) },
                 modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable).fillMaxWidth()
             )
@@ -547,7 +549,7 @@ fun ArchiveOptionsContent(onClose: () -> Unit) {
             OutlinedTextField(
                 value = password,
                 onValueChange = { password = it },
-                label = { Text("Password") },
+                label = { Text(stringResource(R.string.archive_password)) },
                 singleLine = true,
                 visualTransformation = PasswordVisualTransformation(),
                 modifier = Modifier.fillMaxWidth(),
@@ -559,7 +561,7 @@ fun ArchiveOptionsContent(onClose: () -> Unit) {
 
         Row(verticalAlignment = Alignment.CenterVertically) {
             Checkbox(checked = deleteSource, onCheckedChange = { deleteSource = it })
-            Text(text = "Delete source files after archiving", modifier = Modifier.padding(start = 8.dp))
+            Text(text = stringResource(R.string.archive_delete_source), modifier = Modifier.padding(start = 8.dp))
         }
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -569,7 +571,7 @@ fun ArchiveOptionsContent(onClose: () -> Unit) {
                 FileOperationsManager.onArchiveResult(ArchiveSettings("", CompressionMethod.STORE, CompressionLevel.NORMAL, EncryptionMethod.NONE, null, false, true))
                 onClose()
             }) {
-                Text("Cancel")
+                Text(stringResource(R.string.cancel))
             }
             Spacer(modifier = Modifier.width(8.dp))
             Button(
@@ -577,7 +579,7 @@ fun ArchiveOptionsContent(onClose: () -> Unit) {
                 enabled = nameState.text.isNotBlank() && (encryptionMethod == EncryptionMethod.NONE || password.isNotEmpty()),
                 modifier = Modifier.focusRequester(focusRequester)
             ) {
-                Text("Archive")
+                Text(stringResource(R.string.archive_button))
             }
         }
     }
@@ -596,13 +598,13 @@ fun ExtractOptionsContent(onClose: () -> Unit) {
 
     Column(modifier = Modifier.padding(16.dp)) {
         Text(
-            text = "Extract Archive",
+            text = stringResource(R.string.archive_extract),
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
-            text = "Choose extraction options for: $title",
+            text = stringResource(R.string.archive_extract_options, title),
             style = MaterialTheme.typography.bodyMedium
         )
         Spacer(modifier = Modifier.height(16.dp))
@@ -613,7 +615,7 @@ fun ExtractOptionsContent(onClose: () -> Unit) {
                 onClick = { toSeparateFolder = true }
             )
             Text(
-                text = "Extract to separate folder",
+                text = stringResource(R.string.archive_extract_separate),
                 modifier = Modifier.padding(start = 8.dp)
             )
         }
@@ -623,7 +625,7 @@ fun ExtractOptionsContent(onClose: () -> Unit) {
                 onClick = { toSeparateFolder = false }
             )
             Text(
-                text = "Extract to current folder",
+                text = stringResource(R.string.archive_extract_current),
                 modifier = Modifier.padding(start = 8.dp)
             )
         }
@@ -638,7 +640,7 @@ fun ExtractOptionsContent(onClose: () -> Unit) {
                 onCheckedChange = { deleteSource = it }
             )
             Text(
-                text = "Delete source archive after extraction",
+                text = stringResource(R.string.archive_extract_delete_source),
                 modifier = Modifier.padding(start = 8.dp)
             )
         }
@@ -650,7 +652,7 @@ fun ExtractOptionsContent(onClose: () -> Unit) {
                 FileOperationsManager.onExtractResult(ExtractSettings(false, false, true))
                 onClose() 
             }) {
-                Text("Cancel")
+                Text(stringResource(R.string.cancel))
             }
             Spacer(modifier = Modifier.width(8.dp))
             Button(
@@ -659,7 +661,7 @@ fun ExtractOptionsContent(onClose: () -> Unit) {
                 },
                 modifier = Modifier.focusRequester(focusRequester)
             ) {
-                Text("Extract")
+                Text(stringResource(R.string.extract_button))
             }
         }
     }
@@ -685,20 +687,20 @@ fun PasswordInputContent(onClose: () -> Unit) {
 
     Column(modifier = Modifier.padding(16.dp)) {
         Text(
-            text = "Encrypted Archive",
+            text = stringResource(R.string.archive_encrypted_title),
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
-            text = "Please enter the password for: $title",
+            text = stringResource(R.string.archive_enter_password, title),
             style = MaterialTheme.typography.bodyMedium
         )
         Spacer(modifier = Modifier.height(16.dp))
         OutlinedTextField(
             value = password,
             onValueChange = { password = it },
-            label = { Text("Password") },
+            label = { Text(stringResource(R.string.archive_password)) },
             singleLine = true,
             visualTransformation = PasswordVisualTransformation(),
             modifier = Modifier.fillMaxWidth(),
@@ -711,14 +713,14 @@ fun PasswordInputContent(onClose: () -> Unit) {
                 FileOperationsManager.onPasswordResult(null)
                 onClose() 
             }) {
-                Text("Cancel")
+                Text(stringResource(R.string.cancel))
             }
             Spacer(modifier = Modifier.width(8.dp))
             Button(
                 onClick = onConfirm,
                 modifier = Modifier.focusRequester(focusRequester)
             ) {
-                Text("OK")
+                Text(stringResource(R.string.ok))
             }
         }
     }
@@ -755,7 +757,7 @@ fun InputContent(onClose: () -> Unit) {
         OutlinedTextField(
             value = textState,
             onValueChange = { textState = it },
-            label = { Text("Name") },
+            label = { Text(stringResource(R.string.archive_name)) },
             singleLine = true,
             modifier = Modifier.fillMaxWidth().focusRequester(focusRequester),
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
@@ -763,7 +765,7 @@ fun InputContent(onClose: () -> Unit) {
         )
         Spacer(modifier = Modifier.height(16.dp))
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-            TextButton(onClick = onClose) { Text("Cancel") }
+            TextButton(onClick = onClose) { Text(stringResource(R.string.cancel)) }
             Spacer(modifier = Modifier.width(8.dp))
             Button(
                 onClick = onConfirm,
@@ -787,24 +789,24 @@ fun CollisionContent() {
     }
 
     Column(modifier = Modifier.padding(16.dp)) {
-        Text(text = "File Conflict", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        Text(text = stringResource(R.string.conflict_title), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
         Spacer(modifier = Modifier.height(8.dp))
-        Text(text = "A file named \"$fileName\" already exists. What would you like to do?", style = MaterialTheme.typography.bodyMedium)
+        Text(text = stringResource(R.string.conflict_message, fileName), style = MaterialTheme.typography.bodyMedium)
         Spacer(modifier = Modifier.height(16.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
             Checkbox(checked = rememberSelection, onCheckedChange = { rememberSelection = it })
-            Text(text = "Remember selection for this session", style = MaterialTheme.typography.bodySmall)
+            Text(text = stringResource(R.string.conflict_remember), style = MaterialTheme.typography.bodySmall)
         }
         Spacer(modifier = Modifier.height(16.dp))
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-            TextButton(onClick = { FileOperationsManager.onCollisionChoice(CollisionResult.CANCEL, false) }) { Text("Cancel") }
+            TextButton(onClick = { FileOperationsManager.onCollisionChoice(CollisionResult.CANCEL, false) }) { Text(stringResource(R.string.cancel)) }
             Spacer(modifier = Modifier.width(8.dp))
-            Button(onClick = { FileOperationsManager.onCollisionChoice(CollisionResult.KEEP_BOTH, rememberSelection) }) { Text("Keep Both") }
+            Button(onClick = { FileOperationsManager.onCollisionChoice(CollisionResult.KEEP_BOTH, rememberSelection) }) { Text(stringResource(R.string.conflict_keep_both)) }
             Spacer(modifier = Modifier.width(8.dp))
             Button(
                 onClick = { FileOperationsManager.onCollisionChoice(CollisionResult.REPLACE, rememberSelection) },
                 modifier = Modifier.focusRequester(focusRequester)
-            ) { Text("Replace") }
+            ) { Text(stringResource(R.string.conflict_replace)) }
         }
     }
 }
@@ -819,10 +821,10 @@ fun DeleteConfirmContent() {
     }
     
     Column(modifier = Modifier.padding(16.dp)) {
-        Text(text = "Confirm Delete", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        Text(text = stringResource(R.string.delete_confirm_title), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
         Spacer(modifier = Modifier.height(8.dp))
-        val itemText = if (count == 1) "this item" else "$count items"
-        Text(text = "Are you sure you want to delete $itemText?", style = MaterialTheme.typography.bodyMedium)
+        val itemText = if (count == 1) stringResource(R.string.delete_item_this) else stringResource(R.string.delete_items_count, count)
+        Text(text = stringResource(R.string.delete_confirm_message, itemText), style = MaterialTheme.typography.bodyMedium)
         Spacer(modifier = Modifier.height(24.dp))
 
         Row(
@@ -834,7 +836,7 @@ fun DeleteConfirmContent() {
                 onClick = { FileOperationsManager.onDeleteChoice(DeleteResult.CANCEL) },
                 contentPadding = PaddingValues(horizontal = 8.dp)
             ) {
-                Text("Cancel", maxLines = 1)
+                Text(stringResource(R.string.cancel), maxLines = 1)
             }
             
             Button(
@@ -842,14 +844,14 @@ fun DeleteConfirmContent() {
                 contentPadding = PaddingValues(horizontal = 12.dp),
                 modifier = Modifier.focusRequester(focusRequester)
             ) {
-                Text("Recycle Bin", maxLines = 1, fontSize = 13.sp)
+                Text(stringResource(R.string.delete_recycle_bin), maxLines = 1, fontSize = 13.sp)
             }
             
             Button(
                 onClick = { FileOperationsManager.onDeleteChoice(DeleteResult.PERMANENT) },
                 contentPadding = PaddingValues(horizontal = 12.dp)
             ) {
-                Text("Permanently", maxLines = 1, fontSize = 13.sp)
+                Text(stringResource(R.string.delete_permanently), maxLines = 1, fontSize = 13.sp)
             }
         }
     }
@@ -865,18 +867,18 @@ fun DeletePermanentConfirmContent() {
     }
     
     Column(modifier = Modifier.padding(16.dp)) {
-        Text(text = "Permanently Delete", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        Text(text = stringResource(R.string.delete_permanent_title), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
         Spacer(modifier = Modifier.height(8.dp))
-        val itemText = if (count == 1) "this item" else "$count items"
-        Text(text = "Are you sure you want to delete $itemText permanently? This action cannot be undone.", style = MaterialTheme.typography.bodyMedium)
+        val itemText = if (count == 1) stringResource(R.string.delete_item_this) else stringResource(R.string.delete_items_count, count)
+        Text(text = stringResource(R.string.delete_permanent_message, itemText), style = MaterialTheme.typography.bodyMedium)
         Spacer(modifier = Modifier.height(24.dp))
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-            TextButton(onClick = { FileOperationsManager.onDeleteChoice(DeleteResult.CANCEL) }) { Text("No") }
+            TextButton(onClick = { FileOperationsManager.onDeleteChoice(DeleteResult.CANCEL) }) { Text(stringResource(R.string.no)) }
             Spacer(modifier = Modifier.width(8.dp))
             Button(
                 onClick = { FileOperationsManager.onDeleteChoice(DeleteResult.PERMANENT) },
                 modifier = Modifier.focusRequester(focusRequester)
-            ) { Text("Yes") }
+            ) { Text(stringResource(R.string.yes)) }
         }
     }
 }
@@ -904,11 +906,11 @@ fun ProgressContent (onClose: () -> Unit) {
     }
     
     val timeString = remember(timeRemainingMillis, isRunning) {
-        if (!isRunning) "Done"
-        else if (timeRemainingMillis <= 0) "Calculating..."
+        if (!isRunning) context.getString(R.string.done)
+        else if (timeRemainingMillis <= 0) context.getString(R.string.calculating)
         else {
             val seconds = timeRemainingMillis / 1000
-            if (seconds > 60) "About ${seconds / 60} min remaining" else "About $seconds sec remaining"
+            if (seconds > 60) context.getString(R.string.op_min_remaining, seconds / 60) else context.getString(R.string.op_sec_remaining, seconds)
         }
     }
 
@@ -921,11 +923,11 @@ fun ProgressContent (onClose: () -> Unit) {
     }
     
     val titleText = if (isRunning) {
-        if (message.startsWith("Deleting", ignoreCase = true)) "Deleting items..." 
-        else if (message.startsWith("Extracting", ignoreCase = true)) "Extracting archive..."
-        else if (message.startsWith("Compressing", ignoreCase = true)) "Creating archive..."
-        else "Processing items..."
-    } else "Operation Finished"
+        if (message.startsWith("Deleting", ignoreCase = true)) stringResource(R.string.op_deleting)
+        else if (message.startsWith("Extracting", ignoreCase = true)) stringResource(R.string.op_extracting)
+        else if (message.startsWith("Compressing", ignoreCase = true)) stringResource(R.string.op_compressing)
+        else stringResource(R.string.op_processing)
+    } else stringResource(R.string.op_finished)
 
     Column(modifier = Modifier.padding(16.dp)) {
         Text(text = titleText, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
@@ -938,21 +940,21 @@ fun ProgressContent (onClose: () -> Unit) {
         Spacer(modifier = Modifier.height(16.dp))
         HorizontalDivider()
         Spacer(modifier = Modifier.height(8.dp))
-        DetailRow(label = "Name:", value = currentFileName)
-        DetailRow(label = "Time remaining:", value = timeString)
-        DetailRow(label = "Items remaining:", value = "$itemsRemaining ($sizeRemainingString)")
-        DetailRow(label = "Speed:", value = "${Formatter.formatFileSize(context, speedBytesPerSec)}/s")
+        DetailRow(label = stringResource(R.string.prop_name), value = currentFileName)
+        DetailRow(label = stringResource(R.string.op_time_remaining), value = timeString)
+        DetailRow(label = stringResource(R.string.op_items_remaining), value = "$itemsRemaining ($sizeRemainingString)")
+        DetailRow(label = stringResource(R.string.op_speed), value = "${Formatter.formatFileSize(context, speedBytesPerSec)}/s")
         Spacer(modifier = Modifier.height(16.dp))
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
             if (!isRunning) {
                 Button(
                     onClick = onClose,
                     modifier = Modifier.focusRequester(focusRequester)
-                ) { Text("Close") }
+                ) { Text(stringResource(R.string.close)) }
             } else {
-                TextButton(onClick = { NotificationHelper.start(context); onClose() }) { Text("Background") }
+                TextButton(onClick = { NotificationHelper.start(context); onClose() }) { Text(stringResource(R.string.op_background)) }
                 Spacer(modifier = Modifier.width(8.dp))
-                Button(onClick = { FileOperationsManager.cancel() }) { Text("Cancel") }
+                Button(onClick = { FileOperationsManager.cancel() }) { Text(stringResource(R.string.cancel)) }
             }
         }
     }

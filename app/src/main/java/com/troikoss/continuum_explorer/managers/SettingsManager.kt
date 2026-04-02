@@ -1,8 +1,10 @@
 package com.troikoss.continuum_explorer.managers
 
 import android.content.Context
+import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
+import androidx.core.os.LocaleListCompat
 import com.troikoss.continuum_explorer.utils.GlobalEvents
 
 enum class DetailsMode {
@@ -28,6 +30,8 @@ object SettingsManager {
     private const val KEY_DELETE_BEHAVIOR = "delete_behavior"
     private const val KEY_DEFAULT_ARCHIVE_VIEWER = "default_archive_viewer"
     private const val KEY_THEME_MODE = "theme_mode"
+
+    private const val KEY_LANGUAGE = "language"
     private const val KEY_DETAILS_MODE = "details_mode"
 
     private const val KEY_COMMAND_BAR_VISIBLE = "command_bar_visible"
@@ -37,6 +41,9 @@ object SettingsManager {
 
     private val _themeMode = mutableStateOf(ThemeMode.SYSTEM)
     val themeMode: State<ThemeMode> = _themeMode
+
+    private val _language = mutableStateOf("system")
+    val language: State<String> = _language
 
     private val _detailsMode = mutableStateOf(DetailsMode.OFF)
     val detailsMode: State<DetailsMode> = _detailsMode
@@ -71,6 +78,10 @@ object SettingsManager {
         }
         _themeMode.value = theme
 
+        val savedLanguage = prefs.getString(KEY_LANGUAGE, "system") ?: "system"
+        _language.value = savedLanguage
+        applyLocale(savedLanguage)
+
         val savedDetails = prefs.getString(KEY_DETAILS_MODE, DetailsMode.OFF.name)
         _detailsMode.value = try {
             DetailsMode.valueOf(savedDetails ?: DetailsMode.OFF.name)
@@ -81,6 +92,24 @@ object SettingsManager {
         _isCommandBarVisible.value = prefs.getBoolean(KEY_COMMAND_BAR_VISIBLE, true)
 
         _isDefaultArchiveViewerEnabled.value = prefs.getBoolean(KEY_DEFAULT_ARCHIVE_VIEWER, true)
+    }
+
+    fun setLanguage(context: Context, languageTag: String) {
+        _language.value = languageTag
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putString(KEY_LANGUAGE, languageTag).apply()
+        applyLocale(languageTag)
+        GlobalEvents.triggerConfigUpdate()
+    }
+
+    private fun applyLocale(languageTag: String) {
+        val localeList = if (languageTag == "system") {
+            LocaleListCompat.getEmptyLocaleList()
+        } else {
+            LocaleListCompat.forLanguageTags(languageTag)
+        }
+        AppCompatDelegate.setApplicationLocales(localeList)
+
     }
 
     fun setDetailsMode(context: Context, mode: DetailsMode) {

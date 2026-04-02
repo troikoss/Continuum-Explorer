@@ -70,6 +70,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.DpOffset
@@ -78,6 +79,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import androidx.documentfile.provider.DocumentFile
+import com.troikoss.continuum_explorer.R
 import com.troikoss.continuum_explorer.model.UniversalFile
 import com.troikoss.continuum_explorer.utils.FileExplorerState
 import com.troikoss.continuum_explorer.managers.SettingsManager
@@ -86,6 +88,7 @@ import com.troikoss.continuum_explorer.utils.emptyRecycleBin
 import com.troikoss.continuum_explorer.utils.fileDropTarget
 import com.troikoss.continuum_explorer.utils.navigateTo
 import com.troikoss.continuum_explorer.utils.openInNewWindow
+import com.troikoss.continuum_explorer.utils.showProperties
 import com.troikoss.continuum_explorer.utils.toUniversal
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -127,7 +130,7 @@ fun NavigationPane(
         val internalRoot = Environment.getExternalStorageDirectory()
         volumes.add(
             StorageVolumeInfo(
-                label = "Internal Storage",
+                label = context.getString(R.string.nav_internal_storage),
                 path = internalRoot,
                 uri = null,
                 totalSpace = internalRoot.totalSpace,
@@ -199,12 +202,12 @@ fun NavigationPane(
             item { Spacer(modifier = Modifier.height(16.dp)) }
 
             // Section: Favorites
-            item { NavSectionHeader("Favorites") }
+            item { NavSectionHeader(stringResource(R.string.nav_favorites)) }
 
             if (appState.appConfigs.favoritePaths.isEmpty()) {
                 item {
                     Text(
-                        text = "No favorites added",
+                        text = stringResource(R.string.nav_no_favorites),
                         modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
@@ -297,7 +300,7 @@ fun NavigationPane(
                     Spacer(modifier = Modifier.height(16.dp))
                     HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
                     Spacer(modifier = Modifier.height(16.dp))
-                    NavSectionHeader("Library")
+                    NavSectionHeader(stringResource(R.string.nav_library))
                 }
 
                 itemsIndexed(
@@ -370,7 +373,7 @@ fun NavigationPane(
                     ) {
                         if (id == "recent") {
                             NavItem(
-                                label = "Recent",
+                                label = stringResource(R.string.nav_recent),
                                 icon = Icons.Default.History,
                                 onClick = { onItemSelected(8) },
                                 appState = appState,
@@ -379,7 +382,7 @@ fun NavigationPane(
                         } else if (id == "trash") {
                             val trashDir = File(Environment.getExternalStorageDirectory(), ".Trash")
                             NavItem(
-                                label = "Recycle Bin",
+                                label = stringResource(R.string.nav_trash),
                                 icon = Icons.Default.Delete,
                                 onClick = { onItemSelected(7) },
                                 modifier = Modifier.fileDropTarget(appState, destPath = trashDir),
@@ -398,7 +401,7 @@ fun NavigationPane(
             }
 
             // Section: Storage
-            item { NavSectionHeader("Storage") }
+            item { NavSectionHeader(stringResource(R.string.nav_storage)) }
             
             itemsIndexed(storageVolumes) { _, volume ->
                 NavStorageItem(
@@ -419,7 +422,7 @@ fun NavigationPane(
                     Spacer(modifier = Modifier.height(16.dp))
                     HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
                     Spacer(modifier = Modifier.height(16.dp))
-                    NavSectionHeader("Added Locations")
+                    NavSectionHeader(stringResource(R.string.nav_added_locations))
                 }
 
                 itemsIndexed(appState.appConfigs.addedSafUris) { _, uri ->
@@ -467,13 +470,13 @@ private fun NavBackgroundContextMenu(
         when (currentScreen) {
             "MAIN" -> {
                 DropdownMenuItem(
-                    text = { Text("Library items") },
+                    text = { Text(stringResource(R.string.nav_library_items)) },
                     leadingIcon = { Icon(Icons.AutoMirrored.Filled.List, null) },
                     trailingIcon = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) },
                     onClick = { currentScreen = "LIBRARY" }
                 )
                 DropdownMenuItem(
-                    text = { Text("Add Storage") },
+                    text = { Text(stringResource(R.string.nav_add_storage)) },
                     leadingIcon = { Icon(Icons.Default.Add, null) },
                     onClick = {
                         onDismissRequest()
@@ -483,7 +486,7 @@ private fun NavBackgroundContextMenu(
             }
             "LIBRARY" -> {
                 DropdownMenuItem(
-                    text = { Text("Back", color = MaterialTheme.colorScheme.primary) },
+                    text = { Text(stringResource(R.string.back), color = MaterialTheme.colorScheme.primary) },
                     leadingIcon = { Icon(Icons.AutoMirrored.Filled.ArrowBack, null, tint = MaterialTheme.colorScheme.primary) },
                     onClick = { currentScreen = "MAIN" }
                 )
@@ -491,7 +494,7 @@ private fun NavBackgroundContextMenu(
                 HorizontalDivider()
 
                 DropdownMenuItem(
-                    text = { Text("Recent") },
+                    text = { Text(stringResource(R.string.nav_recent)) },
                     leadingIcon = { Icon(Icons.Default.History, null) },
                     trailingIcon = { if (appState.appConfigs.isRecentVisible) Icon(Icons.Default.Check, null) },
                     onClick = {
@@ -531,7 +534,7 @@ private fun NavContextMenu(
 ) {
     DropdownMenu(expanded = expanded, onDismissRequest = onDismissRequest) {
         DropdownMenuItem(
-            text = { Text("Open in New Tab") },
+            text = { Text(stringResource(R.string.menu_open_new_tab)) },
             onClick = {
                 onDismissRequest()
                 if (isRecycleBin) {
@@ -557,7 +560,7 @@ private fun NavContextMenu(
             leadingIcon = { Icon(Icons.Default.Tab, null) }
         )
         DropdownMenuItem(
-            text = { Text("Open in New Window") },
+            text = { Text(stringResource(R.string.menu_open_new_window)) },
             onClick = {
                 onDismissRequest()
                 val universalList = when {
@@ -577,7 +580,7 @@ private fun NavContextMenu(
         )
         if (isRecycleBin) {
             DropdownMenuItem(
-                text = { Text("Empty Recycle Bin") },
+                text = { Text(stringResource(R.string.menu_empty_recycle_bin)) },
                 onClick = {
                     onDismissRequest()
                     appState.emptyRecycleBin()
@@ -588,7 +591,7 @@ private fun NavContextMenu(
         if (onRemove != null) {
             HorizontalDivider()
             DropdownMenuItem(
-                text = { Text(if (path != null) "Remove from Favorites" else "Remove") },
+                text = { Text(if (path != null) stringResource(R.string.menu_remove_favorites) else "Remove") },
                 onClick = {
                     onDismissRequest()
                     onRemove()
@@ -599,8 +602,19 @@ private fun NavContextMenu(
         if (!isRecent) {
             HorizontalDivider()
             DropdownMenuItem(
-                text = { Text("Properties") },
-                onClick = { onDismissRequest() },
+                text = { Text(stringResource(R.string.menu_properties)) },
+                onClick = {
+                    onDismissRequest()
+                    if (isRecycleBin) {
+                        val trashDir = File(Environment.getExternalStorageDirectory(), ".Trash")
+                        appState.showProperties(listOf(trashDir.toUniversal()))
+                    } else if (path != null) {
+                        appState.showProperties(listOf(File(path).toUniversal()))
+                    } else if (uri != null) {
+                        val doc = DocumentFile.fromTreeUri(appState.context, uri)
+                        if (doc != null) appState.showProperties(listOf(doc.toUniversal()))
+                    }
+                },
                 leadingIcon = { Icon(Icons.Default.Info, null) }
             )
         }
@@ -810,7 +824,7 @@ private fun NavStorageItem(
                         Spacer(modifier = Modifier.height(8.dp))
 
                         Text(
-                            text = "$freeFormatted free of $totalFormatted",
+                            text = stringResource(R.string.nav_storage_usage_label, freeFormatted, totalFormatted),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )

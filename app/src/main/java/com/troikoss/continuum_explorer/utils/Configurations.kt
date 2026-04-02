@@ -11,6 +11,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.foundation.layout.size
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.troikoss.continuum_explorer.R
 import com.troikoss.continuum_explorer.model.*
 
 /**
@@ -26,8 +27,8 @@ class FolderConfigurations(private val context: Context) {
     var gridItemSize by mutableIntStateOf(100)
 
     val extraColumns = listOf(
-        FileColumnDefinition(FileColumnType.DATE, "Date Modified", initialWidth = 110.dp),
-        FileColumnDefinition(FileColumnType.SIZE, "Size", initialWidth = 80.dp)
+        FileColumnDefinition(FileColumnType.DATE, context.getString(R.string.details_header_date), initialWidth = 110.dp),
+        FileColumnDefinition(FileColumnType.SIZE, context.getString(R.string.details_header_size), initialWidth = 80.dp)
     )
     
     val columnWidths = mutableStateMapOf<FileColumnType, Dp>().apply {

@@ -67,6 +67,7 @@ import androidx.compose.ui.input.pointer.PointerType
 import androidx.compose.ui.input.pointer.isPrimaryPressed
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -74,6 +75,7 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
+import com.troikoss.continuum_explorer.R
 import com.troikoss.continuum_explorer.ui.theme.FileExplorerTheme
 import com.troikoss.continuum_explorer.utils.FileScannerUtils
 import kotlinx.coroutines.Job
@@ -290,7 +292,7 @@ fun VideoPlayerScreen(
             ) {
                 Icon(
                     imageVector = Icons.Default.PauseCircle,
-                    contentDescription = null,
+                    contentDescription = stringResource(R.string.video_paused),
                     tint = Color.White,
                     modifier = Modifier.size(96.dp)
                 )
@@ -305,7 +307,7 @@ fun VideoPlayerScreen(
             ) {
                 Icon(
                     imageVector = Icons.Default.PlayCircle,
-                    contentDescription = null,
+                    contentDescription = stringResource(R.string.video_playing),
                     tint = Color.White,
                     modifier = Modifier.size(96.dp)
                 )
@@ -421,7 +423,7 @@ fun VideoPlayerScreen(
                         ) {
                             Icon(
                                 imageVector = if (isPlaying) Icons.Default.PauseCircle else Icons.Default.PlayCircle,
-                                contentDescription = "Play/Pause",
+                                contentDescription = stringResource(if (isPlaying) R.string.video_paused else R.string.video_playing),
                                 tint = Color.White,
                                 modifier = Modifier
                                     .size(64.dp)
@@ -472,7 +474,7 @@ fun VideoPlayerScreen(
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Settings,
-                                    contentDescription = "Options",
+                                    contentDescription = stringResource(R.string.options),
                                     tint = Color.White,
                                     modifier = Modifier
                                         .size(64.dp)
@@ -485,22 +487,22 @@ fun VideoPlayerScreen(
                             ) {
                                 DropdownMenuItem(
                                     leadingIcon = { Icon(Icons.Default.Subtitles, null) },
-                                    text = { Text("Subtitles") },
+                                    text = { Text(stringResource(R.string.menu_subtitles)) },
                                     onClick = { optionsMenuExpanded = false }
                                 )
                                 DropdownMenuItem(
                                     leadingIcon = { Icon(Icons.Default.Audiotrack, null) },
-                                    text = { Text("Audio Track") },
+                                    text = { Text(stringResource(R.string.menu_audio_track)) },
                                     onClick = { optionsMenuExpanded = false }
                                 )
                                 DropdownMenuItem(
                                     leadingIcon = { Icon(Icons.Default.FastForward, null) },
-                                    text = { Text("Speed") },
+                                    text = { Text(stringResource(R.string.menu_speed)) },
                                     onClick = { optionsMenuExpanded = false }
                                 )
                                 DropdownMenuItem(
                                     leadingIcon = { Icon(Icons.Default.AspectRatio, null) },
-                                    text = { Text("Aspect Ratio") },
+                                    text = { Text(stringResource(R.string.menu_aspect_ratio)) },
                                     onClick = { optionsMenuExpanded = false }
                                 )
                             }
@@ -512,7 +514,7 @@ fun VideoPlayerScreen(
                         ){
                             Icon(
                                 imageVector = Icons.Default.Fullscreen,
-                                contentDescription = "Fullscreen",
+                                contentDescription = stringResource(R.string.menu_fullscreen),
                                 tint = Color.White,
                                 modifier = Modifier
                                     .size(64.dp)

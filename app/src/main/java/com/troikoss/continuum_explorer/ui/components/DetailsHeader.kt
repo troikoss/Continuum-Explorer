@@ -17,7 +17,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.troikoss.continuum_explorer.R
 import com.troikoss.continuum_explorer.model.FileColumnType
 import com.troikoss.continuum_explorer.model.SortOrder
 import com.troikoss.continuum_explorer.utils.FileExplorerState
@@ -37,7 +39,7 @@ fun DetailsHeader(appState: FileExplorerState) {
         Spacer(Modifier.width(36.dp))
 
         SortableHeaderLabel(
-            label = "Name",
+            label = stringResource(R.string.details_header_name),
             modifier = Modifier.weight(1f),
             isActive = appState.folderConfigs.sortParams.columnType == FileColumnType.NAME,
             order = appState.folderConfigs.sortParams.order,
@@ -98,5 +100,3 @@ fun SortableHeaderLabel(
         }
     }
 }
-
-

@@ -13,6 +13,7 @@ import android.text.format.Formatter
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
+import com.troikoss.continuum_explorer.R
 import com.troikoss.continuum_explorer.managers.FileOperationsManager
 import com.troikoss.continuum_explorer.ui.activities.PopUpActivity
 
@@ -53,8 +54,8 @@ object NotificationHelper {
 
     private fun createNotificationChannel(context: Context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val name = "File Operations"
-            val descriptionText = "Progress of file copy/move operations"
+            val name = context.getString(R.string.settings_file_ops)
+            val descriptionText = "Progress of file operations"
             val importance = NotificationManager.IMPORTANCE_LOW
             val channel = NotificationChannel(CHANNEL_ID, name, importance).apply {
                 description = descriptionText
@@ -104,8 +105,8 @@ object NotificationHelper {
                 // If finished successfully, show success message
                 val builder = NotificationCompat.Builder(context, CHANNEL_ID)
                     .setSmallIcon(android.R.drawable.stat_sys_download_done)
-                    .setContentTitle("Operation Finished")
-                    .setContentText("File operation completed.")
+                    .setContentTitle(context.getString(R.string.op_finished))
+                    .setContentText(context.getString(R.string.msg_op_completed))
                     .setPriority(NotificationCompat.PRIORITY_DEFAULT)
                     .setContentIntent(pendingIntent)
                     .setAutoCancel(true)
@@ -136,12 +137,12 @@ object NotificationHelper {
         // Format stats
         val speedString = "${Formatter.formatFileSize(context, speedBytesPerSec)}/s"
         val timeString = when {
-            timeRemainingMillis <= 0 -> "Calculating..."
+            timeRemainingMillis <= 0 -> context.getString(R.string.calculating)
             timeRemainingMillis < 60000 -> "${timeRemainingMillis / 1000}s left"
             else -> "${timeRemainingMillis / 60000}m left"
         }
 
-        val title = if (isCancelled) "Cancelling..." else message
+        val title = if (isCancelled) context.getString(R.string.msg_cancelling) else message
         val contentText = "$speedString • $timeString"
         val progressInt = (progress * 100).toInt()
 
@@ -159,7 +160,7 @@ object NotificationHelper {
             
         // Only add cancel button if not already cancelling
         if (!isCancelled) {
-            builder.addAction(android.R.drawable.ic_menu_close_clear_cancel, "Cancel", cancelPendingIntent)
+            builder.addAction(android.R.drawable.ic_menu_close_clear_cancel, context.getString(R.string.cancel), cancelPendingIntent)
         }
 
         NotificationManagerCompat.from(context).notify(NOTIFICATION_ID, builder.build())

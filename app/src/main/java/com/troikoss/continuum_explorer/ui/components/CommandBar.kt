@@ -68,7 +68,9 @@ import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.PointerType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.troikoss.continuum_explorer.R
 import com.troikoss.continuum_explorer.model.FileColumnType
 import com.troikoss.continuum_explorer.model.ScreenSize
 import com.troikoss.continuum_explorer.model.ViewMode
@@ -138,7 +140,7 @@ fun CommandBar(
                 // Recycle Bin specific UI
                 if (isSelectionMode) {
                     CommandButton(
-                        text = "Restore",
+                        text = stringResource(R.string.menu_restore),
                         icon = Icons.Default.Restore,
                         onClick = { isTouch -> 
                             appState.restoreSelection()
@@ -147,13 +149,13 @@ fun CommandBar(
                     )
 
                     CommandButton(
-                        text = "Delete Permanently",
+                        text = stringResource(R.string.menu_delete_permanently),
                         icon = Icons.Default.Delete,
                         onClick = { appState.deleteSelection(forcePermanent = true) },
                     )
 
                     CommandButton(
-                        text = "Properties",
+                        text = stringResource(R.string.menu_properties),
                         icon = Icons.Default.Info,
                         onClick = { isTouch -> 
                             appState.showProperties()
@@ -168,21 +170,21 @@ fun CommandBar(
                         FileColumnType.SIZE -> Icons.AutoMirrored.Filled.List
                     }
 
-                    CommandDropDown(text = "Sort", icon = sortIcon) { onDismiss ->
+                    CommandDropDown(text = stringResource(R.string.menu_sort), icon = sortIcon) { onDismiss ->
                         DropdownMenuItem(
-                            text = { Text("By Name") },
+                            text = { Text(stringResource(R.string.menu_by_name)) },
                             leadingIcon = { Icon(Icons.Default.TextFormat, null) },
                             trailingIcon = { appState.folderConfigs.SortArrow(FileColumnType.NAME) },
                             onClick = { appState.folderConfigs.toggleSort(FileColumnType.NAME, appState.getCurrentStorageKey()) { appState.refresh() }; onDismiss() }
                         )
                         DropdownMenuItem(
-                            text = { Text("By Date") },
+                            text = { Text(stringResource(R.string.menu_by_date)) },
                             leadingIcon = { Icon(Icons.Default.DateRange, null) },
                             trailingIcon = { appState.folderConfigs.SortArrow(FileColumnType.DATE) },
                             onClick = { appState.folderConfigs.toggleSort(FileColumnType.DATE, appState.getCurrentStorageKey()) { appState.refresh() }; onDismiss() }
                         )
                         DropdownMenuItem(
-                            text = { Text("By Size") },
+                            text = { Text(stringResource(R.string.menu_by_size)) },
                             leadingIcon = { Icon(Icons.AutoMirrored.Filled.List, null) },
                             trailingIcon = { appState.folderConfigs.SortArrow(FileColumnType.SIZE) },
                             onClick = { appState.folderConfigs.toggleSort(FileColumnType.SIZE, appState.getCurrentStorageKey()) { appState.refresh() }; onDismiss() }
@@ -196,23 +198,23 @@ fun CommandBar(
                         ViewMode.GRID -> Icons.Default.ViewModule
                     }
 
-                    CommandDropDown(text = "View", icon = viewIcon) { onDismiss ->
+                    CommandDropDown(text = stringResource(R.string.menu_view), icon = viewIcon) { onDismiss ->
                         if (appState.getScreenSize() != ScreenSize.SMALL) {
                             DropdownMenuItem(
-                                text = { Text("Details") },
+                                text = { Text(stringResource(R.string.menu_details)) },
                                 leadingIcon = { Icon(Icons.AutoMirrored.Filled.ListAlt, null) },
                                 trailingIcon = { if (appState.activeViewMode == ViewMode.DETAILS) { Icon(Icons.Default.Done, null) }},
                                 onClick = { appState.folderConfigs.updateViewMode(ViewMode.DETAILS, appState.getCurrentStorageKey()); onDismiss() }
                             )
                         }
                         DropdownMenuItem(
-                            text = { Text("Content") },
+                            text = { Text(stringResource(R.string.menu_content)) },
                             leadingIcon = { Icon(Icons.AutoMirrored.Filled.List, null) },
                             trailingIcon = { if (appState.activeViewMode == ViewMode.CONTENT) { Icon(Icons.Default.Done, null) }},
                             onClick = { appState.folderConfigs.updateViewMode(ViewMode.CONTENT, appState.getCurrentStorageKey()); onDismiss() }
                         )
                         DropdownMenuItem(
-                            text = { Text("Grid") },
+                            text = { Text(stringResource(R.string.menu_grid)) },
                             leadingIcon = { Icon(Icons.Default.ViewModule, null) },
                             trailingIcon = { if (appState.activeViewMode == ViewMode.GRID) { Icon(Icons.Default.Done, null) }},
                             onClick = { appState.folderConfigs.updateViewMode(ViewMode.GRID, appState.getCurrentStorageKey()); onDismiss() }
@@ -222,14 +224,14 @@ fun CommandBar(
                     VerticalDivider()
 
                     CommandButton(
-                        text = "Empty Recycle Bin",
+                        text = stringResource(R.string.menu_empty_recycle_bin),
                         icon = Icons.Default.DeleteForever,
                         onClick = { appState.emptyRecycleBin() },
                     )
                     
                     if (canUndo) {
                         CommandButton(
-                            text = "Undo",
+                            text = stringResource(R.string.menu_undo).split(" ").first(),
                             icon = Icons.AutoMirrored.Filled.Undo,
                             onClick = { appState.undo() }
                         )
@@ -237,7 +239,7 @@ fun CommandBar(
                     
                     if (canRedo) {
                         CommandButton(
-                            text = "Redo",
+                            text = stringResource(R.string.menu_redo).split(" ").last(),
                             icon = Icons.AutoMirrored.Filled.Redo,
                             onClick = { appState.redo() }
                         )
@@ -247,13 +249,13 @@ fun CommandBar(
                 // Normal Folder UI
                 if (!isSelectionMode) {
                     // New Menu
-                    CommandDropDown(text = "New", icon = Icons.Default.Add) { onDismiss ->
+                    CommandDropDown(text = stringResource(R.string.menu_new), icon = Icons.Default.Add) { onDismiss ->
                         DropdownMenuItem(
-                            text = { Text("New Folder") },
+                            text = { Text(stringResource(R.string.menu_folder)) },
                             leadingIcon = { Icon(Icons.Default.Folder, null) },
                             onClick = { appState.createNewFolder(); onDismiss() })
                         DropdownMenuItem(
-                            text = { Text("New File") },
+                            text = { Text(stringResource(R.string.menu_text_document)) },
                             leadingIcon = { Icon(Icons.AutoMirrored.Filled.InsertDriveFile, null) },
                             onClick = { appState.createNewFile(); onDismiss() })
                     }
@@ -265,21 +267,21 @@ fun CommandBar(
                         FileColumnType.SIZE -> Icons.AutoMirrored.Filled.List
                     }
 
-                    CommandDropDown(text = "Sort", icon = sortIcon) { onDismiss ->
+                    CommandDropDown(text = stringResource(R.string.menu_sort), icon = sortIcon) { onDismiss ->
                         DropdownMenuItem(
-                            text = { Text("By Name") },
+                            text = { Text(stringResource(R.string.menu_by_name)) },
                             leadingIcon = { Icon(Icons.Default.TextFormat, null) },
                             trailingIcon = { appState.folderConfigs.SortArrow(FileColumnType.NAME) },
                             onClick = { appState.folderConfigs.toggleSort(FileColumnType.NAME, appState.getCurrentStorageKey()) { appState.refresh() }; onDismiss() }
                         )
                         DropdownMenuItem(
-                            text = { Text("By Date") },
+                            text = { Text(stringResource(R.string.menu_by_date)) },
                             leadingIcon = { Icon(Icons.Default.DateRange, null) },
                             trailingIcon = { appState.folderConfigs.SortArrow(FileColumnType.DATE) },
                             onClick = { appState.folderConfigs.toggleSort(FileColumnType.DATE, appState.getCurrentStorageKey()) { appState.refresh() }; onDismiss() }
                         )
                         DropdownMenuItem(
-                            text = { Text("By Size") },
+                            text = { Text(stringResource(R.string.menu_by_size)) },
                             leadingIcon = { Icon(Icons.AutoMirrored.Filled.List, null) },
                             trailingIcon = { appState.folderConfigs.SortArrow(FileColumnType.SIZE) },
                             onClick = { appState.folderConfigs.toggleSort(FileColumnType.SIZE, appState.getCurrentStorageKey()) { appState.refresh() }; onDismiss() }
@@ -293,10 +295,10 @@ fun CommandBar(
                         ViewMode.GRID -> Icons.Default.ViewModule
                     }
 
-                    CommandDropDown(text = "View", icon = viewIcon) { onDismiss ->
+                    CommandDropDown(text = stringResource(R.string.menu_view), icon = viewIcon) { onDismiss ->
                         if (appState.getScreenSize() != ScreenSize.SMALL) {
                             DropdownMenuItem(
-                                text = { Text("Details") },
+                                text = { Text(stringResource(R.string.menu_details)) },
                                 leadingIcon = { Icon(Icons.AutoMirrored.Filled.ListAlt, null) },
                                 trailingIcon = {
                                     if (appState.activeViewMode == ViewMode.DETAILS) {
@@ -307,7 +309,7 @@ fun CommandBar(
                             )
                         }
                         DropdownMenuItem(
-                            text = { Text("Content") },
+                            text = { Text(stringResource(R.string.menu_content)) },
                             leadingIcon = { Icon(Icons.AutoMirrored.Filled.List, null) },
                             trailingIcon = {
                                 if (appState.activeViewMode == ViewMode.CONTENT) {
@@ -317,7 +319,7 @@ fun CommandBar(
                             onClick = { appState.folderConfigs.updateViewMode(ViewMode.CONTENT, appState.getCurrentStorageKey()); onDismiss() }
                         )
                         DropdownMenuItem(
-                            text = { Text("Grid") },
+                            text = { Text(stringResource(R.string.menu_grid)) },
                             leadingIcon = { Icon(Icons.Default.ViewModule, null) },
                             trailingIcon = {
                                 if (appState.activeViewMode == ViewMode.GRID) {
@@ -331,14 +333,14 @@ fun CommandBar(
                     VerticalDivider()
 
                     CommandButton(
-                        text = "Select All",
+                        text = stringResource(R.string.shortcuts_ctrl_a_desc),
                         icon = Icons.Default.SelectAll,
                         onClick = { selectionManager.selectAll() },
                     )
 
                     if (hasClipboardItems) {
                         CommandButton(
-                            text = "Paste",
+                            text = stringResource(R.string.menu_paste),
                             icon = Icons.Default.ContentPaste,
                             onClick = { appState.paste() }
                         )
@@ -346,7 +348,7 @@ fun CommandBar(
                     
                     if (canUndo) {
                         CommandButton(
-                            text = "Undo",
+                            text = stringResource(R.string.menu_undo).split(" ").first(),
                             icon = Icons.AutoMirrored.Filled.Undo,
                             onClick = { appState.undo() }
                         )
@@ -354,7 +356,7 @@ fun CommandBar(
                     
                     if (canRedo) {
                         CommandButton(
-                            text = "Redo",
+                            text = stringResource(R.string.menu_redo).split(" ").last(),
                             icon = Icons.AutoMirrored.Filled.Redo,
                             onClick = { appState.redo() }
                         )
@@ -369,7 +371,7 @@ fun CommandBar(
 
                     if (onlyOneSelected && !hasDirectories) {
                         CommandButton(
-                            text = "Open With",
+                            text = stringResource(R.string.menu_open_with_no_dots),
                             icon = Icons.Default.FolderOpen,
                             onClick = { isTouch ->
                                 openWith(context, selectedList[0])
@@ -380,13 +382,13 @@ fun CommandBar(
 
                     if (hasDirectories || hasArchive) {
                         CommandButton(
-                            text = "Open in New Tab",
+                            text = stringResource(R.string.menu_open_new_tab),
                             icon = Icons.Default.Tab,
                             onClick = { isTouch -> appState.openInNewTab(selectionManager.selectedItems.toList()); if (isTouch) {selectionManager.clear()} },
                         )
 
                         CommandButton(
-                            text = "Open in New Window",
+                            text = stringResource(R.string.menu_open_new_window),
                             icon = Icons.Default.Splitscreen,
                             onClick = { isTouch -> appState.openInNewWindow(selectionManager.selectedItems.toList()); if (isTouch) {selectionManager.clear()} },
                         )
@@ -403,7 +405,7 @@ fun CommandBar(
                         val isFav = appState.appConfigs.isFavorite(path)
 
                         CommandButton(
-                            text = if (isFav) "Remove from Favorites" else "Add to Favorites",
+                            text = if (isFav) stringResource(R.string.menu_remove_favorites) else stringResource(R.string.menu_add_favorites),
                             onClick = { isTouch ->
                                 if (isFav) appState.appConfigs.removeFavorite(path)
                                 else appState.appConfigs.addFavorite(path)
@@ -415,7 +417,7 @@ fun CommandBar(
 
                     if (onlyOneSelected) {
                         CommandButton(
-                            text = "Add to Home",
+                            text = stringResource(R.string.menu_add_home),
                             icon = Icons.Default.PushPin,
                             onClick = { isTouch ->
                                 appState.pinSelectionToHome()
@@ -429,7 +431,7 @@ fun CommandBar(
                     
                     if (hasArchive) {
                         CommandButton(
-                            text = "Extract",
+                            text = stringResource(R.string.menu_extract).removeSuffix("..."),
                             icon = Icons.Default.Unarchive,
                             onClick = { isTouch -> 
                                 appState.extractSelection()
@@ -439,7 +441,7 @@ fun CommandBar(
                     }
 
                     CommandButton(
-                        text = "Compress",
+                        text = stringResource(R.string.menu_compress).removeSuffix("..."),
                         icon = Icons.Default.Archive,
                         onClick = { isTouch ->
                             appState.compressSelection()
@@ -450,26 +452,26 @@ fun CommandBar(
                     VerticalDivider()
 
 
-                    CommandDropDown(text = "Select", icon = Icons.Default.SelectAll) { onDismiss ->
+                    CommandDropDown(text = stringResource(R.string.menu_select), icon = Icons.Default.SelectAll) { onDismiss ->
 
                         val allSelected = selectionManager.selectedItems.size == selectionManager.allFiles.size
 
                         if (!allSelected) {
                             DropdownMenuItem(
-                                text = { Text("Select All") },
+                                text = { Text(stringResource(R.string.shortcuts_ctrl_a_desc)) },
                                 leadingIcon = { Icon(Icons.Default.Deselect, null) },
                                 onClick = { selectionManager.selectAll(); onDismiss() }
                             )
                         }
 
                         DropdownMenuItem(
-                            text = { Text("Clear Selection") },
+                            text = { Text(stringResource(R.string.menu_clear_selection)) },
                             leadingIcon = { Icon(Icons.Default.Deselect, null) },
                             onClick = { selectionManager.clear(); onDismiss() }
                         )
 
                         DropdownMenuItem(
-                            text = { Text("Select Inverse") },
+                            text = { Text(stringResource(R.string.menu_select_inverse)) },
                             leadingIcon = { Icon(Icons.Default.Deselect, null) },
                             onClick = { selectionManager.selectInverse(); onDismiss() }
                         )
@@ -477,44 +479,44 @@ fun CommandBar(
                     }
 
                     CommandButton(
-                        text = "Cut",
+                        text = stringResource(R.string.menu_cut),
                         icon = Icons.Default.ContentCut,
                         onClick = { isTouch -> appState.cutSelection(); if (isTouch) {selectionManager.clear()} },
                     )
                     CommandButton(
-                        text = "Copy",
+                        text = stringResource(R.string.menu_copy),
                         icon = Icons.Default.CopyAll,
                         onClick = { isTouch -> appState.copySelection(); if (isTouch) {selectionManager.clear()} },
                     )
                     
                     if (hasClipboardItems) {
                         CommandButton(
-                            text = "Paste",
+                            text = stringResource(R.string.menu_paste),
                             icon = Icons.Default.ContentPaste,
                             onClick = { isTouch -> appState.paste(); if (isTouch) {selectionManager.clear()} }
                         )
                     }
                     
                     CommandButton(
-                        text = "Rename",
+                        text = stringResource(R.string.menu_rename),
                         icon = Icons.Default.DriveFileRenameOutline,
                         onClick = { isTouch -> appState.renameSelection(); if (isTouch) {selectionManager.clear()} }
                     )
                     if ( !selectionManager.selectedItems.any{it.isDirectory}  ) {
                         CommandButton(
-                            text = "Share",
+                            text = stringResource(R.string.menu_share),
                             icon = Icons.Default.Share,
                             onClick = { isTouch -> shareFiles(context, selectionManager.selectedItems.toList()); if (isTouch) {selectionManager.clear()} }
                         )
                     }
                     CommandButton(
-                        text = "Delete",
+                        text = stringResource(R.string.menu_delete),
                         icon = Icons.Default.Delete,
                         onClick = { appState.deleteSelection()},
                     )
 
                     CommandButton(
-                        text = "Properties",
+                        text = stringResource(R.string.menu_properties),
                         icon = Icons.Default.Info,
                         onClick = { isTouch -> 
                             appState.showProperties()

@@ -4,6 +4,7 @@ import android.net.Uri
 import android.os.Environment
 import android.widget.Toast
 import androidx.documentfile.provider.DocumentFile
+import com.troikoss.continuum_explorer.R
 import com.troikoss.continuum_explorer.model.NavLocation
 import java.io.File
 
@@ -112,25 +113,25 @@ fun FileExplorerState.getLocationName(location: NavLocation): String {
         val inner = location.archivePath ?: ""
         if (inner.isEmpty()) base else "$base/${inner.removeSuffix("/")}"
     } else if (location.archiveUri != null) {
-        val base = "Archive"
+        val base = context.getString(R.string.nav_archive)
         val inner = location.archivePath ?: ""
         if (inner.isEmpty()) base else "$base/${inner.removeSuffix("/")}"
     } else if (location.path != null) {
         if (location.path.absolutePath == storageRoot.absolutePath) {
-            if (storageRoot.absolutePath == Environment.getExternalStorageDirectory().absolutePath) "Internal Storage"
-            else "SD Card"
+            if (storageRoot.absolutePath == Environment.getExternalStorageDirectory().absolutePath) context.getString(R.string.nav_internal_storage)
+            else context.getString(R.string.nav_sd_card)
         } else {
             location.path.name
         }
     } else if (location.uri != null) {
         if (location.safStack != null && location.safStack.isNotEmpty()) {
             val doc = DocumentFile.fromTreeUri(context, location.uri)
-            doc?.name ?: "Unknown Folder"
+            doc?.name ?: context.getString(R.string.nav_unknown_folder)
         } else {
             getSafDisplayName(location.uri)
         }
     } else {
-        "New Tab"
+        context.getString(R.string.new_tab)
     }
 }
 
@@ -206,7 +207,7 @@ fun FileExplorerState.goUp() {
         }
     } else if (currentPath != null) {
         if (currentPath?.absolutePath == storageRoot.absolutePath) {
-            Toast.makeText(context, "Already at storage root", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, context.getString(R.string.msg_already_at_storage_root), Toast.LENGTH_SHORT).show()
             return
         }
 
@@ -222,7 +223,7 @@ fun FileExplorerState.goUp() {
             destinationUri = safStack.last()
             canPerformGoUp = true
         } else {
-            Toast.makeText(context, "Already at picked folder root", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, context.getString(R.string.msg_already_at_saf_root), Toast.LENGTH_SHORT).show()
         }
     }
 

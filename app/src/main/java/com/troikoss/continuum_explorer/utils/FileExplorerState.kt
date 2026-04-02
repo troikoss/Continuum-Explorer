@@ -13,6 +13,7 @@ import android.widget.Toast
 import androidx.compose.runtime.*
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.documentfile.provider.DocumentFile
+import com.troikoss.continuum_explorer.R
 import com.troikoss.continuum_explorer.managers.RecentFilesManager
 import com.troikoss.continuum_explorer.managers.SearchManager
 import com.troikoss.continuum_explorer.managers.SelectionManager
@@ -143,7 +144,7 @@ class FileExplorerState(
                     }
                 }
             }
-            return if (rootId == "primary") "Internal Storage" else rootId
+            return if (rootId == "primary") context.getString(R.string.nav_internal_storage) else rootId
         }
 
         val pm = context.packageManager
@@ -161,34 +162,34 @@ class FileExplorerState(
         if (appName.isNotEmpty()) return appName
 
         val doc = DocumentFile.fromTreeUri(context, currentSafUri!!)
-        return doc?.name ?: "External Location"
+        return doc?.name ?: context.getString(R.string.nav_external_location)
     }
 
     val currentName: String
         get() {
             return if (isInRecycleBin) {
-                "Recycle Bin"
+                context.getString(R.string.nav_recycle_bin)
             } else if (isRecentMode) {
-                "Recent"
+                context.getString(R.string.nav_recent)
             } else if (currentArchiveFile != null) {
-                currentArchiveFile?.name ?: "Archive"
+                currentArchiveFile?.name ?: context.getString(R.string.nav_archive)
             } else if (currentArchiveUri != null) {
-                "Archive"
+                context.getString(R.string.nav_archive)
             } else if (currentPath != null) {
                 if (currentPath?.absolutePath == storageRoot.absolutePath) {
-                    if (storageRoot.absolutePath == Environment.getExternalStorageDirectory().absolutePath) "Internal Storage"
-                    else "SD Card"
+                    if (storageRoot.absolutePath == Environment.getExternalStorageDirectory().absolutePath) context.getString(R.string.nav_internal_storage)
+                    else context.getString(R.string.nav_sd_card)
                 }
-                else currentPath?.name ?: "Unknown"
+                else currentPath?.name ?: context.getString(R.string.unknown)
             } else if (currentSafUri != null) {
                 if (safStack.isNotEmpty()) {
                     val doc = DocumentFile.fromTreeUri(context, currentSafUri!!)
-                    doc?.name ?: "Unknown Folder"
+                    doc?.name ?: context.getString(R.string.nav_unknown_folder)
                 } else {
                     getSafDisplayName(currentSafUri!!)
                 }
             } else {
-                "New Tab"
+                context.getString(R.string.new_tab)
             }
         }
 
@@ -253,7 +254,7 @@ class FileExplorerState(
                 folderConfigs.resolveViewMode(key)
                 folderConfigs.resolveSortParams(key)
                 folderConfigs.resolveGridSize(key)
-                loadedPathKey = key ?: "search_results"
+                loadedPathKey = key ?: context.getString(R.string.msg_search_results)
             }
             try {
                 // Parse if we need to load archives
@@ -284,7 +285,7 @@ class FileExplorerState(
             } catch (_: Exception) {
                 withContext(Dispatchers.Main) {
                     isLoading = false
-                    Toast.makeText(context, "Search failed", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, context.getString(R.string.msg_search_failed), Toast.LENGTH_SHORT).show()
                 }
             }
         }
@@ -432,7 +433,7 @@ class FileExplorerState(
     fun formatSize(size: Long): String = Formatter.formatFileSize(context, size)
 
     fun getCurrentStorageKey(): String? {
-        if (isSearchMode) return "search_results"
+        if (isSearchMode) return context.getString(R.string.msg_search_results)
         return if (currentArchiveFile != null || currentArchiveUri != null) {
             val base = currentArchiveFile?.absolutePath ?: currentArchiveUri.toString()
             "archive:$base:${currentArchivePath.removeSuffix("/")}"

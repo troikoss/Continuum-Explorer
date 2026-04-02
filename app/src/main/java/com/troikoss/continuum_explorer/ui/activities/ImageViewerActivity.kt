@@ -85,10 +85,12 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
 import coil.compose.AsyncImage
+import com.troikoss.continuum_explorer.R
 import com.troikoss.continuum_explorer.managers.FileOperationsManager
 import com.troikoss.continuum_explorer.utils.GlobalEvents
 import com.troikoss.continuum_explorer.model.FileColumnType
@@ -453,7 +455,7 @@ fun ImageViewerScreen(
                 ) {
                     // --- GROUP 1: Open With ---
                     DropdownMenuItem(
-                        text = { Text("Open with") },
+                        text = { Text(stringResource(R.string.menu_open_with)) },
                         leadingIcon = { Icon(Icons.Default.OpenInNew, contentDescription = "Open with") },
                         onClick = {
                             showMenu = false
@@ -479,7 +481,7 @@ fun ImageViewerScreen(
 
                     // --- GROUP 2: Zoom Controls ---
                     DropdownMenuItem(
-                        text = { Text("Zoom in") },
+                        text = { Text(stringResource(R.string.menu_zoom_in).replaceFirstChar { it.uppercase() }.split(" ").first() + " in") },
                         leadingIcon = { Icon(Icons.Default.ZoomIn, contentDescription = "Zoom in") },
                         onClick = {
                             showMenu = false
@@ -498,7 +500,7 @@ fun ImageViewerScreen(
                     )
 
                     DropdownMenuItem(
-                        text = { Text("Zoom out") },
+                        text = { Text(stringResource(R.string.menu_zoom_out).replaceFirstChar { it.uppercase() }.split(" ").first() + " out") },
                         leadingIcon = { Icon(Icons.Default.ZoomOut, contentDescription = "Zoom out") },
                         onClick = {
                             showMenu = false
@@ -572,7 +574,7 @@ fun ImageViewerScreen(
                     )
 
                     DropdownMenuItem(
-                        text = { Text("Share") },
+                        text = { Text(stringResource(R.string.menu_share)) },
                         leadingIcon = { Icon(Icons.Default.Share, contentDescription = "Share") },
                         onClick = {
                             showMenu = false
@@ -594,7 +596,7 @@ fun ImageViewerScreen(
                     )
 
                     DropdownMenuItem(
-                        text = { Text("Rename") },
+                        text = { Text(stringResource(R.string.menu_rename)) },
                         leadingIcon = { Icon(Icons.Default.Edit, contentDescription = "Rename") },
                         onClick = {
                             showMenu = false
@@ -630,7 +632,7 @@ fun ImageViewerScreen(
                     )
 
                     DropdownMenuItem(
-                        text = { Text("Delete") },
+                        text = { Text(stringResource(R.string.menu_delete)) },
                         leadingIcon = { Icon(Icons.Default.Delete, contentDescription = "Delete") },
                         onClick = {
                             showMenu = false
@@ -658,7 +660,7 @@ fun ImageViewerScreen(
                     )
 
                     DropdownMenuItem(
-                        text = { Text("Properties") },
+                        text = { Text(stringResource(R.string.menu_properties)) },
                         leadingIcon = { Icon(Icons.Default.Info, contentDescription = "Properties") },
                         onClick = {
                             showMenu = false
@@ -682,7 +684,7 @@ fun ImageViewerScreen(
                     )
 
                     DropdownMenuItem(
-                        text = { Text("Close") },
+                        text = { Text(stringResource(R.string.close)) },
                         leadingIcon = { Icon(Icons.Default.Close, contentDescription = "Close") },
                         onClick = {
                             showMenu = false
