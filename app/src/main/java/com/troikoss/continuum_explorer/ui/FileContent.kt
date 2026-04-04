@@ -15,6 +15,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableFloatStateOf
@@ -109,6 +110,8 @@ fun FileContent(
 
     val density = LocalDensity.current
     val viewMode = appState.activeViewMode
+
+    val gridContentPadding = remember { PaddingValues(8.dp) }
 
     val columnCount = remember (
         appState.activeViewMode,
@@ -294,20 +297,41 @@ fun FileContent(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(horizontal = 32.dp),
-                    contentPadding = PaddingValues(8.dp)
+                    contentPadding = gridContentPadding
                 ) {
                     items(
                         items = appState.files,
-                        key = { it.absolutePath }
+                        key = { it.absolutePath },
+                        contentType = { file ->
+                            when {
+                                file.isDirectory -> "folder"
+                                file.isArchiveEntry -> "archive_entry"
+                                else -> "file"
+                            }
+                        }
                     ) { file ->
+
+                        val isHovered by remember(file) {
+                            derivedStateOf {
+                                // This makes it update when you scroll
+                                gridState.firstVisibleItemScrollOffset
+
+                                val currentRect = itemPositions[file]
+                                val pos = mousePosition
+
+                                pos != null && currentRect != null && currentRect.contains(pos)
+                            }
+                        }
+
+
                         FileView(
                             file = file,
                             itemPositions = itemPositions,
                             containerCoordinates = containerCoordinates,
-                            mousePosition = mousePosition,
-                            scrollOffset = { gridState.firstVisibleItemScrollOffset },
+                            mousePosition = { mousePosition } ,
                             appState = appState,
-                            focusRequester = focusRequester
+                            focusRequester = focusRequester,
+                            isHovered = isHovered
                         )
                     }
                 }

@@ -339,51 +339,123 @@ fun PropertyRow(label: String, value: String) {
 fun ShortcutsContent(onClose: () -> Unit) {
     Column(
         modifier = Modifier
-            .padding(16.dp)
-            .verticalScroll(rememberScrollState())
-            .fillMaxWidth()
+        .fillMaxWidth()
+        .padding(16.dp)
     ) {
-        Text(
-            text = stringResource(R.string.shortcuts_title),
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold
-        )
-        Spacer(modifier = Modifier.height(16.dp))
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .verticalScroll(rememberScrollState())
+                .fillMaxWidth()
+        ) {
+            Text(
+                text = stringResource(R.string.shortcuts_title),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(modifier = Modifier.height(16.dp))
 
-        ShortcutCategory(stringResource(R.string.shortcuts_nav_selection))
-        ShortcutItem(stringResource(R.string.shortcuts_arrow_keys), stringResource(R.string.shortcuts_arrow_keys_desc))
-        ShortcutItem(stringResource(R.string.shortcuts_home_end), stringResource(R.string.shortcuts_home_end_desc))
-        ShortcutItem(stringResource(R.string.shortcuts_page_up_down), stringResource(R.string.shortcuts_page_up_down_desc))
-        ShortcutItem(stringResource(R.string.shortcuts_ctrl_a), stringResource(R.string.shortcuts_ctrl_a_desc))
-        ShortcutItem(stringResource(R.string.shortcuts_backspace), stringResource(R.string.shortcuts_backspace_desc))
+            ShortcutCategory(stringResource(R.string.shortcuts_nav_selection))
+            ShortcutItem(
+                stringResource(R.string.shortcuts_arrow_keys),
+                stringResource(R.string.shortcuts_arrow_keys_desc)
+            )
+            ShortcutItem(
+                stringResource(R.string.shortcuts_home_end),
+                stringResource(R.string.shortcuts_home_end_desc)
+            )
+            ShortcutItem(
+                stringResource(R.string.shortcuts_page_up_down),
+                stringResource(R.string.shortcuts_page_up_down_desc)
+            )
+            ShortcutItem(
+                stringResource(R.string.shortcuts_ctrl_a),
+                stringResource(R.string.shortcuts_ctrl_a_desc)
+            )
+            ShortcutItem(
+                stringResource(R.string.shortcuts_backspace),
+                stringResource(R.string.shortcuts_backspace_desc)
+            )
 
-        Spacer(modifier = Modifier.height(16.dp))
-        ShortcutCategory(stringResource(R.string.shortcuts_file_ops))
-        ShortcutItem(stringResource(R.string.shortcuts_enter), stringResource(R.string.shortcuts_enter_desc))
-        ShortcutItem(stringResource(R.string.shortcuts_ctrl_enter), stringResource(R.string.shortcuts_ctrl_enter_desc))
-        ShortcutItem(stringResource(R.string.shortcuts_shift_enter), stringResource(R.string.shortcuts_shift_enter_desc))
-        ShortcutItem(stringResource(R.string.shortcuts_ctrl_cvx), stringResource(R.string.shortcuts_ctrl_cvx_desc))
-        ShortcutItem(stringResource(R.string.shortcuts_delete), stringResource(R.string.shortcuts_delete_desc))
-        ShortcutItem(stringResource(R.string.shortcuts_f2), stringResource(R.string.shortcuts_f2_desc))
-        ShortcutItem(stringResource(R.string.shortcuts_f5), stringResource(R.string.shortcuts_f5_desc))
+            Spacer(modifier = Modifier.height(16.dp))
+            ShortcutCategory(stringResource(R.string.shortcuts_file_ops))
+            ShortcutItem(
+                stringResource(R.string.shortcuts_enter),
+                stringResource(R.string.shortcuts_enter_desc)
+            )
+            ShortcutItem(
+                stringResource(R.string.shortcuts_ctrl_enter),
+                stringResource(R.string.shortcuts_ctrl_enter_desc)
+            )
+            ShortcutItem(
+                stringResource(R.string.shortcuts_shift_enter),
+                stringResource(R.string.shortcuts_shift_enter_desc)
+            )
+            ShortcutItem(
+                stringResource(R.string.shortcuts_ctrl_cvx),
+                stringResource(R.string.shortcuts_ctrl_cvx_desc)
+            )
+            ShortcutItem(
+                stringResource(R.string.shortcuts_delete),
+                stringResource(R.string.shortcuts_delete_desc)
+            )
+            ShortcutItem(
+                stringResource(R.string.shortcuts_f2),
+                stringResource(R.string.shortcuts_f2_desc)
+            )
+            ShortcutItem(
+                stringResource(R.string.shortcuts_f5),
+                stringResource(R.string.shortcuts_f5_desc)
+            )
 
-        Spacer(modifier = Modifier.height(16.dp))
-        ShortcutCategory(stringResource(R.string.shortcuts_app_actions))
-        ShortcutItem(stringResource(R.string.shortcuts_ctrl_n), stringResource(R.string.shortcuts_ctrl_n_desc))
-        ShortcutItem(stringResource(R.string.shortcuts_ctrl_w), stringResource(R.string.shortcuts_ctrl_w_desc))
-        ShortcutItem(stringResource(R.string.shortcuts_ctrl_zy), stringResource(R.string.shortcuts_ctrl_zy_desc))
-        ShortcutItem(stringResource(R.string.shortcuts_ctrl_wheel), stringResource(R.string.shortcuts_ctrl_wheel_desc))
-        ShortcutItem(stringResource(R.string.shortcuts_ctrl_slash), stringResource(R.string.shortcuts_ctrl_slash_desc))
+            Spacer(modifier = Modifier.height(16.dp))
+            ShortcutCategory(stringResource(R.string.shortcuts_app_actions))
+            ShortcutItem(
+                stringResource(R.string.shortcuts_ctrl_n),
+                stringResource(R.string.shortcuts_ctrl_n_desc)
+            )
+            ShortcutItem(
+                stringResource(R.string.shortcuts_ctrl_w),
+                stringResource(R.string.shortcuts_ctrl_w_desc)
+            )
+            ShortcutItem(
+                stringResource(R.string.shortcuts_ctrl_zy),
+                stringResource(R.string.shortcuts_ctrl_zy_desc)
+            )
+            ShortcutItem(
+                stringResource(R.string.shortcuts_ctrl_wheel),
+                stringResource(R.string.shortcuts_ctrl_wheel_desc)
+            )
+            ShortcutItem(
+                stringResource(R.string.shortcuts_ctrl_slash),
+                stringResource(R.string.shortcuts_ctrl_slash_desc)
+            )
 
-        Spacer(modifier = Modifier.height(16.dp))
-        ShortcutCategory(stringResource(R.string.shortcuts_mouse))
-        ShortcutItem(stringResource(R.string.shortcuts_right_click), stringResource(R.string.shortcuts_right_click_desc))
-        ShortcutItem(stringResource(R.string.shortcuts_middle_click), stringResource(R.string.shortcuts_middle_click_desc))
-        ShortcutItem(stringResource(R.string.shortcuts_shift_middle_click), stringResource(R.string.shortcuts_shift_middle_click_desc))
-        ShortcutItem(stringResource(R.string.shortcuts_drag), stringResource(R.string.shortcuts_drag_desc))
-        ShortcutItem(stringResource(R.string.shortcuts_shift_drag), stringResource(R.string.shortcuts_shift_drag_desc))
-
-        Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(16.dp))
+            ShortcutCategory(stringResource(R.string.shortcuts_mouse))
+            ShortcutItem(
+                stringResource(R.string.shortcuts_right_click),
+                stringResource(R.string.shortcuts_right_click_desc)
+            )
+            ShortcutItem(
+                stringResource(R.string.shortcuts_middle_click),
+                stringResource(R.string.shortcuts_middle_click_desc)
+            )
+            ShortcutItem(
+                stringResource(R.string.shortcuts_shift_middle_click),
+                stringResource(R.string.shortcuts_shift_middle_click_desc)
+            )
+            ShortcutItem(
+                stringResource(R.string.shortcuts_drag),
+                stringResource(R.string.shortcuts_drag_desc)
+            )
+            ShortcutItem(
+                stringResource(R.string.shortcuts_shift_drag),
+                stringResource(R.string.shortcuts_shift_drag_desc)
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+        }
+        HorizontalDivider()
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
             Button(onClick = onClose) {
                 Text(stringResource(R.string.close))

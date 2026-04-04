@@ -162,11 +162,6 @@ private fun TabItem(
 ) {
     val textColor = if (selected) MaterialTheme.colorScheme.onPrimaryContainer else Color(0xFF9AA0A6)
 
-    val density = LocalDensity.current
-    val customShape = remember {
-        BrowserTabShape(with(density) { 8.dp.toPx() })
-    }
-
     Box(
         modifier = Modifier
             .padding(4.dp)
@@ -224,33 +219,5 @@ private fun TabItem(
 
 
         }
-    }
-}
-
-class BrowserTabShape(private val cornerRadius: Float) : Shape {
-    override fun createOutline(size: Size, layoutDirection: LayoutDirection, density: Density): Outline {
-        val path = Path().apply {
-            val w = size.width
-            val h = size.height
-            val r = cornerRadius
-
-            // Start at bottom left
-            moveTo(0f, h)
-            // Outer flare left
-            quadraticTo(r * 0.5f, h, r * 0.5f, h - r * 0.5f)
-            // Up to top curve
-            lineTo(r * 0.5f, r)
-            quadraticTo(r * 0.5f, 0f, r * 1.5f, 0f)
-            // Across
-            lineTo(w - r * 1.5f, 0f)
-            // Top right curve
-            quadraticTo(w - r * 0.5f, 0f, w - r * 0.5f, r)
-            // Down
-            lineTo(w - r * 0.5f, h - r * 0.5f)
-            // Outer flare right
-            quadraticTo(w - r * 0.5f, h, w, h)
-            close()
-        }
-        return Outline.Generic(path)
     }
 }

@@ -54,7 +54,7 @@
 
     <!-- Shortcuts Dialog -->
     <string name="shortcuts_title">Guía de atajos</string>
-    <string name="shortcuts_nav_selection">Navegação e seleção</string>
+    <string name="shortcuts_nav_selection">Navegación y selección</string>
     <string name="shortcuts_arrow_keys">Teclas de flecha</string>
     <string name="shortcuts_arrow_keys_desc">Mover selección</string>
     <string name="shortcuts_home_end">Inicio / Fin</string>
@@ -76,7 +76,7 @@
     <string name="shortcuts_ctrl_cvx_desc">Copiar / Cortar / Pegar</string>
     <string name="shortcuts_delete">Suprimir</string>
     <string name="shortcuts_delete_desc">Eliminar (Mayús + Supr para permanente)</string>
-    <string name="shortcuts_f2_desc">Renombrar</string>
+    <string name="shortcuts_f2_desc">Cambiar Nombre</string>
     <string name="shortcuts_f5_desc">Actualizar</string>
     <string name="shortcuts_app_actions">Acciones de la aplicación</string>
     <string name="shortcuts_ctrl_n">Ctrl + N</string>
@@ -102,7 +102,7 @@
     <string name="shortcuts_shift_drag_desc">Mover</string>
 
     <!-- Archive Operations -->
-    <string name="archive_create">Crear archivo</string>
+    <string name="archive_create">Comprimir</string>
     <string name="archive_name">Nombre del archivo</string>
     <string name="archive_comp_method">Método de compresión</string>
     <string name="archive_comp_level">Nivel de compresión</string>
@@ -116,7 +116,7 @@
     <string name="archive_extract_delete_source">Eliminar archivo original tras la extracción</string>
     <string name="archive_encrypted_title">Archivo cifrado</string>
     <string name="archive_enter_password">Introduzca la contraseña para: %1$s</string>
-    <string name="archive_button">Archivar</string>
+    <string name="archive_button">Comprimir</string>
     <string name="extract_button">Extraer</string>
     <string name="archive_inner_error">Aún no es posible abrir archivos dentro de un archivo</string>
 
@@ -131,7 +131,7 @@
     <string name="delete_item_this">este elemento</string>
     <string name="delete_items_count">%1$d elementos</string>
     <string name="delete_confirm_message">¿Está seguro de que desea eliminar %1$s?</string>
-    <string name="delete_recycle_bin">Papelera de reciclaje</string>
+    <string name="delete_recycle_bin">Papelera</string>
     <string name="delete_permanently">Permanentemente</string>
     <string name="delete_permanent_title">Eliminar permanentemente</string>
     <string name="delete_permanent_message">¿Está seguro de que desea eliminar %1$s permanentemente? Esta acción no se puede deshacer.</string>
@@ -261,9 +261,9 @@
     <string name="msg_starting">Iniciando&#8230;</string>
     <string name="msg_cancelling">Cancelando&#8230;</string>
     <string name="msg_cancelled">Cancelado</string>
-    <string name="msg_rename_failed">Error al renombrar</string>
-    <string name="msg_select_rename">Seleccione un archivo para renombrar</string>
-    <string name="msg_select_one_rename">Seleccione solo un archivo para renombrar</string>
+    <string name="msg_rename_failed">Error al cambiar nombre</string>
+    <string name="msg_select_rename">Seleccione un archivo para cambiar nombre</string>
+    <string name="msg_select_one_rename">Seleccione solo un archivo para cambiar nombre</string>
     <string name="msg_failed_create_folder">Error al crear carpeta</string>
     <string name="msg_failed_create_file">Error al crear archivo</string>
     <string name="msg_recycle_bin_empty">La papelera ya está vacía</string>
@@ -287,7 +287,7 @@
     <!-- Dialog Titles -->
     <string name="dialog_new_folder">Nueva carpeta</string>
     <string name="dialog_new_file">Nuevo documento de texto</string>
-    <string name="dialog_rename">Renombrar</string>
+    <string name="dialog_rename">Cambiar nombre</string>
     <string name="dialog_search_options">Opciones de búsqueda</string>
 
     <!-- Search -->

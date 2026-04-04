@@ -220,21 +220,18 @@ class SelectionManager {
  * A modifier that applies selection highlights and focus borders to an item.
  */
 fun Modifier.selectionBackground(
-    item: UniversalFile,
-    selectionManager: SelectionManager,
+    isSelected: Boolean,
     isHovered: Boolean,
+    isLead: Boolean,
     shape: Shape = RectangleShape
 ): Modifier = composed {
-    val isSelected = selectionManager.isSelected(item)
-    val isLead = selectionManager.leadItem == item
 
     val baseSelectedColor = MaterialTheme.colorScheme.primaryContainer
     val darkenedSelectedColor = lerp(baseSelectedColor, Color.Black, 0.1f)
     val hoverColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
 
     val backgroundColor = when {
-        isSelected && isHovered -> darkenedSelectedColor
-        isSelected && isLead -> darkenedSelectedColor
+        isSelected && (isHovered || isLead) -> darkenedSelectedColor
         isSelected -> baseSelectedColor
         isHovered -> hoverColor
         else -> Color.Transparent

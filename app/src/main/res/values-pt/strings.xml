@@ -33,7 +33,7 @@
     <string name="prop_name">Nome:</string>
     <string name="prop_type">Tipo:</string>
     <string name="prop_size">Tamanho:</string>
-    <string name="prop_size_on_disk">Tamanho no disco:</string>
+    <string name="prop_size_on_disk">Tamanho em disco:</string>
     <string name="prop_location">Localização:</string>
     <string name="prop_modified">Modificado:</string>
     <string name="prop_resolution">Resolução:</string>
@@ -60,7 +60,7 @@
     <string name="shortcuts_home_end">Home / End</string>
     <string name="shortcuts_home_end_desc">Ir para o início / fim da lista</string>
     <string name="shortcuts_page_up_down">Page Up / Down</string>
-    <string name="shortcuts_page_up_down_desc">Rolar a página para cima / baixo</string>
+    <string name="shortcuts_page_up_down_desc">Rolar página para cima / baixo</string>
     <string name="shortcuts_ctrl_a">Ctrl + A</string>
     <string name="shortcuts_ctrl_a_desc">Selecionar tudo</string>
     <string name="shortcuts_backspace">Backspace</string>
@@ -102,13 +102,13 @@
     <string name="shortcuts_shift_drag_desc">Mover</string>
 
     <!-- Archive Operations -->
-    <string name="archive_create">Criar Arquivo</string>
+    <string name="archive_create">Compactar</string>
     <string name="archive_name">Nome do Arquivo</string>
-    <string name="archive_comp_method">Método de Compressão</string>
-    <string name="archive_comp_level">Nível de Compressão</string>
+    <string name="archive_comp_method">Método de Compactação</string>
+    <string name="archive_comp_level">Nível de Compactação</string>
     <string name="archive_enc_method">Método de Criptografia</string>
     <string name="archive_password">Senha</string>
-    <string name="archive_delete_source">Excluir arquivos de origem após arquivamento</string>
+    <string name="archive_delete_source">Excluir arquivos de origem após compactar</string>
     <string name="archive_extract">Extrair Arquivo</string>
     <string name="archive_extract_options">Escolha as opções de extração para: %1$s</string>
     <string name="archive_extract_separate">Extrair para pasta separada</string>
@@ -116,7 +116,7 @@
     <string name="archive_extract_delete_source">Excluir arquivo de origem após extração</string>
     <string name="archive_encrypted_title">Arquivo Criptografado</string>
     <string name="archive_enter_password">Por favor, insira a senha para: %1$s</string>
-    <string name="archive_button">Arquivar</string>
+    <string name="archive_button">Compactar</string>
     <string name="extract_button">Extrair</string>
     <string name="archive_inner_error">Ainda não é possível abrir arquivos dentro de um arquivo</string>
 
@@ -139,7 +139,7 @@
     <!-- Progress Dialog -->
     <string name="op_deleting">Excluindo itens&#8230;</string>
     <string name="op_extracting">Extraindo arquivo&#8230;</string>
-    <string name="op_compressing">Criando arquivo&#8230;</string>
+    <string name="op_compressing">Compactando&#8230;</string>
     <string name="op_processing">Processando itens&#8230;</string>
     <string name="op_finished">Operação Concluída</string>
     <string name="op_time_remaining">Tempo restante:</string>
@@ -166,7 +166,7 @@
     <string name="settings_show_hidden_files">Mostrar arquivos/pastas ocultos</string>
     <string name="settings_show_hidden_files_desc">Mostrar arquivos e pastas que começam com um ponto.</string>
     <string name="settings_file_ops">Operações de Arquivo</string>
-    <string name="settings_deletion_behavior">Comportamento de Exclusão</string>
+    <string name="settings_deletion_behavior">Comportamento ao Excluir</string>
     <string name="settings_del_ask">Perguntar sempre</string>
     <string name="settings_del_recycle">Mover para a Lixeira</string>
     <string name="settings_del_permanent">Excluir permanentemente</string>
@@ -197,7 +197,7 @@
     <string name="menu_add_favorites">Adicionar aos Favoritos</string>
     <string name="menu_add_home">Adicionar ao Início</string>
     <string name="menu_extract">Extrair&#8230;</string>
-    <string name="menu_compress">Comprimir&#8230;</string>
+    <string name="menu_compress">Compactar&#8230;</string>
     <string name="menu_cut">Recortar</string>
     <string name="menu_copy">Copiar</string>
     <string name="menu_paste">Colar</string>
@@ -205,7 +205,7 @@
     <string name="menu_share">Compartilhar</string>
     <string name="menu_delete">Excluir</string>
     <string name="menu_new">Novo</string>
-    <string name="menu_sort">Ordenar</string>
+    <string name="menu_sort">Organizar</string>
     <string name="menu_view">Exibir</string>
     <string name="menu_empty_recycle_bin">Esvaziar Lixeira</string>
     <string name="menu_refresh">Atualizar</string>
@@ -287,7 +287,7 @@
     <!-- Dialog Titles -->
     <string name="dialog_new_folder">Nova Pasta</string>
     <string name="dialog_new_file">Novo Documento de Texto</string>
-    <string name="dialog_rename">Renombrar</string>
+    <string name="dialog_rename">Renomear</string>
     <string name="dialog_search_options">Opções de Pesquisa</string>
 
     <!-- Search -->

@@ -1,5 +1,6 @@
 package com.troikoss.continuum_explorer.ui.activities
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -24,6 +25,7 @@ import com.troikoss.continuum_explorer.R
 import com.troikoss.continuum_explorer.ui.theme.FileExplorerTheme
 import com.troikoss.continuum_explorer.managers.DeleteBehavior
 import com.troikoss.continuum_explorer.managers.DetailsMode
+import com.troikoss.continuum_explorer.managers.FileOperationsManager
 import com.troikoss.continuum_explorer.managers.SettingsManager
 import com.troikoss.continuum_explorer.managers.ThemeMode
 
@@ -371,55 +373,14 @@ fun SettingsScreen(onBack: () -> Unit) {
             }
 
             if (showShortcutsDialog) {
-                AlertDialog(
-                    onDismissRequest = { showShortcutsDialog = false },
-                    title = { Text(stringResource(R.string.shortcuts_title)) },
-                    text = {
-                        Column(
-                            modifier = Modifier
-                                .verticalScroll(rememberScrollState())
-                                .fillMaxWidth()
-                        ) {
-                            ShortcutCategory(stringResource(R.string.shortcuts_nav_selection))
-                            ShortcutItem(stringResource(R.string.shortcuts_arrow_keys), stringResource(R.string.shortcuts_arrow_keys_desc))
-                            ShortcutItem(stringResource(R.string.shortcuts_home_end), stringResource(R.string.shortcuts_home_end_desc))
-                            ShortcutItem(stringResource(R.string.shortcuts_page_up_down), stringResource(R.string.shortcuts_page_up_down_desc))
-                            ShortcutItem(stringResource(R.string.shortcuts_ctrl_a), stringResource(R.string.shortcuts_ctrl_a_desc))
-                            ShortcutItem(stringResource(R.string.shortcuts_backspace), stringResource(R.string.shortcuts_backspace_desc))
-
-                            Spacer(modifier = Modifier.height(16.dp))
-                            ShortcutCategory(stringResource(R.string.shortcuts_file_ops))
-                            ShortcutItem(stringResource(R.string.shortcuts_enter), stringResource(R.string.shortcuts_enter_desc))
-                            ShortcutItem(stringResource(R.string.shortcuts_ctrl_enter), stringResource(R.string.shortcuts_ctrl_enter_desc))
-                            ShortcutItem(stringResource(R.string.shortcuts_shift_enter), stringResource(R.string.shortcuts_shift_enter_desc))
-                            ShortcutItem(stringResource(R.string.shortcuts_ctrl_cvx), stringResource(R.string.shortcuts_ctrl_cvx_desc))
-                            ShortcutItem(stringResource(R.string.shortcuts_delete), stringResource(R.string.shortcuts_delete_desc))
-                            ShortcutItem(stringResource(R.string.shortcuts_f2), stringResource(R.string.shortcuts_f2_desc))
-                            ShortcutItem(stringResource(R.string.shortcuts_f5), stringResource(R.string.shortcuts_f5_desc))
-
-                            Spacer(modifier = Modifier.height(16.dp))
-                            ShortcutCategory(stringResource(R.string.shortcuts_app_actions))
-                            ShortcutItem(stringResource(R.string.shortcuts_ctrl_n), stringResource(R.string.shortcuts_ctrl_n_desc))
-                            ShortcutItem(stringResource(R.string.shortcuts_ctrl_w), stringResource(R.string.shortcuts_ctrl_w_desc))
-                            ShortcutItem(stringResource(R.string.shortcuts_ctrl_zy), stringResource(R.string.shortcuts_ctrl_zy_desc))
-                            ShortcutItem(stringResource(R.string.shortcuts_ctrl_wheel), stringResource(R.string.shortcuts_ctrl_wheel_desc))
-                            ShortcutItem(stringResource(R.string.shortcuts_ctrl_slash), stringResource(R.string.shortcuts_ctrl_slash_desc))
-
-                            Spacer(modifier = Modifier.height(16.dp))
-                            ShortcutCategory(stringResource(R.string.shortcuts_mouse))
-                            ShortcutItem(stringResource(R.string.shortcuts_right_click), stringResource(R.string.shortcuts_right_click_desc))
-                            ShortcutItem(stringResource(R.string.shortcuts_middle_click), stringResource(R.string.shortcuts_middle_click_desc))
-                            ShortcutItem(stringResource(R.string.shortcuts_shift_middle_click), stringResource(R.string.shortcuts_shift_middle_click_desc))
-                            ShortcutItem(stringResource(R.string.shortcuts_drag), stringResource(R.string.shortcuts_drag_desc))
-                            ShortcutItem(stringResource(R.string.shortcuts_shift_drag), stringResource(R.string.shortcuts_shift_drag_desc))
-                        }
-                    },
-                    confirmButton = {
-                        TextButton(onClick = { showShortcutsDialog = false }) {
-                            Text(stringResource(R.string.close))
-                        }
+                LaunchedEffect(Unit) {
+                    FileOperationsManager.showShortcuts()
+                    val intent = Intent(context, PopUpActivity::class.java).apply {
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                     }
-                )
+                    context.startActivity(intent)
+                    showShortcutsDialog = false
+                }
             }
         }
     }
