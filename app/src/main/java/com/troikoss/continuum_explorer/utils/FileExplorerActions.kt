@@ -63,6 +63,7 @@ fun FileExplorerState.openInNewWindow(items: List<UniversalFile>) {
         val intent = Intent(context, MainActivity::class.java).apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             addFlags(Intent.FLAG_ACTIVITY_MULTIPLE_TASK)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_DOCUMENT)
             if (currentPath != null) {
                 putExtra("path", currentPath?.absolutePath)
             } else if (currentSafUri != null) {
@@ -75,6 +76,7 @@ fun FileExplorerState.openInNewWindow(items: List<UniversalFile>) {
             val intent = Intent(context, MainActivity::class.java).apply {
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 addFlags(Intent.FLAG_ACTIVITY_MULTIPLE_TASK)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_DOCUMENT)
                 if (ZipUtils.isArchive(item) && item.fileRef != null && SettingsManager.isDefaultArchiveViewerEnabled.value) {
                     putExtra("archivePath", item.fileRef.absolutePath)
                 } else if (item.fileRef != null) {

@@ -195,9 +195,10 @@ private fun FileContentView(
 ) {
     Column {
         val formattedSize = remember(file) { appState.formatSize(file.length) }
+        val formattedDate = remember(file)  { appState.formatDate(file.lastModified) }
         ListItem(
             headlineContent = { Text(file.name) },
-            supportingContent = { Text(if (file.isDirectory) "Folder" else formattedSize) },
+            supportingContent = { Text(if (file.isDirectory) "Folder - $formattedDate" else "$formattedSize - $formattedDate") },
             leadingContent = {
                 FileThumbnail(
                     file = file,

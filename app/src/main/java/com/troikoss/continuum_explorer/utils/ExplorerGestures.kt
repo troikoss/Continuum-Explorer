@@ -623,6 +623,23 @@ fun Modifier.fileDropTarget(
 
     val target = remember(appState, destPath, destSafUri) {
         object : DragAndDropTarget {
+            // Track drag position so FileContent can auto-scroll during drags.
+            // DragEvent.y is always in ComposeView coordinates regardless of which item received it.
+            override fun onMoved(event: DragAndDropEvent) {
+                appState.activeDragY.value = event.toAndroidDragEvent().y
+            }
+            override fun onEntered(event: DragAndDropEvent) {
+                appState.activeDragY.value = event.toAndroidDragEvent().y
+                appState.isSystemDragActive.value = true
+            }
+            override fun onExited(event: DragAndDropEvent) {
+                appState.activeDragY.value = null
+            }
+            override fun onEnded(event: DragAndDropEvent) {
+                appState.activeDragY.value = null
+                appState.isSystemDragActive.value = false
+            }
+
             override fun onDrop(event: DragAndDropEvent): Boolean {
                 val androidEvent = event.toAndroidDragEvent()
                 val clipData = androidEvent.clipData

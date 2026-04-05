@@ -75,6 +75,13 @@ class FileExplorerState(
     // Tracks the last pointer type for drag logic
     var isMouseInteraction by mutableStateOf(false)
 
+    // Y position (in ComposeView coordinates) of the active system drag, null when idle.
+    // Every fileDropTarget writes here; FileContent reads it for edge auto-scroll.
+    val activeDragY = mutableStateOf<Float?>(null)
+
+    // Flag indicating if a system drag is currently active.
+    val isSystemDragActive = mutableStateOf(false)
+
     // Centralized selection manager
     val selectionManager = SelectionManager()
 
@@ -380,9 +387,9 @@ class FileExplorerState(
                 } else {
                     emptyList()
                 }
-                
+
                 val filteredList = if (showHidden) universalList else universalList.filter { !it.name.startsWith(".") }
-                
+
                 if (isRecentMode) filteredList else sortFiles(filteredList, sortParams)
             }
 

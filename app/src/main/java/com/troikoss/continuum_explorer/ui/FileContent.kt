@@ -1,5 +1,6 @@
 package com.troikoss.continuum_explorer.ui
 
+import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -30,6 +31,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
@@ -69,7 +71,7 @@ fun FileContent(
 
     // PERFORMANCE OPTIMIZATION: We use a regular HashMap instead of mutableStateMapOf.
     // This prevents the entire file list from recomposing on every single frame of a scroll.
-    // The hover and marquee logic still work because they read from this map when other 
+    // The hover and marquee logic still work because they read from this map when other
     // states (like mouse position or drag offsets) change.
     val itemPositions = remember { HashMap<UniversalFile, Rect>() }
 
@@ -110,8 +112,6 @@ fun FileContent(
 
     val density = LocalDensity.current
     val viewMode = appState.activeViewMode
-
-    val gridContentPadding = remember { PaddingValues(8.dp) }
 
     val columnCount = remember (
         appState.activeViewMode,
@@ -203,6 +203,32 @@ fun FileContent(
         }
     }
 
+    // Coordinates of the grid container, used to convert ComposeView-relative drag Y
+    // (from appState.activeDragY) into grid-relative Y for edge detection.
+    var gridContainerTopPx by remember { mutableFloatStateOf(0f) }
+    var gridContainerHeightPx by remember { mutableFloatStateOf(0f) }
+
+    // Drag auto-scroll: runs while a system drag is active and near the top/bottom edge.
+    LaunchedEffect(appState.activeDragY.value) {
+        if (appState.activeDragY.value == null) return@LaunchedEffect
+        val threshold = 120f   // px band at top/bottom that triggers scroll
+        val maxSpeed  = 22f    // px per frame at full speed
+        while (true) {
+            val dragY = appState.activeDragY.value ?: break
+            val relY  = dragY - gridContainerTopPx
+            val h     = gridContainerHeightPx
+            val delta = when {
+                relY < threshold && relY > 0f ->
+                    -(maxSpeed * ((threshold - relY) / threshold).coerceIn(0f, 1f))
+                h > 0f && relY > h - threshold ->
+                    maxSpeed * ((relY - (h - threshold)) / threshold).coerceIn(0f, 1f)
+                else -> 0f
+            }
+            if (delta != 0f) gridState.scrollBy(delta)
+            delay(16L)
+        }
+    }
+
 
     Box(modifier = Modifier
         .fillMaxSize()
@@ -287,6 +313,10 @@ fun FileContent(
                 modifier = Modifier
                     .weight(1f) // Takes up all space BELOW the header
                     .clipToBounds() // CUTS OFF the blue box so it doesn't draw over the header!
+                    .onGloballyPositioned { coords ->
+                        gridContainerTopPx    = coords.positionInRoot().y
+                        gridContainerHeightPx = coords.size.height.toFloat()
+                    }
             ) {
                 LazyVerticalGrid(
                     state = gridState,
@@ -297,7 +327,7 @@ fun FileContent(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(horizontal = 32.dp),
-                    contentPadding = gridContentPadding
+                    contentPadding = PaddingValues(8.dp)
                 ) {
                     items(
                         items = appState.files,
@@ -315,6 +345,9 @@ fun FileContent(
                             derivedStateOf {
                                 // This makes it update when you scroll
                                 gridState.firstVisibleItemScrollOffset
+
+                                // Suppress hover highlight during any drag operation
+                                if (appState.activeDragY.value != null || appState.isSystemDragActive.value || dragStart != null) return@derivedStateOf false
 
                                 val currentRect = itemPositions[file]
                                 val pos = mousePosition

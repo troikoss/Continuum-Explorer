@@ -24,7 +24,6 @@
             android:name=".ui.activities.MainActivity"
             android:exported="true"
             android:launchMode="standard"
-            android:documentLaunchMode="always"
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden"
             android:theme="@style/Theme.FileExplorer2">
             <intent-filter>

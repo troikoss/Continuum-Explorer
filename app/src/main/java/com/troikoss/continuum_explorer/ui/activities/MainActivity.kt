@@ -23,6 +23,7 @@ import java.io.File
 import android.Manifest
 import androidx.appcompat.app.AppCompatActivity
 import coil.Coil
+import java.util.UUID
 
 class MainActivity : AppCompatActivity() {
 
@@ -64,11 +65,22 @@ class MainActivity : AppCompatActivity() {
         // Initialize settings
         SettingsManager.init(applicationContext)
 
-        val isNewWindow = intent.action == "com.troikoss.continuum_explorer.OPEN_NEW_WINDOW"
+        if (intent.action == "com.troikoss.continuum_explorer.OPEN_NEW_WINDOW") {
+            val freshIntent = Intent(this, MainActivity::class.java).apply {
+                action = Intent.ACTION_MAIN
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or
+                        Intent.FLAG_ACTIVITY_MULTIPLE_TASK or
+                        Intent.FLAG_ACTIVITY_NEW_DOCUMENT
+                data = Uri.fromParts("window", UUID.randomUUID().toString(), null)
+            }
+            startActivity(freshIntent)
+            finish()
+            return
+        }
 
-        val initialPath = if (isNewWindow) null else intent.getStringExtra("path")
-        val initialUri = if (isNewWindow) null else intent.getStringExtra("uri")
-        val initialArchive = if (isNewWindow) null else {
+        val initialPath = intent.getStringExtra("path")
+        val initialUri = intent.getStringExtra("uri")
+        val initialArchive = run {
             val path = intent.getStringExtra("archivePath")
             if (path != null) File(path) else null
         }
@@ -95,12 +107,13 @@ class MainActivity : AppCompatActivity() {
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        
-        // Handle "New Window" requests sent to an existing instance
         if (intent.action == "com.troikoss.continuum_explorer.OPEN_NEW_WINDOW") {
-            val newWindowIntent = Intent(intent).apply {
-                // Force a new task
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_MULTIPLE_TASK or Intent.FLAG_ACTIVITY_NEW_DOCUMENT
+            val newWindowIntent = Intent(this, MainActivity::class.java).apply {
+                action = Intent.ACTION_MAIN
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or
+                        Intent.FLAG_ACTIVITY_MULTIPLE_TASK or
+                        Intent.FLAG_ACTIVITY_NEW_DOCUMENT
+                data = Uri.fromParts("window", UUID.randomUUID().toString(), null)
             }
             startActivity(newWindowIntent)
             return
