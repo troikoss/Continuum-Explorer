@@ -22,7 +22,6 @@ import com.troikoss.continuum_explorer.model.*
 import com.troikoss.continuum_explorer.ui.components.ItemContextMenu
 import com.troikoss.continuum_explorer.utils.*
 import com.troikoss.continuum_explorer.utils.IconHelper.FileThumbnail
-import com.troikoss.continuum_explorer.utils.IconHelper.isMimeTypePreviewable
 
 /**
  * Renders a single file or folder item, switching layout based on the current ViewMode.
@@ -38,23 +37,25 @@ fun FileView(
     focusRequester: FocusRequester,
     isHovered: Boolean
 ) {
-    // 1. Selection & State Manager
+    // Selection
     val selectionManager = appState.selectionManager
     val isSelected = selectionManager.isSelected(file)
     val isLead = selectionManager.leadItem == file
-    val icon = remember(file) { IconHelper.getIconForItem(file) }
-    
+
+    // Context Menu
     var showMenu by remember { mutableStateOf(false) }
     var menuOffset by remember { mutableStateOf(DpOffset.Zero) }
-    var isOverflowing by remember { mutableStateOf(false) }
     
     val density = LocalDensity.current
-    val tooltipState = rememberTooltipState()
 
-    // 2. Lifecycle & Positioning
+    // Lifecycle & Positioning
     DisposableEffect(file) {
         onDispose { itemPositions.remove(file) }
     }
+
+    // Tooltips
+    val tooltipState = rememberTooltipState()
+    var isOverflowing by remember { mutableStateOf(false) }
 
     val mouseTooltipProvider = remember {
         object : androidx.compose.ui.window.PopupPositionProvider {
@@ -75,7 +76,7 @@ fun FileView(
         }
     }
 
-    // 3. Layout Configuration
+    // Layout Configuration
     val viewMode = appState.activeViewMode
     val isGridView = viewMode == ViewMode.GRID
     val shape = if (isGridView) RoundedCornerShape(8.dp) else RectangleShape
@@ -119,7 +120,10 @@ fun FileView(
                     )
                     .contextMenuDetector(enableLongPress = false, aggressive = true) { offset ->
                         if (!selectionManager.isSelected(file)) {
-                            selectionManager.handleRowClick(file, false, false)
+                            selectionManager.handleRowClick(file,
+                                isShiftPressed = false,
+                                isCtrlPressed = false
+                            )
                         }
                         menuOffset = with(density) { DpOffset(offset.x.toDp(), offset.y.toDp()) }
                         showMenu = true
@@ -129,15 +133,15 @@ fun FileView(
                     modifier = Modifier.selectionBackground(isSelected, isHovered, isLead, shape)
                 ) {
                     when (viewMode) {
-                        ViewMode.GRID -> FileGridView(file, isSelected, icon, appState)
-                        ViewMode.CONTENT -> FileContentView(file, isSelected, appState)
+                        ViewMode.GRID -> FileGridView(file, isSelected, appState) { isOverflowing = it }
+                        ViewMode.CONTENT -> FileContentView(file, isSelected, appState) { isOverflowing = it }
                         ViewMode.DETAILS -> FileDetailsView(file, isSelected, appState) { isOverflowing = it }
                     }
                 }
             }
         }
 
-        // 4. Context Menu
+        // Context Menu
         Box(modifier = Modifier.offset(menuOffset.x, menuOffset.y)) {
             ItemContextMenu(
                 expanded = showMenu,
@@ -154,8 +158,8 @@ fun FileView(
 private fun FileGridView(
     file: UniversalFile,
     isSelected: Boolean,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    appState: FileExplorerState
+    appState: FileExplorerState,
+    onOverflowChange: (Boolean) -> Unit
 ) {
     Column(
         modifier = Modifier.padding(8.dp).fillMaxWidth(),
@@ -167,22 +171,16 @@ private fun FileGridView(
                 modifier = Modifier.size((appState.folderConfigs.gridItemSize * 0.6f).dp),
                 tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary
             )
-
-            if (isMimeTypePreviewable(file)) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    modifier = Modifier.size(24.dp).padding(3.dp),
-                    tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary
-                )
-            }
         }
         Text(
             text = file.name,
             textAlign = TextAlign.Center,
             style = MaterialTheme.typography.bodyMedium,
             maxLines = 2,
-            overflow = TextOverflow.Ellipsis
+            overflow = TextOverflow.Ellipsis,
+            onTextLayout = { textLayoutResult ->
+                onOverflowChange(textLayoutResult.hasVisualOverflow)
+            }
         )
     }
 }
@@ -191,13 +189,24 @@ private fun FileGridView(
 private fun FileContentView(
     file: UniversalFile,
     isSelected: Boolean,
-    appState: FileExplorerState
+    appState: FileExplorerState,
+    onOverflowChange: (Boolean) -> Unit
 ) {
+    val formattedSize = remember(file) { appState.formatSize(file.length) }
+    val formattedDate = remember(file)  { appState.formatDate(file.lastModified) }
+
     Column {
-        val formattedSize = remember(file) { appState.formatSize(file.length) }
-        val formattedDate = remember(file)  { appState.formatDate(file.lastModified) }
         ListItem(
-            headlineContent = { Text(file.name) },
+            headlineContent = {
+                Text(
+                    text = file.name,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    onTextLayout = { textLayoutResult ->
+                        onOverflowChange(textLayoutResult.hasVisualOverflow)
+                    }
+                )
+            },
             supportingContent = { Text(if (file.isDirectory) "Folder - $formattedDate" else "$formattedSize - $formattedDate") },
             leadingContent = {
                 FileThumbnail(

@@ -1,7 +1,6 @@
 package com.troikoss.continuum_explorer.ui
 
 import android.content.Context
-import android.content.res.Configuration
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
@@ -41,25 +40,13 @@ import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerType
 import androidx.compose.ui.input.pointer.isShiftPressed
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
-import com.troikoss.continuum_explorer.model.ScreenSize
-import com.troikoss.continuum_explorer.ui.components.CommandBar
-import com.troikoss.continuum_explorer.ui.components.DetailsBar
-import com.troikoss.continuum_explorer.ui.components.DetailsPane
-import com.troikoss.continuum_explorer.ui.components.NavigationPane
-import com.troikoss.continuum_explorer.ui.components.TabBar
-import com.troikoss.continuum_explorer.ui.components.TopBar
 import com.troikoss.continuum_explorer.managers.DetailsMode
 import com.troikoss.continuum_explorer.managers.SettingsManager
-import com.troikoss.continuum_explorer.utils.FileExplorerState
-import com.troikoss.continuum_explorer.utils.VerticalResizeHandle
-import com.troikoss.continuum_explorer.utils.ZipUtils
-import com.troikoss.continuum_explorer.utils.fileDropTarget
-import com.troikoss.continuum_explorer.utils.goUp
-import com.troikoss.continuum_explorer.utils.navigateTo
+import com.troikoss.continuum_explorer.model.ScreenSize
+import com.troikoss.continuum_explorer.ui.components.*
+import com.troikoss.continuum_explorer.utils.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import java.io.File
@@ -70,7 +57,7 @@ import java.io.File
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FileExplorer(
-    initialPath: String? = null, 
+    initialPath: String? = null,
     initialUri: String? = null,
     initialArchive: File? = null,
     initialArchiveUri: Uri? = null
@@ -78,10 +65,10 @@ fun FileExplorer(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
+    // --- Tab Management ---
     val tabs = remember { mutableStateListOf<FileExplorerState>() }
     var selectedTabIndex by remember { mutableIntStateOf(0) }
 
-    // Helper to create a new state with the proper callback
     fun createNewTabState(ctx: Context, scp: CoroutineScope): FileExplorerState {
         return FileExplorerState(ctx, scp).apply {
             onOpenInNewTab = { item ->
@@ -105,49 +92,38 @@ fun FileExplorer(
         }
     }
 
-    if (tabs.isEmpty()) {
-        val firstState = createNewTabState(context, scope)
-        if (initialArchive != null) {
-            // Deprecated path: Archive Mode via File
-            firstState.navigateTo(
-                newPath = null, 
-                newUri = null, 
-                addToHistory = false,
-                archiveFile = initialArchive,
-                archivePath = ""
-            )
-        } else if (initialArchiveUri != null) {
-            // New Archive Mode via Uri
-            firstState.navigateTo(
-                newPath = null, 
-                newUri = null, 
-                addToHistory = false,
-                archiveUri = initialArchiveUri,
-                archivePath = ""
-            )
-        } else if (initialPath != null) {
-            firstState.navigateTo(File(initialPath), null, addToHistory = false)
-        } else if (initialUri != null) {
-            firstState.navigateTo(null, Uri.parse(initialUri), addToHistory = false)
+    // Initialize first tab if empty
+    LaunchedEffect(Unit) {
+        if (tabs.isEmpty()) {
+            val firstState = createNewTabState(context, scope)
+            when {
+                initialArchive != null -> firstState.navigateTo(null, null, addToHistory = false, archiveFile = initialArchive, archivePath = "")
+                initialArchiveUri != null -> firstState.navigateTo(null, null, addToHistory = false, archiveUri = initialArchiveUri, archivePath = "")
+                initialPath != null -> firstState.navigateTo(File(initialPath), null, addToHistory = false)
+                initialUri != null -> firstState.navigateTo(null, Uri.parse(initialUri), addToHistory = false)
+            }
+            tabs.add(firstState)
         }
-        tabs.add(firstState)
     }
 
-    val safeIndex = selectedTabIndex.coerceIn(0, tabs.size - 1)
+    if (tabs.isEmpty()) return // Wait for initialization
+
+    val safeIndex = selectedTabIndex.coerceIn(0, tabs.lastIndex)
     val appState = tabs[safeIndex]
+    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
 
-
+    // --- Storage Access Framework Launcher ---
     val safLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocumentTree()
     ) { uri ->
         appState.handleSafResult(uri)
     }
 
-    LaunchedEffect(appState, appState.currentPath, appState.currentSafUri, appState.folderConfigs.sortParams, appState.currentArchiveFile, appState.currentArchiveUri, appState.currentArchivePath, appState.isRecentMode) {
+    // --- Side Effects ---
+    LaunchedEffect(appState, appState.currentPath, appState.currentSafUri, appState.folderConfigs.sortParams, 
+                   appState.currentArchiveFile, appState.currentArchiveUri, appState.currentArchivePath, appState.isRecentMode) {
         appState.triggerLoad()
     }
-
-    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
 
     BackHandler(enabled = appState.canGoUp || appState.selectionManager.selectedItems.isNotEmpty()) {
         if (appState.selectionManager.selectedItems.isNotEmpty()) {
@@ -155,52 +131,7 @@ fun FileExplorer(
         } else appState.goUp()
     }
 
-    // Helper to handle navigation selection
-    val navigateToSection: (Int) -> Unit = { index ->
-        val internalRoot = Environment.getExternalStorageDirectory()
-        when {
-            index == 6 -> appState.navigateTo(internalRoot, null, newRoot = internalRoot)
-            index == 7 -> {
-                val trashDir = File(internalRoot, ".Trash")
-                if (!trashDir.exists()) trashDir.mkdirs()
-                appState.navigateTo(trashDir, null, newRoot = internalRoot)
-            }
-            index == 8 -> {
-                appState.navigateTo(null, null, isRecent = true)
-            }
-            index >= 100 -> {
-                val storageManager = context.getSystemService(Context.STORAGE_SERVICE) as StorageManager
-                val volumes = storageManager.storageVolumes
-                val volumeIndex = index - 100
-
-                // Look at the original full list, just like NavigationPane does
-                if (volumeIndex < volumes.size) {
-                    val volume = volumes[volumeIndex]
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                        val directory = volume.directory
-                        if (directory != null) {
-                            // Set the SD card root as both the current path AND the new root
-                            appState.navigateTo(directory, null, newRoot = directory)
-                        }
-                    } else {
-                        // Fallback for older versions
-                        val externalDirs = context.getExternalFilesDirs(null)
-                        if (volumeIndex < externalDirs.size) {
-                            val dir = externalDirs[volumeIndex]
-                            if (dir != null) {
-                                val root = File(dir.absolutePath.split("/Android")[0])
-                                appState.navigateTo(root, null, newRoot = root)
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    val navPaneWidth = appState.appConfigs.navPaneWidth
-    val detailsPaneWidth = appState.appConfigs.detailsPaneWidth
-
+    // --- Main Layout ---
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -216,138 +147,203 @@ fun FileExplorer(
                     }
                 }
             }
-            .fileDropTarget(appState) 
+            .fileDropTarget(appState)
     ) {
         ModalNavigationDrawer(
             drawerState = drawerState,
             gesturesEnabled = appState.getScreenSize() == ScreenSize.SMALL,
             drawerContent = {
                 ModalDrawerSheet {
-                    NavigationPane(
+                    NavigationContent(
                         appState = appState,
-                        onItemSelected = {
-                            navigateToSection(it)
-                            scope.launch { drawerState.close() }
-                        },
-                        onSafItemSelected = { uri ->
-                            appState.navigateTo(null, uri)
-                            scope.launch { drawerState.close() }
-                        },
-                        onAddStorageClick = {
-                            safLauncher.launch(null)
-                        }
+                        onCloseDrawer = { scope.launch { drawerState.close() } },
+                        onAddStorage = { safLauncher.launch(null) }
                     )
                 }
             }
         ) {
             Scaffold(
                 topBar = {
-                    val backgroundColor = MaterialTheme.colorScheme.surface
-                    Column(
-                        modifier = Modifier
-                            .background(backgroundColor)
-                            .statusBarsPadding()
-                    ) {
-                        TabBar(
-                            tabs = tabs.map { it.currentName },
-                            selectedTabIndex = safeIndex,
-                            onTabSelected = { selectedTabIndex = it },
-                            onAddTab = {
-                                tabs.add(createNewTabState(context, scope))
-                                selectedTabIndex = tabs.size - 1
-                            },
-                            onCloseTab = { index ->
-                                if (tabs.size > 1) {
-                                    tabs.removeAt(index)
-                                    if (selectedTabIndex >= tabs.size) {
-                                        selectedTabIndex = (tabs.size - 1).coerceAtLeast(0)
-                                    }
+                    ExplorerTopBar(
+                        tabs = tabs,
+                        selectedTabIndex = safeIndex,
+                        onTabSelected = { selectedTabIndex = it },
+                        onAddTab = {
+                            tabs.add(createNewTabState(context, scope))
+                            selectedTabIndex = tabs.size - 1
+                        },
+                        onCloseTab = { index ->
+                            if (tabs.size > 1) {
+                                tabs.removeAt(index)
+                                if (selectedTabIndex >= tabs.size) {
+                                    selectedTabIndex = (tabs.size - 1).coerceAtLeast(0)
                                 }
-                            },
-                            appState = appState
-                        )
-
-                        TopBar(
-                            onMenuClick = {
-                                scope.launch { drawerState.open() }
-                            },
-                            appState = appState
-                        )
-
-                        if (SettingsManager.isCommandBarVisible.value) {
-                            CommandBar(
-                                appState = appState
-                            )
-                        }
-                    }
+                            }
+                        },
+                        onMenuClick = { scope.launch { drawerState.open() } },
+                        appState = appState
+                    )
                 }
             ) { innerPadding ->
-                Column (
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(innerPadding)
+                ExplorerBody(
+                    modifier = Modifier.padding(innerPadding),
+                    appState = appState,
+                    onAddStorage = { safLauncher.launch(null) }
+                )
+            }
+        }
+    }
+}
 
-                ){
-                    Row(
-                        modifier = Modifier
-                            .weight(1f)
-                    ) {
-                        if (appState.getScreenSize() != ScreenSize.SMALL) {
-                            PermanentDrawerSheet(
-                                modifier = Modifier.width(navPaneWidth),
-                                windowInsets = WindowInsets(0, 0, 0, 0)
+@Composable
+private fun NavigationContent(
+    appState: FileExplorerState,
+    onCloseDrawer: () -> Unit,
+    onAddStorage: () -> Unit
+) {
+    val context = LocalContext.current
+    NavigationPane(
+        appState = appState,
+        onItemSelected = { sectionIndex ->
+            navigateToSection(appState, context, sectionIndex)
+            onCloseDrawer()
+        },
+        onSafItemSelected = { uri ->
+            appState.navigateTo(null, uri)
+            onCloseDrawer()
+        },
+        onAddStorageClick = onAddStorage
+    )
+}
 
-                            ) {
-                                NavigationPane(
-                                    appState = appState,
-                                    onItemSelected = {
-                                        navigateToSection(it)
-                                    },
-                                    onSafItemSelected = { uri ->
-                                        appState.navigateTo(null, uri)
-                                    },
-                                    onAddStorageClick = {
-                                        safLauncher.launch(null)
-                                    }
-                                )
-                            }
-                            VerticalResizeHandle(onResize = { delta ->
-                                appState.appConfigs.navPaneWidth = (appState.appConfigs.navPaneWidth + delta).coerceIn(200.dp, 300.dp)
-                                appState.appConfigs.savePaneWidths()
-                            },
-                                contentAlignment = Alignment.CenterStart
-                            )
-                        }
+@Composable
+private fun ExplorerTopBar(
+    tabs: List<FileExplorerState>,
+    selectedTabIndex: Int,
+    onTabSelected: (Int) -> Unit,
+    onAddTab: () -> Unit,
+    onCloseTab: (Int) -> Unit,
+    onMenuClick: () -> Unit,
+    appState: FileExplorerState
+) {
+    Column(
+        modifier = Modifier
+            .background(MaterialTheme.colorScheme.surface)
+            .statusBarsPadding()
+    ) {
+        TabBar(
+            tabs = tabs.map { it.currentName },
+            selectedTabIndex = selectedTabIndex,
+            onTabSelected = onTabSelected,
+            onAddTab = onAddTab,
+            onCloseTab = onCloseTab,
+            appState = appState
+        )
 
-                        Box(modifier = Modifier.weight(1f)) {
-                            FileContent(
-                                appState = appState
-                            )
-                        }
+        TopBar(
+            onMenuClick = onMenuClick,
+            appState = appState
+        )
 
-                        if (appState.getScreenSize() == ScreenSize.LARGE && SettingsManager.detailsMode.value == DetailsMode.PANE) {
-                            VerticalResizeHandle(onResize = { delta ->
-                                appState.appConfigs.detailsPaneWidth = (appState.appConfigs.detailsPaneWidth - delta).coerceIn(200.dp, 300.dp)
-                                appState.appConfigs.savePaneWidths()
-                            },
-                                contentAlignment = Alignment.CenterEnd
-                            )
+        if (SettingsManager.isCommandBarVisible.value) {
+            CommandBar(appState = appState)
+        }
+    }
+}
 
-                            DetailsPane(
-                                appState = appState,
-                                modifier = Modifier.width(detailsPaneWidth)
-                            )
+@Composable
+private fun ExplorerBody(
+    modifier: Modifier = Modifier,
+    appState: FileExplorerState,
+    onAddStorage: () -> Unit
+) {
+    val context = LocalContext.current
+    val screenSize = appState.getScreenSize()
+    val navPaneWidth = appState.appConfigs.navPaneWidth
+    val detailsPaneWidth = appState.appConfigs.detailsPaneWidth
+
+    Column(modifier = modifier.fillMaxSize()) {
+        Row(modifier = Modifier.weight(1f)) {
+            // Navigation Pane (Side)
+            if (screenSize != ScreenSize.SMALL) {
+                PermanentDrawerSheet(
+                    modifier = Modifier.width(navPaneWidth),
+                    windowInsets = WindowInsets(0, 0, 0, 0)
+                ) {
+                    NavigationPane(
+                        appState = appState,
+                        onItemSelected = { navigateToSection(appState, context, it) },
+                        onSafItemSelected = { appState.navigateTo(null, it) },
+                        onAddStorageClick = onAddStorage
+                    )
+                }
+
+                VerticalResizeHandle(
+                    onResize = { delta ->
+                        appState.appConfigs.navPaneWidth = (appState.appConfigs.navPaneWidth + delta).coerceIn(200.dp, 300.dp)
+                        appState.appConfigs.savePaneWidths()
+                    },
+                    contentAlignment = Alignment.CenterStart
+                )
+            }
+
+            // Main Content Area
+            Box(modifier = Modifier.weight(1f)) {
+                FileContent(appState = appState)
+            }
+
+            // Details Pane
+            if (screenSize == ScreenSize.LARGE && SettingsManager.detailsMode.value == DetailsMode.PANE) {
+                VerticalResizeHandle(
+                    onResize = { delta ->
+                        appState.appConfigs.detailsPaneWidth = (appState.appConfigs.detailsPaneWidth - delta).coerceIn(200.dp, 300.dp)
+                        appState.appConfigs.savePaneWidths()
+                    },
+                    contentAlignment = Alignment.CenterEnd
+                )
+
+                DetailsPane(
+                    appState = appState,
+                    modifier = Modifier.width(detailsPaneWidth)
+                )
+            }
+        }
+
+        // Details Bar (Bottom)
+        if (screenSize == ScreenSize.LARGE && SettingsManager.detailsMode.value == DetailsMode.BAR) {
+            HorizontalDivider()
+            DetailsBar(appState = appState)
+        }
+    }
+}
+
+private fun navigateToSection(appState: FileExplorerState, context: Context, index: Int) {
+    val internalRoot = Environment.getExternalStorageDirectory()
+    when {
+        index == 6 -> appState.navigateTo(internalRoot, null, newRoot = internalRoot)
+        index == 7 -> {
+            val trashDir = File(internalRoot, ".Trash")
+            if (!trashDir.exists()) trashDir.mkdirs()
+            appState.navigateTo(trashDir, null, newRoot = internalRoot)
+        }
+        index == 8 -> appState.navigateTo(null, null, isRecent = true)
+        index >= 100 -> {
+            val storageManager = context.getSystemService(Context.STORAGE_SERVICE) as StorageManager
+            val volumes = storageManager.storageVolumes
+            val volumeIndex = index - 100
+
+            if (volumeIndex < volumes.size) {
+                val volume = volumes[volumeIndex]
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                    volume.directory?.let { appState.navigateTo(it, null, newRoot = it) }
+                } else {
+                    val externalDirs = context.getExternalFilesDirs(null)
+                    if (volumeIndex < externalDirs.size) {
+                        externalDirs[volumeIndex]?.let { dir ->
+                            val root = File(dir.absolutePath.split("/Android")[0])
+                            appState.navigateTo(root, null, newRoot = root)
                         }
                     }
-
-                    if (appState.getScreenSize() == ScreenSize.LARGE && SettingsManager.detailsMode.value == DetailsMode.BAR) {
-                        HorizontalDivider()
-
-                        DetailsBar(
-                            appState = appState
-                        )
-                    }
-
                 }
             }
         }
