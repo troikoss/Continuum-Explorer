@@ -55,7 +55,7 @@ fun FileContent(appState: FileExplorerState) {
     val viewMode = appState.activeViewMode
 
     // --- State Management ---
-    val itemPositions = remember { HashMap<UniversalFile, Rect>() }
+    val itemPositions = remember { androidx.compose.runtime.snapshots.SnapshotStateMap<UniversalFile, Rect>() }
     var dragStart by remember { mutableStateOf<Offset?>(null) }
     var dragEnd by remember { mutableStateOf<Offset?>(null) }
     val marquee = rememberMarquee()
@@ -367,9 +367,6 @@ private fun FileGrid(
         ) { file ->
             val isHovered by remember(file, dragActive) {
                 derivedStateOf {
-                    // Update when scrolling
-                    gridState.firstVisibleItemScrollOffset
-
                     // Suppress hover during any drag operation
                     if (appState.activeDragY.value != null || appState.isSystemDragActive.value || dragActive) {
                         false

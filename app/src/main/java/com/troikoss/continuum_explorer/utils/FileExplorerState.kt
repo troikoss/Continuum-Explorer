@@ -116,11 +116,14 @@ class FileExplorerState(
         }
 
     init {
-        val key = getCurrentStorageKey()
-        folderConfigs.resolveViewMode(key)
-        folderConfigs.resolveSortParams(key)
-        folderConfigs.resolveGridSize(key)
-
+        scope.launch(Dispatchers.IO) {
+            val key = getCurrentStorageKey()
+            withContext(Dispatchers.Main) {
+                folderConfigs.resolveViewMode(key)
+                folderConfigs.resolveSortParams(key)
+                folderConfigs.resolveGridSize(key)
+            }
+        }
         // Listen for global refresh events from other windows
         scope.launch {
             GlobalEvents.refreshEvent.collect {
