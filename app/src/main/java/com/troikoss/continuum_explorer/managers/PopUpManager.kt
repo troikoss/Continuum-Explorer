@@ -1,10 +1,12 @@
 package com.troikoss.continuum_explorer.managers
 
+import android.content.Context
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import com.troikoss.continuum_explorer.model.UniversalFile
+import com.troikoss.continuum_explorer.R
 import kotlinx.coroutines.CompletableDeferred
 import net.lingala.zip4j.model.enums.CompressionLevel
 import net.lingala.zip4j.model.enums.CompressionMethod
@@ -35,6 +37,17 @@ enum class DeleteResult {
     CANCEL
 }
 
+enum class OperationType {
+    RENAME,
+    COMPRESS,
+    EXTRACT,
+    DELETE,
+    NONE,
+    COPY,
+    TRASH
+}
+
+
 data class ExtractSettings(
     val toSeparateFolder: Boolean,
     val deleteSource: Boolean,
@@ -56,6 +69,10 @@ data class ArchiveSettings(
  * Both FileUtils (logic) and PopUpActivity (UI) will talk to this.
  */
 object FileOperationsManager {
+    var currentOperationType = mutableStateOf(OperationType.NONE)
+    var currentFileName = mutableStateOf<String?>(null)
+    var currentProcessedItems = mutableIntStateOf(0)
+
     // What kind of popup to show
     var popupType = mutableStateOf(PopupType.PROGRESS)
 
@@ -75,14 +92,13 @@ object FileOperationsManager {
     var itemsProcessed = mutableIntStateOf(0)
     var currentSpeed = mutableLongStateOf(0L) // Bytes per second
     var timeRemaining = mutableLongStateOf(0L) // Milliseconds
-    var currentFileName = mutableStateOf("")
 
     // Cancellation
     var isCancelled = mutableStateOf(false)
 
     // Input Text State
-    var dialogTitle = mutableStateOf("Rename")
-    var confirmButtonText = mutableStateOf("Rename")
+    var dialogTitle = mutableStateOf("")
+    var confirmButtonText = mutableStateOf("")
     var initialInputText = mutableStateOf("")
 
     // This holds the function to run when the user clicks "Create" or "Rename"
@@ -124,11 +140,44 @@ object FileOperationsManager {
         listeners.forEach { it() }
     }
 
+    fun getTitleText(context: Context): String {
+        if (!isOperating.value && !isCancelled.value) return context.getString(R.string.op_finished)
+        if (isCancelled.value) return context.getString(R.string.msg_cancelled)
+        
+        val fileName = currentFileName.value ?: ""
+        val count = currentProcessedItems.intValue
+
+        return when (currentOperationType.value) {
+            OperationType.DELETE -> {
+                if (count == 1) context.getString(R.string.op_deleting_an_item)
+                else context.getString(R.string.op_deleting_items, count)
+            }
+            OperationType.EXTRACT -> {
+                if (count == 1) context.getString(R.string.op_extracting_an_archive)
+                else context.getString(R.string.op_extracting_archives, count)
+            }
+            OperationType.COMPRESS -> {
+                if (count == 1) context.getString(R.string.op_compressing_an_item)
+                else context.getString(R.string.op_compressing_items, count)
+            }
+            OperationType.RENAME -> context.getString(R.string.op_renaming, fileName)
+            OperationType.COPY -> {
+                if (count == 1) context.getString(R.string.op_copying)
+                else context.getString(R.string.op_copying_items, count)
+            }
+            OperationType.TRASH -> {
+                if (count == 1) context.getString(R.string.op_trashing)
+                else context.getString(R.string.op_trashing_items, count)
+            }
+            OperationType.NONE -> ""
+        }
+    }
+
+
     fun start() {
         isOperating.value = true
         isCancelled.value = false // Reset cancellation
         progress.value = 0f
-        statusMessage.value = "Starting..."
         popupType.value = PopupType.PROGRESS
         
         totalSize.longValue = 0L
@@ -138,6 +187,7 @@ object FileOperationsManager {
         currentSpeed.longValue = 0L
         timeRemaining.longValue = 0L
         currentFileName.value = ""
+        currentProcessedItems.intValue = 0
         
         rememberedCollisionResult = null
         collisionDeferred = null
@@ -277,36 +327,35 @@ object FileOperationsManager {
         notifyListeners()
     }
 
-    fun openRename(file: UniversalFile, onConfirm: (String) -> Unit) {
+    fun openRename(file: UniversalFile, context: Context, onConfirm: (String) -> Unit) {
         openInput(
-            title = "Rename",
+            title = context.getString(R.string.menu_rename),
             initialText = file.name,
-            buttonText = "Rename",
+            buttonText = context.getString(R.string.menu_rename),
             onConfirm = onConfirm
         )
     }
 
-    fun openCreateFolder(onConfirm: (String) -> Unit) {
+    fun openCreateFolder(context: Context, onConfirm: (String) -> Unit) {
         openInput(
-            title = "New Folder",
-            initialText = "New Folder",
-            buttonText = "Create",
+            title = context.getString(R.string.dialog_new_folder),
+            initialText = context.getString(R.string.dialog_new_folder),
+            buttonText = context.getString(R.string.create),
             onConfirm = onConfirm
         )
     }
 
-    fun openCreateFile(onConfirm: (String) -> Unit) {
+    fun openCreateFile(context: Context, onConfirm: (String) -> Unit) {
         openInput(
-            title = "New Text Document",
-            initialText = "New Text Document.txt",
-            buttonText = "Create",
+            title = context.getString(R.string.dialog_new_file),
+            initialText = "${context.getString(R.string.dialog_new_file)}.txt",
+            buttonText = context.getString(R.string.create),
             onConfirm = onConfirm
         )
     }
 
     fun cancel() {
         isCancelled.value = true
-        statusMessage.value = "Cancelling..."
         // Also cancel any pending dialogs
         collisionDeferred?.complete(CollisionResult.CANCEL)
         deleteDeferred?.complete(DeleteResult.CANCEL)
@@ -316,11 +365,11 @@ object FileOperationsManager {
         notifyListeners()
     }
 
-    fun update(current: Int, total: Int, message: String) {
+    fun update(current: Int, total: Int, operationType: OperationType = OperationType.NONE, fileName: String? = null) {
         progress.floatValue = if (total > 0) current.toFloat() / total.toFloat() else 0f
-        statusMessage.value = message
+        currentOperationType.value = if (operationType != OperationType.NONE) operationType else currentOperationType.value
+        currentFileName.value = fileName ?: currentFileName.value
         itemsProcessed.intValue = current
-        itemsTotal.intValue = total
         notifyListeners()
     }
 
@@ -347,13 +396,10 @@ object FileOperationsManager {
         isOperating.value = false
         if (!isCancelled.value) {
              progress.floatValue = 1f
-             statusMessage.value = "Done"
              processedSize.longValue = totalSize.longValue
              itemsProcessed.intValue = itemsTotal.intValue
-        } else {
-             statusMessage.value = "Cancelled"
         }
-        
+
         timeRemaining.longValue = 0
         currentSpeed.longValue = 0
         notifyListeners()

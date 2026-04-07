@@ -14,8 +14,8 @@
     <string name="no">Não</string>
     <string name="back">Voltar</string>
     <string name="done">Concluído</string>
-    <string name="loading">Carregando&#8230;</string>
-    <string name="calculating">Calculando&#8230;</string>
+    <string name="loading">Carregando…</string>
+    <string name="calculating">Calculando…</string>
     <string name="unknown">Desconhecido</string>
     <string name="home">Início</string>
     <string name="new_tab">Nova Guia</string>
@@ -25,7 +25,7 @@
     <string name="up">Subir</string>
     <string name="menu">Menu</string>
     <string name="search">Pesquisar</string>
-    <string name="search_hint">Pesquisar&#8230;</string>
+    <string name="search_hint">Pesquisar…</string>
     <string name="options">Opções</string>
 
     <!-- Properties / Details -->
@@ -43,8 +43,9 @@
     <string name="prop_folders_count">%1$d Pastas</string>
     <string name="prop_files_count">%1$d Arquivos</string>
     <string name="prop_selected_count">%1$d selecionado</string>
-    <string name="prop_loading_metadata">Carregando metadados&#8230;</string>
+    <string name="prop_loading_metadata">Carregando metadados…</string>
     <string name="prop_total_size">Tamanho Total:</string>
+    <string name="prop_bytes">bytes</string>
     <string name="details_item_count_singular">1 item</string>
     <string name="details_item_count_plural">%1$d itens</string>
     <string name="details_date_modified">Data de Modificação: %1$s</string>
@@ -137,18 +138,32 @@
     <string name="delete_permanent_message">Tem certeza de que deseja excluir %1$s permanentemente? Esta ação não pode ser desfeita.</string>
 
     <!-- Progress Dialog -->
-    <string name="op_deleting">Excluindo itens&#8230;</string>
-    <string name="op_extracting">Extraindo arquivo&#8230;</string>
-    <string name="op_compressing">Compactando&#8230;</string>
-    <string name="op_processing">Processando itens&#8230;</string>
-    <string name="op_finished">Operação Concluída</string>
+    <string name="op_deleting">Excluindo itens…</string>
+    <string name="op_extracting">Extraindo arquivo…</string>
+    <string name="op_compressing">Compactando itens…</string>
+    <string name="op_processing">Processando itens…</string>
+    <string name="op_finished">Concluída</string>
     <string name="op_time_remaining">Tempo restante:</string>
     <string name="op_items_remaining">Itens restantes:</string>
     <string name="op_speed">Velocidade:</string>
     <string name="op_background">Segundo Plano</string>
     <string name="op_min_remaining">Cerca de %1$d min restantes</string>
     <string name="op_sec_remaining">Cerca de %1$d seg restantes</string>
-    <string name="op_renaming">Renomeando %1$s&#8230;</string>
+    <string name="op_renaming">Renomeando %1$s…</string>
+    <string name="op_copying">Copiando 1 item…</string>
+    <string name="op_trashing">Movendo 1 item para a lixeira…</string>
+    <string name="op_extracting_an_archive">Extraindo 1 item…</string>
+    <string name="op_extracting_archives">Extraindo %1$d arquivos…</string>
+    <string name="op_compressing_an_item">Comprimindo 1 item…</string>
+    <string name="op_compressing_items">Compactando %1$d itens…</string>
+    <string name="op_copying_items">Copiando %1$d itens…</string>
+    <string name="op_deleting_an_item">Excluindo 1 item…</string>
+    <string name="op_deleting_items">Excluindo %1$d itens…</string>
+    <string name="op_trashing_items">Movendo %1$d itens para a lixeira…</string>
+    <string name="op_sec">seg</string>
+
+    <!-- Notifications -->
+    <string name="notif_description">Progresso das operações de arquivo</string>
 
     <!-- Settings -->
     <string name="settings">Configurações</string>
@@ -165,6 +180,8 @@
     <string name="settings_show_command_bar_desc">Barra de ferramentas com botões de operação de arquivo abaixo da barra de endereços.</string>
     <string name="settings_show_hidden_files">Mostrar arquivos/pastas ocultos</string>
     <string name="settings_show_hidden_files_desc">Mostrar arquivos e pastas que começam com um ponto.</string>
+    <string name="settings_icon_selection">Alternar seleção de ícones</string>
+    <string name="settings_icon_selection_desc">Alternar a seleção tocando no ícone do arquivo com o toque ou caneta.</string>
     <string name="settings_file_ops">Operações de Arquivo</string>
     <string name="settings_deletion_behavior">Comportamento ao Excluir</string>
     <string name="settings_del_ask">Perguntar sempre</string>
@@ -190,14 +207,14 @@
     <string name="menu_delete_permanently">Excluir Permanentemente</string>
     <string name="menu_properties">Propriedades</string>
     <string name="menu_open">Abrir</string>
-    <string name="menu_open_with">Abrir Com&#8230;</string>
+    <string name="menu_open_with">Abrir Com…</string>
     <string name="menu_open_new_tab">Abrir em Nova Guia</string>
     <string name="menu_open_new_window">Abrir em Nova Janela</string>
     <string name="menu_remove_favorites">Remover dos Favoritos</string>
     <string name="menu_add_favorites">Adicionar aos Favoritos</string>
     <string name="menu_add_home">Adicionar ao Início</string>
-    <string name="menu_extract">Extrair&#8230;</string>
-    <string name="menu_compress">Compactar&#8230;</string>
+    <string name="menu_extract">Extrair…</string>
+    <string name="menu_compress">Compactar…</string>
     <string name="menu_cut">Recortar</string>
     <string name="menu_copy">Copiar</string>
     <string name="menu_paste">Colar</string>
@@ -209,7 +226,7 @@
     <string name="menu_view">Exibir</string>
     <string name="menu_empty_recycle_bin">Esvaziar Lixeira</string>
     <string name="menu_refresh">Atualizar</string>
-    <string name="menu_folder">Pasta</string>
+    <string name="folder">Pasta</string>
     <string name="menu_text_document">Documento de Texto</string>
     <string name="menu_by_name">Por Nome</string>
     <string name="menu_by_date">Por Data</string>
@@ -251,15 +268,22 @@
     <string name="nav_sd_card">Cartão SD</string>
     <string name="nav_external_location">Local Externo</string>
     <string name="nav_unknown_folder">Pasta Desconhecida</string>
-    <string name="nav_archive">Arquivo</string>
     <string name="nav_collapse">Recolher</string>
     <string name="nav_expand">Expandir</string>
     <string name="nav_storage_usage_label">%1$s livres de %2$s</string>
 
+    <!-- Item Types -->
+    <string name="archive">Arquivo</string>
+    <string name="image">Imagem</string>
+    <string name="video">Vídeo</string>
+    <string name="audio">Áudio</string>
+    <string name="document">Documento</string>
+    <string name="file">Arquivo</string>
+
     <!-- Actions/Operations Messages -->
-    <string name="msg_preparing">Preparando&#8230;</string>
-    <string name="msg_starting">Iniciando&#8230;</string>
-    <string name="msg_cancelling">Cancelando&#8230;</string>
+    <string name="msg_preparing">Preparando…</string>
+    <string name="msg_starting">Iniciando…</string>
+    <string name="msg_cancelling">Cancelando…</string>
     <string name="msg_cancelled">Cancelado</string>
     <string name="msg_rename_failed">Falha ao renomear</string>
     <string name="msg_select_rename">Selecione um arquivo para renomear</string>
@@ -283,6 +307,8 @@
     <string name="msg_op_completed">Operação de arquivo concluída.</string>
     <string name="msg_already_at_storage_root">Já está na raiz do armazenamento</string>
     <string name="msg_already_at_saf_root">Já está na raiz da pasta escolhida</string>
+    <string name="msg_empty_clipboard">A área de transferência está vazia</string>
+    <string name="msg_compression_failed">Falha na compactação: %1$s</string>
 
     <!-- Dialog Titles -->
     <string name="dialog_new_folder">Nova Pasta</string>
@@ -295,13 +321,35 @@
     <string name="search_kind">tipo: (Tipo de arquivo)</string>
     <string name="search_ext">*.ext (Extensão)</string>
 
-    <!-- Video Player Indicators -->
+    <!-- Image Viewer/ Video Player -->
+    <string name="unknown_resolution">Resolução desconhecida</string>
     <string name="video_playing">Reproduzindo</string>
     <string name="video_paused">Pausado</string>
+    <string name="video_loop_on">Loop: Ativado</string>
+    <string name="video_loop_off">Loop: Desativado</string>
+    <string name="video_speed_normal">Normal (1x)</string>
+    <string name="video_no_audio_tracks">Nenhuma faixa de áudio encontrada</string>
+    <string name="off">Desativado</string>
+    <string name="video_fit">Ajustar (Padrão)</string>
+    <string name="video_fill">Preencher</string>
+    <string name="video_zoom">Zoom (Recortar)</string>
+    <string name="video_fixed_w">Largura fixa</string>
+    <string name="video_fixed_h">Altura fixa</string>
+    <string name="video_audio_track">Faixa de áudio $1%d</string>
+    <string name="video_subtitle_track">Faixa de legenda $1%d</string>
+    <string name="media_previous">Anterior</string>
+    <string name="media_next">Próximo</string>
+    <string name="video_volume">Volume</string>
+    <string name="video_loop">Loop</string>
+    <string name="media_viewed">Imagem visualizada</string>
+    <string name="menu_set_wallpaper_failed">Falha ao definir papel de parede</string>
+    <string name="share_image_failed">Falha ao compartilhar imagem</string>
+    <string name="media_thumbnail">Miniatura</string>
 
     <!-- Details Headers -->
     <string name="details_header_name">Nome</string>
     <string name="details_header_size">Tamanho</string>
     <string name="details_header_date">Data</string>
+    <string name="msg_unknown_compression_error">Erro de compactação desconhecido</string>
 
 </resources>

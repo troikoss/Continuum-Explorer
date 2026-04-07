@@ -185,9 +185,9 @@ class FileExplorerState(
             } else if (isRecentMode) {
                 context.getString(R.string.nav_recent)
             } else if (currentArchiveFile != null) {
-                currentArchiveFile?.name ?: context.getString(R.string.nav_archive)
+                currentArchiveFile?.name ?: context.getString(R.string.archive)
             } else if (currentArchiveUri != null) {
-                context.getString(R.string.nav_archive)
+                context.getString(R.string.archive)
             } else if (currentPath != null) {
                 if (currentPath?.absolutePath == storageRoot.absolutePath) {
                     if (storageRoot.absolutePath == Environment.getExternalStorageDirectory().absolutePath) context.getString(R.string.nav_internal_storage)

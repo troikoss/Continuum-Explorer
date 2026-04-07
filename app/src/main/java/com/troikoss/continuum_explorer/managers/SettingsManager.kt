@@ -36,6 +36,7 @@ object SettingsManager {
 
     private const val KEY_COMMAND_BAR_VISIBLE = "command_bar_visible"
     private const val KEY_SHOW_HIDDEN_FILES = "show_hidden_files"
+    private const val KEY_ICON_TOUCH_SELECTION = "icon_touch_selection"
 
     private val _deleteBehavior = mutableStateOf(DeleteBehavior.ASK)
     val deleteBehavior: State<DeleteBehavior> = _deleteBehavior
@@ -54,6 +55,9 @@ object SettingsManager {
 
     private val _showHiddenFiles = mutableStateOf(false)
     val showHiddenFiles: State<Boolean> = _showHiddenFiles
+
+    private val _iconTouchSelection = mutableStateOf(true)
+    val iconTouchSelection: State<Boolean> = _iconTouchSelection
 
     // Derived state: enabled if behavior is not PERMANENT
     private val _isRecycleBinEnabled = mutableStateOf(true)
@@ -95,6 +99,7 @@ object SettingsManager {
 
         _isCommandBarVisible.value = prefs.getBoolean(KEY_COMMAND_BAR_VISIBLE, true)
         _showHiddenFiles.value = prefs.getBoolean(KEY_SHOW_HIDDEN_FILES, false)
+        _iconTouchSelection.value = prefs.getBoolean(KEY_ICON_TOUCH_SELECTION, true)
 
         _isDefaultArchiveViewerEnabled.value = prefs.getBoolean(KEY_DEFAULT_ARCHIVE_VIEWER, true)
     }
@@ -137,6 +142,13 @@ object SettingsManager {
         _showHiddenFiles.value = show
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         prefs.edit().putBoolean(KEY_SHOW_HIDDEN_FILES, show).apply()
+        GlobalEvents.triggerConfigUpdate()
+    }
+
+    fun setIconTouchSelection(context: Context, enabled: Boolean) {
+        _iconTouchSelection.value = enabled
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putBoolean(KEY_ICON_TOUCH_SELECTION, enabled).apply()
         GlobalEvents.triggerConfigUpdate()
     }
 

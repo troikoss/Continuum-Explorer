@@ -25,9 +25,6 @@ import java.util.Properties
 import android.provider.Settings
 import android.provider.DocumentsContract
 import android.provider.MediaStore
-import androidx.annotation.OptIn
-import androidx.media3.common.util.Log
-import androidx.media3.common.util.UnstableApi
 import com.troikoss.continuum_explorer.managers.CollisionResult
 import com.troikoss.continuum_explorer.managers.DeleteBehavior
 import com.troikoss.continuum_explorer.managers.DeleteResult
@@ -37,6 +34,8 @@ import com.troikoss.continuum_explorer.managers.UndoAction
 import com.troikoss.continuum_explorer.managers.UndoManager
 import com.troikoss.continuum_explorer.model.FileColumnType
 import com.troikoss.continuum_explorer.model.SortOrder
+import com.troikoss.continuum_explorer.R
+import com.troikoss.continuum_explorer.managers.OperationType
 
 /**
  * Extension functions to convert native File and DocumentFile types 
@@ -93,20 +92,20 @@ fun getUriForUniversalFile(context: Context, file: UniversalFile): Uri? {
 /**
  * Gets a human-readable file type string
  */
-fun getFileType(file: UniversalFile): String {
-    if (file.isDirectory) return "Folder"
+fun getFileType(file: UniversalFile, context: Context): String {
+    if (file.isDirectory) return context.getString(R.string.folder)
 
     val extension = file.name.substringAfterLast(".", "").lowercase()
     val extensionString = extension.uppercase()
 
     return when (extension) {
-        "zip", "rar", "7z", "tar", "gz" -> "Archive"
-        "jpg", "jpeg", "bmp", "png", "gif", "webp" -> "Image"
-        "mp4", "mkv", "avi", "mov", "webm" -> "Video"
-        "mp3", "wav", "ogg", "m4a", "flac" -> "Audio"
-        "txt", "doc", "docx", "odt", "pdf" -> "Document"
-        "" -> "File"
-        else -> "$extensionString File"
+        "zip", "rar", "7z", "tar", "gz" -> context.getString(R.string.archive)
+        "jpg", "jpeg", "bmp", "png", "gif", "webp" -> context.getString(R.string.image)
+        "mp4", "mkv", "avi", "mov", "webm" -> context.getString(R.string.video)
+        "mp3", "wav", "ogg", "m4a", "flac" -> context.getString(R.string.audio)
+        "txt", "doc", "docx", "odt", "pdf" -> context.getString(R.string.document)
+        "" -> context.getString(R.string.file)
+        else -> "$extensionString ${context.getString(R.string.file)}"
     }
 }
 
@@ -203,9 +202,9 @@ fun getImageResolution(context: Context, file: UniversalFile): String {
         if (options.outWidth > 0 && options.outHeight > 0) {
             return "${options.outWidth}x${options.outHeight}"
         }
-        return "Unknown Resolution"
+        return context.getString(R.string.unknown_resolution)
     } catch (_: Exception) {
-        return "Unknown Resolution"
+        return context.getString(R.string.unknown_resolution)
     }
 }
 
@@ -282,7 +281,7 @@ suspend fun calculateSizeRecursively(context: Context, file: UniversalFile): Lon
     }
 }
 
-private fun getUniqueName(name: String, exists: (String) -> Boolean): String {
+fun getUniqueName(name: String, exists: (String) -> Boolean): String {
     if (!exists(name)) return name
     
     val lastDot = name.lastIndexOf('.')
@@ -453,7 +452,7 @@ suspend fun pasteFromClipboard(
 
     if (clipData == null || clipData.itemCount == 0) {
         withContext(Dispatchers.Main) {
-            Toast.makeText(context, "Clipboard is empty", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, context.getString(R.string.msg_empty_clipboard), Toast.LENGTH_SHORT).show()
             FileOperationsManager.finish()
         }
         return emptyList()
@@ -505,6 +504,7 @@ suspend fun pasteFromClipboard(
         FileOperationsManager.start()
         FileOperationsManager.totalSize.longValue = totalBytesToCopy
         FileOperationsManager.itemsTotal.intValue = totalCount
+        FileOperationsManager.currentProcessedItems.intValue = totalCount
         PendingCut.isActive = isMove 
     }
     
@@ -558,7 +558,7 @@ suspend fun pasteFromClipboard(
             }
             
              withContext(Dispatchers.Main) {
-                FileOperationsManager.update(i, totalCount, "Copying ${sourceFile.name}")
+                FileOperationsManager.update(i, totalCount, operationType = OperationType.COPY)
                 FileOperationsManager.currentFileName.value = sourceFile.name
             }
 
@@ -637,7 +637,6 @@ suspend fun pasteFromClipboard(
         }
         
         if (isMove && pastedFileNames.isNotEmpty() && !FileOperationsManager.isCancelled.value) {
-            withContext(Dispatchers.Main) { FileOperationsManager.statusMessage.value = "Deleting source files..." }
             // Perform a silent permanent delete after moving
             deleteFiles(context, PendingCut.files, forcePermanent = true, silent = true)
             PendingCut.clear()
@@ -730,8 +729,9 @@ suspend fun deleteFiles(
     withContext(Dispatchers.IO) { totalBytesToDelete = files.sumOf { calculateSizeRecursively(context, it) } }
     withContext(Dispatchers.Main) {
         FileOperationsManager.itemsTotal.intValue = files.size
+        FileOperationsManager.currentProcessedItems.intValue = files.size
         FileOperationsManager.totalSize.longValue = totalBytesToDelete
-        FileOperationsManager.statusMessage.value = "Deleting..."
+        FileOperationsManager.currentOperationType.value = OperationType.DELETE
     }
 
     var globalBytesDeleted = 0L
@@ -745,7 +745,7 @@ suspend fun deleteFiles(
         for ((index, file) in files.withIndex()) {
             if (FileOperationsManager.isCancelled.value) break
             withContext(Dispatchers.Main) {
-                FileOperationsManager.update(index, files.size, "Deleting ${file.name}...")
+                FileOperationsManager.update(index, files.size, operationType = OperationType.DELETE)
                 FileOperationsManager.currentFileName.value = file.name
                 FileOperationsManager.itemsProcessed.intValue = index
             }
@@ -828,8 +828,9 @@ suspend fun moveToRecycleBin(context: Context, files: List<UniversalFile>) {
     withContext(Dispatchers.IO) { totalBytesToMove = files.sumOf { calculateSizeRecursively(context, it) } }
     withContext(Dispatchers.Main) {
         FileOperationsManager.itemsTotal.intValue = files.size
+        FileOperationsManager.currentProcessedItems.intValue = files.size
         FileOperationsManager.totalSize.longValue = totalBytesToMove
-        FileOperationsManager.statusMessage.value = "Moving to Recycle Bin..."
+        FileOperationsManager.currentOperationType.value = OperationType.TRASH
     }
 
     var movedCount = 0
@@ -839,7 +840,7 @@ suspend fun moveToRecycleBin(context: Context, files: List<UniversalFile>) {
         for ((index, file) in files.withIndex()) {
             if (FileOperationsManager.isCancelled.value) break
             withContext(Dispatchers.Main) {
-                FileOperationsManager.update(index, files.size, "Moving ${file.name} to Trash...")
+                FileOperationsManager.update(index, files.size, operationType = OperationType.TRASH)
                 FileOperationsManager.currentFileName.value = file.name
             }
             if (file.fileRef != null) {
@@ -871,7 +872,23 @@ suspend fun restoreFiles(context: Context, files: List<UniversalFile>) {
         var restoredCount = 0
         for (file in files) {
             val originalPath = getOriginalPath(file.name) ?: continue
-            val target = File(originalPath)
+            var target = File(originalPath)
+            
+            if (target.exists()) {
+                val result = FileOperationsManager.resolveCollision(target.name)
+                when (result) {
+                    CollisionResult.CANCEL -> break
+                    CollisionResult.REPLACE -> {
+                        if (target.isDirectory) target.deleteRecursively() else target.delete()
+                    }
+                    CollisionResult.KEEP_BOTH -> {
+                        val parent = target.parentFile
+                        val newName = getUniqueName(target.name) { File(parent, it).exists() }
+                        target = File(parent, newName)
+                    }
+                }
+            }
+
             target.parentFile?.mkdirs()
             if (file.fileRef != null && file.fileRef.renameTo(target)) {
                 removeTrashMetadata(file.name)
@@ -891,13 +908,24 @@ suspend fun renameFile(file: UniversalFile, newName: String): Boolean {
         try {
             if (file.fileRef != null) {
                 val oldName = file.fileRef.name
-                val newFile = File(file.fileRef.parentFile, newName)
+                if (oldName == newName) return@withContext true
+                
+                // Collision behavior: Always auto-suffix with a number
+                val targetName = getUniqueName(newName) { File(file.fileRef.parentFile, it).exists() }
+                
+                val newFile = File(file.fileRef.parentFile, targetName)
                 if (file.fileRef.renameTo(newFile)) {
-                    UndoManager.record(UndoAction.Rename(newFile.parentFile, oldName, newName))
+                    UndoManager.record(UndoAction.Rename(newFile.parentFile, oldName, targetName))
                     true
                 } else false
             } else if (file.documentFileRef != null) {
-                file.documentFileRef.renameTo(newName)
+                // Collision behavior: Always auto-suffix with a number
+                val parent = file.documentFileRef.parentFile
+                val targetName = if (parent != null) {
+                    getUniqueName(newName) { parent.findFile(it) != null }
+                } else newName
+
+                file.documentFileRef.renameTo(targetName)
             } else false
         } catch (e: Exception) { e.printStackTrace(); false }
     }
@@ -909,12 +937,20 @@ suspend fun renameFile(file: UniversalFile, newName: String): Boolean {
 suspend fun createDirectory(context: Context, parentPath: File?, parentSafUri: Uri?, name: String): Boolean {
     return withContext(Dispatchers.IO) {
         try {
+            var targetName = name
             if (parentPath != null) {
-                val newDir = File(parentPath, name)
-                if (newDir.exists()) false else newDir.mkdir()
+                val existing = File(parentPath, targetName)
+                if (existing.exists()) {
+                    targetName = getUniqueName(targetName) { File(parentPath, it).exists() }
+                }
+                File(parentPath, targetName).mkdir()
             } else if (parentSafUri != null) {
-                val parentDoc = DocumentFile.fromTreeUri(context, parentSafUri)
-                parentDoc?.createDirectory(name) != null
+                val parentDoc = DocumentFile.fromTreeUri(context, parentSafUri) ?: return@withContext false
+                val existing = parentDoc.findFile(targetName)
+                if (existing != null) {
+                    targetName = getUniqueName(targetName) { parentDoc.findFile(it) != null }
+                }
+                parentDoc.createDirectory(targetName) != null
             } else false
         } catch (e: Exception) { e.printStackTrace(); false }
     }
@@ -926,12 +962,20 @@ suspend fun createDirectory(context: Context, parentPath: File?, parentSafUri: U
 suspend fun createFile(context: Context, parentPath: File?, parentSafUri: Uri?, name: String): Boolean {
     return withContext(Dispatchers.IO) {
         try {
-             if (parentPath != null) {
-                val newFile = File(parentPath, name)
-                if (newFile.exists()) false else newFile.createNewFile()
+            var targetName = name
+            if (parentPath != null) {
+                val existing = File(parentPath, targetName)
+                if (existing.exists()) {
+                    targetName = getUniqueName(targetName) { File(parentPath, it).exists() }
+                }
+                File(parentPath, targetName).createNewFile()
             } else if (parentSafUri != null) {
-                val parentDoc = DocumentFile.fromTreeUri(context, parentSafUri)
-                parentDoc?.createFile("text/plain", name) != null
+                val parentDoc = DocumentFile.fromTreeUri(context, parentSafUri) ?: return@withContext false
+                val existing = parentDoc.findFile(targetName)
+                if (existing != null) {
+                    targetName = getUniqueName(targetName) { parentDoc.findFile(it) != null }
+                }
+                parentDoc.createFile("text/plain", targetName) != null
             } else false
         } catch (e: Exception) { e.printStackTrace(); false }
     }

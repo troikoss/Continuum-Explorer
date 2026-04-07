@@ -52,7 +52,7 @@ fun DetailsPane (
     val totalFiles = appState.files.size
     val currentPath = appState.currentUniversalPath
 
-    val fileType = if (selectionCount >= 1) getFileType(selectedItems.first()) else null
+    val fileType = if (selectionCount >= 1) getFileType(selectedItems.first(), context) else null
 
     Box(
         modifier = modifier
@@ -106,7 +106,7 @@ fun DetailsPane (
                 if (selectionCount == 1) {
 
                     Text(
-                        text = getFileType(selectedItems.first()),
+                        text = getFileType(selectedItems.first(), context),
                         fontSize = 18.sp
                     )
                     Spacer(modifier = Modifier.height(4.dp))
@@ -181,7 +181,7 @@ fun DetailsBar(
     val selectionCount = selectedItems.size
     val totalFiles = appState.files.size
 
-    val fileType = if (selectionCount >= 1) getFileType(selectedItems.first()) else null
+    val fileType = if (selectionCount >= 1) getFileType(selectedItems.first(), context) else null
 
     Row(modifier = Modifier.height(80.dp)  ) {
         Box(
@@ -234,7 +234,7 @@ fun DetailsBar(
 
             if (selectionCount == 1) {
                 Text(
-                    text = getFileType(selectedItems.first()),
+                    text = getFileType(selectedItems.first(), context),
                     fontSize = 12.sp,
                     modifier = Modifier.weight(1f)
                 )

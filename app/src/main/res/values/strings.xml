@@ -44,6 +44,7 @@
     <string name="prop_selected_count">%1$d selected</string>
     <string name="prop_loading_metadata">Loading metadata...</string>
     <string name="prop_total_size">Total Size:</string>
+    <string name="prop_bytes">bytes</string>
     <string name="details_item_count_singular">1 item</string>
     <string name="details_item_count_plural">%1$d items</string>
     <string name="details_date_modified">Date Modified: %1$s</string>
@@ -138,18 +139,34 @@
     <string name="delete_permanent_message">Are you sure you want to delete %1$s permanently? This action cannot be undone.</string>
 
     <!-- Progress Dialog -->
-    <string name="op_deleting">Deleting items...</string>
-    <string name="op_extracting">Extracting archive...</string>
-    <string name="op_compressing">Creating archive...</string>
-    <string name="op_processing">Processing items...</string>
-    <string name="op_finished">Operation Finished</string>
+    <string name="op_deleting">Deleting items…</string>
+    <string name="op_extracting">Extracting archive…</string>
+    <string name="op_compressing">Compressing items…</string>
+    <string name="op_processing">Processing items…</string>
+    <string name="op_finished">Finished</string>
     <string name="op_time_remaining">Time remaining:</string>
     <string name="op_items_remaining">Items remaining:</string>
     <string name="op_speed">Speed:</string>
     <string name="op_background">Background</string>
     <string name="op_min_remaining">About %1$d min remaining</string>
     <string name="op_sec_remaining">About %1$d sec remaining</string>
-    <string name="op_renaming">Renaming %1$s...</string>
+    <string name="op_renaming">Renaming %1$s…</string>
+    <string name="op_copying">Copying 1 item…</string>
+    <string name="op_copying_items">Copying %1$d items…</string>
+    <string name="op_extracting_an_archive">Extracting 1 item…</string>
+    <string name="op_extracting_archives">Extracting %1$d archives…</string>
+    <string name="op_compressing_an_item">Compressing 1 item…</string>
+    <string name="op_compressing_items">Compressing %1$d items…</string>
+    <string name="op_deleting_an_item">Deleting 1 item…</string>
+    <string name="op_deleting_items">Deleting %1$d items…</string>
+    <string name="op_trashing">Moving 1 item to Recycle Bin…</string>
+    <string name="op_trashing_items">Moving %1$d items to Recycle Bin…</string>
+    <string name="op_sec">sec</string>
+
+
+
+    <!-- Notifications -->
+    <string name="notif_description">Progress of file operations</string>
 
     <!-- Settings -->
     <string name="settings">Settings</string>
@@ -166,6 +183,8 @@
     <string name="settings_show_command_bar_desc">Toolbar with file operation buttons below the address bar.</string>
     <string name="settings_show_hidden_files">Show hidden files/folders</string>
     <string name="settings_show_hidden_files_desc">Show files and folders that start with a dot.</string>
+    <string name="settings_icon_selection">Icon Selection Toggle</string>
+    <string name="settings_icon_selection_desc">Toggle selection by tapping the file icon with touch or stylus.</string>
     <string name="settings_file_ops">File Operations</string>
     <string name="settings_deletion_behavior">Deletion Behavior</string>
     <string name="settings_del_ask">Ask each time</string>
@@ -210,7 +229,6 @@
     <string name="menu_view">View</string>
     <string name="menu_empty_recycle_bin">Empty Recycle Bin</string>
     <string name="menu_refresh">Refresh</string>
-    <string name="menu_folder">Folder</string>
     <string name="menu_text_document">Text Document</string>
     <string name="menu_by_name">By Name</string>
     <string name="menu_by_date">By Date</string>
@@ -252,10 +270,18 @@
     <string name="nav_sd_card">SD Card</string>
     <string name="nav_external_location">External Location</string>
     <string name="nav_unknown_folder">Unknown Folder</string>
-    <string name="nav_archive">Archive</string>
     <string name="nav_collapse">Collapse</string>
     <string name="nav_expand">Expand</string>
     <string name="nav_storage_usage_label">%1$s free of %2$s</string>
+
+    <!-- Item Types -->
+    <string name="archive">Archive</string>
+    <string name="image">Image</string>
+    <string name="video">Video</string>
+    <string name="audio">Audio</string>
+    <string name="document">Document</string>
+    <string name="file">File</string>
+    <string name="folder">Folder</string>
 
     <!-- Actions/Operations Messages -->
     <string name="msg_preparing">Preparing...</string>
@@ -285,6 +311,9 @@
     <string name="msg_op_completed">File operation completed.</string>
     <string name="msg_already_at_storage_root">Already at storage root</string>
     <string name="msg_already_at_saf_root">Already at picked folder root</string>
+    <string name="msg_empty_clipboard">Clipboard is empty</string>
+    <string name="msg_compression_failed">Compression failed: %1$s</string>
+
 
     <!-- Dialog Titles -->
     <string name="dialog_new_folder">New Folder</string>
@@ -300,7 +329,8 @@
     <string name="search_not" translatable="false">NOT</string>
     <string name="search_ext">*.ext (Extension)</string>
 
-    <!-- Video Player Indicators -->
+    <!-- Image Viewer/ Video Player -->
+    <string name="unknown_resolution">Unknown Resolution</string>
     <string name="video_playing">Playing</string>
     <string name="video_paused">Paused</string>
 
@@ -308,5 +338,26 @@
     <string name="details_header_name">Name</string>
     <string name="details_header_size">Size</string>
     <string name="details_header_date">Date</string>
+    <string name="msg_unknown_compression_error">Unknown compression error</string>
+    <string name="video_loop_on">Loop: On</string>
+    <string name="video_loop_off">Loop: Off</string>
+    <string name="video_speed_normal">Normal (1x)</string>
+    <string name="video_no_audio_tracks">No audio tracks found</string>
+    <string name="off">Off</string>
+    <string name="video_fit">Fit (Default)</string>
+    <string name="video_fill">Fill</string>
+    <string name="video_zoom">Zoom (Crop)</string>
+    <string name="video_fixed_w">Fixed width</string>
+    <string name="video_fixed_h">Fixed height</string>
+    <string name="video_audio_track">Audio track $1%d</string>
+    <string name="video_subtitle_track">Subtitle track $1%d</string>
+    <string name="media_previous">Previous</string>
+    <string name="media_next">Next</string>
+    <string name="video_volume">Volume</string>
+    <string name="video_loop">Loop</string>
+    <string name="media_viewed">Viewed image</string>
+    <string name="menu_set_wallpaper_failed">Failed to set wallpaper</string>
+    <string name="share_image_failed">Failed to share image</string>
+    <string name="media_thumbnail">Thumbnail</string>
 
 </resources>

@@ -6,10 +6,6 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
-import android.os.Environment
-import android.provider.DocumentsContract
-import android.provider.MediaStore
-import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
@@ -84,6 +80,7 @@ import androidx.compose.material.icons.filled.Wallpaper
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.DpOffset
@@ -92,9 +89,8 @@ import androidx.core.content.FileProvider
 import coil.compose.AsyncImage
 import com.troikoss.continuum_explorer.R
 import com.troikoss.continuum_explorer.managers.FileOperationsManager
+import com.troikoss.continuum_explorer.managers.OperationType
 import com.troikoss.continuum_explorer.utils.GlobalEvents
-import com.troikoss.continuum_explorer.model.FileColumnType
-import com.troikoss.continuum_explorer.model.SortOrder
 import com.troikoss.continuum_explorer.ui.theme.FileExplorerTheme
 import com.troikoss.continuum_explorer.utils.FileScannerUtils
 import com.troikoss.continuum_explorer.utils.contextMenuDetector
@@ -134,6 +130,7 @@ fun ImageViewerScreen(
 ) {
     val activity = (LocalView.current.context as? Activity)
     val context = LocalContext.current
+    val resources = LocalResources.current
     val coroutineScope = rememberCoroutineScope()
     val focusRequester = remember { FocusRequester() }
     val listState = rememberLazyListState()
@@ -403,7 +400,7 @@ fun ImageViewerScreen(
                 if (currentIndex > 0 && scale == 1f) {
                     AsyncImage(
                         model = siblingImages[currentIndex - 1],
-                        contentDescription = "Previous",
+                        contentDescription = stringResource(R.string.media_previous),
                         contentScale = ContentScale.Fit,
                         modifier = Modifier
                             .fillMaxSize()
@@ -417,7 +414,7 @@ fun ImageViewerScreen(
                 // 2. The Current Image (Center)
                 AsyncImage(
                     model = currentUri,
-                    contentDescription = "Viewed Image",
+                    contentDescription = stringResource(R.string.media_viewed),
                     contentScale = ContentScale.Fit,
                     onSuccess = { state -> imageSize = state.painter.intrinsicSize },
                     modifier = Modifier
@@ -434,7 +431,7 @@ fun ImageViewerScreen(
                 if (currentIndex < siblingImages.size - 1 && scale == 1f) {
                     AsyncImage(
                         model = siblingImages[currentIndex + 1],
-                        contentDescription = "Next",
+                        contentDescription = stringResource(R.string.media_next),
                         contentScale = ContentScale.Fit,
                         modifier = Modifier
                             .fillMaxSize()
@@ -456,7 +453,7 @@ fun ImageViewerScreen(
                     // --- GROUP 1: Open With ---
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.menu_open_with)) },
-                        leadingIcon = { Icon(Icons.Default.OpenInNew, contentDescription = "Open with") },
+                        leadingIcon = { Icon(Icons.Default.OpenInNew, contentDescription = stringResource(R.string.menu_open_with)) },
                         onClick = {
                             showMenu = false
                             currentUri?.let { uriString ->
@@ -469,9 +466,9 @@ fun ImageViewerScreen(
                                         setDataAndType(contentUri, "image/*")
                                         flags = Intent.FLAG_GRANT_READ_URI_PERMISSION
                                     }
-                                    context.startActivity(Intent.createChooser(intent, "Open with"))
+                                    context.startActivity(Intent.createChooser(intent, resources.getString(R.string.menu_open_with)))
                                 } catch (e: Exception) {
-                                    Toast.makeText(context, "Failed to open image", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(context, resources.getString(R.string.msg_failed_open_image), Toast.LENGTH_SHORT).show()
                                 }
                             }
                         }
@@ -481,8 +478,8 @@ fun ImageViewerScreen(
 
                     // --- GROUP 2: Zoom Controls ---
                     DropdownMenuItem(
-                        text = { Text(stringResource(R.string.menu_zoom_in).replaceFirstChar { it.uppercase() }.split(" ").first() + " in") },
-                        leadingIcon = { Icon(Icons.Default.ZoomIn, contentDescription = "Zoom in") },
+                        text = { Text(stringResource(R.string.menu_zoom_in))},
+                        leadingIcon = { Icon(Icons.Default.ZoomIn, contentDescription = stringResource(R.string.menu_zoom_in)) },
                         onClick = {
                             showMenu = false
                             scale = (scale * 1.5f).coerceIn(1f, 10f)
@@ -490,8 +487,8 @@ fun ImageViewerScreen(
                     )
 
                     DropdownMenuItem(
-                        text = { Text("Reset zoom") },
-                        leadingIcon = { Icon(Icons.Default.FitScreen, contentDescription = "Reset zoom") },
+                        text = { Text(stringResource(R.string.menu_reset_zoom)) },
+                        leadingIcon = { Icon(Icons.Default.FitScreen, contentDescription = stringResource(R.string.menu_reset_zoom)) },
                         onClick = {
                             showMenu = false
                             scale = 1f
@@ -500,8 +497,8 @@ fun ImageViewerScreen(
                     )
 
                     DropdownMenuItem(
-                        text = { Text(stringResource(R.string.menu_zoom_out).replaceFirstChar { it.uppercase() }.split(" ").first() + " out") },
-                        leadingIcon = { Icon(Icons.Default.ZoomOut, contentDescription = "Zoom out") },
+                        text = { Text(stringResource(R.string.menu_zoom_out))},
+                        leadingIcon = { Icon(Icons.Default.ZoomOut, contentDescription = stringResource(R.string.menu_zoom_out)) },
                         onClick = {
                             showMenu = false
                             scale = (scale / 1.5f).coerceIn(1f, 10f)
@@ -515,8 +512,8 @@ fun ImageViewerScreen(
 
                     // --- GROUP 3: File Operations ---
                     DropdownMenuItem(
-                        text = { Text("Copy image") },
-                        leadingIcon = { Icon(Icons.Default.Image, contentDescription = "Copy image") },
+                        text = { Text(stringResource(R.string.menu_copy_image)) },
+                        leadingIcon = { Icon(Icons.Default.Image, contentDescription = stringResource(R.string.menu_copy_image)) },
                         onClick = {
                             showMenu = false
                             currentUri?.let { uriString ->
@@ -541,18 +538,18 @@ fun ImageViewerScreen(
                                     val clip = ClipData.newUri(context.contentResolver, "Copied Image", contentUri)
                                     clipboard.setPrimaryClip(clip)
 
-                                    Toast.makeText(context, "Image copied to clipboard", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(context, resources.getString(R.string.menu_copy_image), Toast.LENGTH_SHORT).show()
                                 } catch (e: Exception) {
                                     e.printStackTrace()
-                                    Toast.makeText(context, "Failed to copy image", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(context, resources.getString(R.string.msg_failed_copy_image), Toast.LENGTH_SHORT).show()
                                 }
                             }
                         }
                     )
 
                     DropdownMenuItem(
-                        text = { Text("Set as Wallpaper") },
-                        leadingIcon = { Icon(Icons.Default.Wallpaper, contentDescription = "Wallpaper") },
+                        text = { Text(stringResource(R.string.menu_set_wallpaper)) },
+                        leadingIcon = { Icon(Icons.Default.Wallpaper, contentDescription = stringResource(R.string.menu_set_wallpaper)) },
                         onClick = {
                             showMenu = false
                             currentUri?.let { uriString ->
@@ -565,9 +562,9 @@ fun ImageViewerScreen(
                                         putExtra("mimeType", "image/*")
                                         flags = Intent.FLAG_GRANT_READ_URI_PERMISSION
                                     }
-                                    context.startActivity(Intent.createChooser(wallpaperIntent, "Set as"))
+                                    context.startActivity(Intent.createChooser(wallpaperIntent, resources.getString(R.string.menu_set_wallpaper)))
                                 } catch (e: Exception) {
-                                    Toast.makeText(context, "Failed to set wallpaper", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(context, resources.getString(R.string.menu_set_wallpaper_failed), Toast.LENGTH_SHORT).show()
                                 }
                             }
                         }
@@ -575,7 +572,7 @@ fun ImageViewerScreen(
 
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.menu_share)) },
-                        leadingIcon = { Icon(Icons.Default.Share, contentDescription = "Share") },
+                        leadingIcon = { Icon(Icons.Default.Share, contentDescription = stringResource(R.string.menu_share)) },
                         onClick = {
                             showMenu = false
                             currentUri?.let { uriString ->
@@ -587,9 +584,9 @@ fun ImageViewerScreen(
                                         putExtra(Intent.EXTRA_STREAM, contentUri)
                                         flags = Intent.FLAG_GRANT_READ_URI_PERMISSION
                                     }
-                                    context.startActivity(Intent.createChooser(shareIntent, "Share image via"))
+                                    context.startActivity(Intent.createChooser(shareIntent, resources.getString(R.string.msg_share_image_via)))
                                 } catch (e: Exception) {
-                                    Toast.makeText(context, "Failed to share image", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(context, resources.getString(R.string.share_image_failed), Toast.LENGTH_SHORT).show()
                                 }
                             }
                         }
@@ -597,14 +594,14 @@ fun ImageViewerScreen(
 
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.menu_rename)) },
-                        leadingIcon = { Icon(Icons.Default.Edit, contentDescription = "Rename") },
+                        leadingIcon = { Icon(Icons.Default.Edit, contentDescription = stringResource(R.string.menu_rename)) },
                         onClick = {
                             showMenu = false
                             withImageFile(currentUri) { file ->
                                 val target = file.toUniversal()
-                                FileOperationsManager.openRename(target) { newName ->
+                                FileOperationsManager.openRename(target, context) { newName ->
                                     FileOperationsManager.start()
-                                    FileOperationsManager.update(0, 1, "Renaming ${target.name}...")
+                                    FileOperationsManager.update(0, 1, operationType= OperationType.RENAME)
                                     FileOperationsManager.currentFileName.value = target.name
 
                                     startPopUpActivity(context)
@@ -621,7 +618,7 @@ fun ImageViewerScreen(
                                             }
                                             GlobalEvents.triggerRefresh()
                                         } else {
-                                            withContext(Dispatchers.Main) { Toast.makeText(context, "Rename failed", Toast.LENGTH_SHORT).show() }
+                                            withContext(Dispatchers.Main) { Toast.makeText(context, resources.getString(R.string.msg_rename_failed), Toast.LENGTH_SHORT).show() }
                                         }
                                         FileOperationsManager.finish()
                                     }
@@ -633,7 +630,7 @@ fun ImageViewerScreen(
 
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.menu_delete)) },
-                        leadingIcon = { Icon(Icons.Default.Delete, contentDescription = "Delete") },
+                        leadingIcon = { Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.menu_delete)) },
                         onClick = {
                             showMenu = false
                             withImageFile(currentUri) { file ->
@@ -661,7 +658,7 @@ fun ImageViewerScreen(
 
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.menu_properties)) },
-                        leadingIcon = { Icon(Icons.Default.Info, contentDescription = "Properties") },
+                        leadingIcon = { Icon(Icons.Default.Info, contentDescription = stringResource(R.string.menu_properties)) },
                         onClick = {
                             showMenu = false
                             withImageFile(currentUri) { file ->
@@ -675,8 +672,8 @@ fun ImageViewerScreen(
 
                     // --- GROUP 4: Window Controls ---
                     DropdownMenuItem(
-                        text = { Text("Fullscreen") },
-                        leadingIcon = { Icon(Icons.Default.Fullscreen, contentDescription = "Fullscreen") },
+                        text = { Text(stringResource(R.string.menu_fullscreen)) },
+                        leadingIcon = { Icon(Icons.Default.Fullscreen, contentDescription = stringResource(R.string.menu_fullscreen)) },
                         onClick = {
                             showMenu = false
                             onToggleFullscreen()
@@ -685,7 +682,7 @@ fun ImageViewerScreen(
 
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.close)) },
-                        leadingIcon = { Icon(Icons.Default.Close, contentDescription = "Close") },
+                        leadingIcon = { Icon(Icons.Default.Close, contentDescription = stringResource(R.string.close)) },
                         onClick = {
                             showMenu = false
                             activity?.finish()
@@ -766,7 +763,7 @@ fun ImageViewerScreen(
                         val isSelected = imgUri == currentUri
                         AsyncImage(
                             model = imgUri,
-                            contentDescription = "Thumbnail",
+                            contentDescription = stringResource(R.string.media_thumbnail),
                             contentScale = ContentScale.Crop,
                             modifier = Modifier
                                 .size (itemSizeDp)

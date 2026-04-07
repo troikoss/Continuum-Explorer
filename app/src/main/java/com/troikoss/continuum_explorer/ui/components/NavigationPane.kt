@@ -70,6 +70,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -119,6 +120,8 @@ fun NavigationPane(
     onAddStorageClick: () -> Unit
 ) {
     val context = LocalContext.current
+    val resources = LocalResources.current
+
     val storageManager = context.getSystemService(Context.STORAGE_SERVICE) as StorageManager
     val isRecycleBinEnabled by SettingsManager.isRecycleBinEnabled
 
@@ -130,7 +133,7 @@ fun NavigationPane(
         val internalRoot = Environment.getExternalStorageDirectory()
         volumes.add(
             StorageVolumeInfo(
-                label = context.getString(R.string.nav_internal_storage),
+                label = resources.getString(R.string.nav_internal_storage),
                 path = internalRoot,
                 uri = null,
                 totalSpace = internalRoot.totalSpace,
@@ -151,7 +154,7 @@ fun NavigationPane(
 
                         volumes.add(
                             StorageVolumeInfo(
-                                label = if (description.isEmpty()) "External Drive" else description,
+                                label = description.ifEmpty { resources.getString(R.string.nav_external_drive) },
                                 path = directory,
                                 uri = null,
                                 totalSpace = directory.totalSpace,
@@ -227,7 +230,12 @@ fun NavigationPane(
                             .fillMaxWidth()
                             .then(if (isDragging) Modifier else Modifier.animateItem())
                             .zIndex(if (isDragging) 1f else 0f)
-                            .offset { IntOffset(0, if (isDragging) draggingOffset.roundToInt() else 0) }
+                            .offset {
+                                IntOffset(
+                                    0,
+                                    if (isDragging) draggingOffset.roundToInt() else 0
+                                )
+                            }
                             .shadow(elevation)
                             .background(if (isDragging) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.surface)
                             .pointerInput(path) {
@@ -244,7 +252,9 @@ fun NavigationPane(
 
                                         while (true) {
                                             val event = awaitPointerEvent()
-                                            val move = event.changes.firstOrNull { it.id == pointerId } ?: break
+                                            val move =
+                                                event.changes.firstOrNull { it.id == pointerId }
+                                                    ?: break
                                             if (!move.pressed) break
                                             distance += (move.position - down.position).getDistance()
                                             if (distance > 5f) {
@@ -261,16 +271,23 @@ fun NavigationPane(
                                                 val changeOffset = change.positionChange()
                                                 draggingOffset += changeOffset.y
 
-                                                val currentIndex = appState.appConfigs.favoritePaths.indexOf(path)
+                                                val currentIndex =
+                                                    appState.appConfigs.favoritePaths.indexOf(path)
                                                 if (currentIndex != -1) {
                                                     val itemHeight = 40.dp.toPx()
                                                     val threshold = itemHeight * 0.6f
 
                                                     if (draggingOffset > threshold && currentIndex < appState.appConfigs.favoritePaths.size - 1) {
-                                                        appState.appConfigs.moveFavorite(currentIndex, currentIndex + 1)
+                                                        appState.appConfigs.moveFavorite(
+                                                            currentIndex,
+                                                            currentIndex + 1
+                                                        )
                                                         draggingOffset -= itemHeight
                                                     } else if (draggingOffset < -threshold && currentIndex > 0) {
-                                                        appState.appConfigs.moveFavorite(currentIndex, currentIndex - 1)
+                                                        appState.appConfigs.moveFavorite(
+                                                            currentIndex,
+                                                            currentIndex - 1
+                                                        )
                                                         draggingOffset += itemHeight
                                                     }
                                                 }
@@ -315,7 +332,12 @@ fun NavigationPane(
                             .fillMaxWidth()
                             .then(if (isDragging) Modifier else Modifier.animateItem())
                             .zIndex(if (isDragging) 1f else 0f)
-                            .offset { IntOffset(0, if (isDragging) draggingOffset.roundToInt() else 0) }
+                            .offset {
+                                IntOffset(
+                                    0,
+                                    if (isDragging) draggingOffset.roundToInt() else 0
+                                )
+                            }
                             .shadow(elevation)
                             .background(if (isDragging) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.surface)
                             .pointerInput(id) {
@@ -332,7 +354,9 @@ fun NavigationPane(
 
                                         while (true) {
                                             val event = awaitPointerEvent()
-                                            val move = event.changes.firstOrNull { it.id == pointerId } ?: break
+                                            val move =
+                                                event.changes.firstOrNull { it.id == pointerId }
+                                                    ?: break
                                             if (!move.pressed) break
                                             distance += (move.position - down.position).getDistance()
                                             if (distance > 5f) {
@@ -349,16 +373,23 @@ fun NavigationPane(
                                                 val changeOffset = change.positionChange()
                                                 draggingOffset += changeOffset.y
 
-                                                val currentIndex = appState.appConfigs.libraryOrder.indexOf(id)
+                                                val currentIndex =
+                                                    appState.appConfigs.libraryOrder.indexOf(id)
                                                 if (currentIndex != -1) {
                                                     val itemHeight = 40.dp.toPx()
                                                     val threshold = itemHeight * 0.6f
 
                                                     if (draggingOffset > threshold && currentIndex < appState.appConfigs.libraryOrder.size - 1) {
-                                                        appState.appConfigs.moveLibraryItem(currentIndex, currentIndex + 1)
+                                                        appState.appConfigs.moveLibraryItem(
+                                                            currentIndex,
+                                                            currentIndex + 1
+                                                        )
                                                         draggingOffset -= itemHeight
                                                     } else if (draggingOffset < -threshold && currentIndex > 0) {
-                                                        appState.appConfigs.moveLibraryItem(currentIndex, currentIndex - 1)
+                                                        appState.appConfigs.moveLibraryItem(
+                                                            currentIndex,
+                                                            currentIndex - 1
+                                                        )
                                                         draggingOffset += itemHeight
                                                     }
                                                 }
@@ -591,7 +622,7 @@ private fun NavContextMenu(
         if (onRemove != null) {
             HorizontalDivider()
             DropdownMenuItem(
-                text = { Text(if (path != null) stringResource(R.string.menu_remove_favorites) else "Remove") },
+                text = { Text(if (path != null) stringResource(R.string.menu_remove_favorites) else stringResource(R.string.menu_remove)) },
                 onClick = {
                     onDismissRequest()
                     onRemove()
@@ -641,10 +672,12 @@ private fun NavItem(
             selected = false,
             onClick = onClick,
             icon = { Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.secondary) },
-            modifier = Modifier.height(40.dp).contextMenuDetector(enableLongPress = true, aggressive = true) { offset ->
-                menuOffset = with(density) { DpOffset(offset.x.toDp(), offset.y.toDp()) }
-                expanded = true
-            },
+            modifier = Modifier
+                .height(40.dp)
+                .contextMenuDetector(enableLongPress = true, aggressive = true) { offset ->
+                    menuOffset = with(density) { DpOffset(offset.x.toDp(), offset.y.toDp()) }
+                    expanded = true
+                },
             shape = MaterialTheme.shapes.small
         )
 
@@ -841,7 +874,7 @@ private fun NavStorageItem(
                         ) {
                             Icon(
                                 imageVector = if (expandedTree) Icons.Default.KeyboardArrowDown else Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                                contentDescription = if (expandedTree) "Collapse" else "Expand",
+                                contentDescription = if (expandedTree) stringResource(R.string.nav_collapse) else stringResource(R.string.nav_expand),
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
@@ -915,7 +948,7 @@ private fun StorageFolderTreeItem(
             ) {
                 Icon(
                     imageVector = if (expanded) Icons.Default.KeyboardArrowDown else Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                    contentDescription = if (expanded) "Collapse" else "Expand",
+                    contentDescription = if (expanded) stringResource(R.string.nav_collapse) else stringResource(R.string.nav_expand),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }

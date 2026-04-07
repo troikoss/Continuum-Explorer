@@ -6,8 +6,11 @@ import android.net.Uri
 import android.os.ParcelFileDescriptor
 import android.provider.OpenableColumns
 import android.widget.Toast
+import com.troikoss.continuum_explorer.R
 import com.troikoss.continuum_explorer.managers.ArchiveSettings
+import com.troikoss.continuum_explorer.managers.CollisionResult
 import com.troikoss.continuum_explorer.managers.FileOperationsManager
+import com.troikoss.continuum_explorer.managers.OperationType
 import com.troikoss.continuum_explorer.ui.activities.PopUpActivity
 import com.troikoss.continuum_explorer.model.UniversalFile
 import java.io.File
@@ -157,6 +160,12 @@ object ZipUtils {
             }
         }
         return list
+    }
+
+    private fun getEntryName(path: String): String {
+        val cleanPath = path.replace('\\', '/').removeSuffix("/")
+        val lastSlash = cleanPath.lastIndexOf('/')
+        return if (lastSlash == -1) cleanPath else cleanPath.substring(lastSlash + 1)
     }
 
     private suspend fun getZipEntriesUri(context: Context, uri: Uri): List<RawEntry> {
@@ -309,7 +318,8 @@ object ZipUtils {
     ) = withContext(Dispatchers.IO) {
         withContext(Dispatchers.Main) {
             FileOperationsManager.start()
-            FileOperationsManager.statusMessage.value = if (archives.size == 1) "Extracting ${archives[0].name}..." else "Extracting ${archives.size} archives..."
+            FileOperationsManager.currentOperationType.value = OperationType.EXTRACT
+            FileOperationsManager.currentProcessedItems.intValue = archives.size
         }
 
         try {
@@ -367,12 +377,32 @@ object ZipUtils {
 
                 for (entry in zip4jFile.fileHeaders) {
                     if (FileOperationsManager.isCancelled.value) break
-                    val outFile = File(destDir, entry.fileName.replace('\\', '/'))
+                    var outFile = File(destDir, entry.fileName.replace('\\', '/'))
                     
                     if (entry.isDirectory) {
                         outFile.mkdirs()
                     } else {
                         outFile.parentFile?.mkdirs()
+
+                        if (outFile.exists()) {
+                            val result = FileOperationsManager.resolveCollision(outFile.name)
+                            when (result) {
+                                CollisionResult.CANCEL -> {
+                                    FileOperationsManager.cancel()
+                                    break
+                                }
+                                CollisionResult.REPLACE -> {
+                                    outFile.delete()
+                                }
+                                CollisionResult.KEEP_BOTH -> {
+                                    val parent = outFile.parentFile ?: destDir
+                                    val newName = getUniqueName(outFile.name) { File(parent, it).exists() }
+                                    outFile = File(parent, newName)
+                                }
+                            }
+                        }
+                        if (FileOperationsManager.isCancelled.value) break
+
                         try {
                             zip4jFile.getInputStream(entry).use { input ->
                                 FileOutputStream(outFile).use { output ->
@@ -401,7 +431,7 @@ object ZipUtils {
                                                     totalBytes = totalBytes,
                                                     speed = currentSpeed,
                                                     remainingMillis = timeRemaining,
-                                                    fileName = entry.fileName
+                                                    fileName = getEntryName(entry.fileName)
                                                 )
                                             }
                                             lastUpdateTime = now
@@ -438,11 +468,30 @@ object ZipUtils {
     ) = withContext(Dispatchers.IO) {
         withContext(Dispatchers.Main) {
             FileOperationsManager.start()
-            FileOperationsManager.statusMessage.value = "Compressing ${settings.archiveName}..."
+            FileOperationsManager.currentOperationType.value = OperationType.COMPRESS
+            FileOperationsManager.currentFileName.value = settings.archiveName
+            FileOperationsManager.currentProcessedItems.intValue = filesToCompress.size
         }
         
         try {
-            val destFile = File(destFolder, settings.archiveName)
+            var destFile = File(destFolder, settings.archiveName)
+            if (destFile.exists()) {
+                val result = FileOperationsManager.resolveCollision(destFile.name)
+                when (result) {
+                    CollisionResult.CANCEL -> {
+                        FileOperationsManager.finish()
+                        return@withContext
+                    }
+                    CollisionResult.REPLACE -> {
+                        destFile.delete()
+                    }
+                    CollisionResult.KEEP_BOTH -> {
+                        val newName = getUniqueName(destFile.name) { File(destFolder, it).exists() }
+                        destFile = File(destFolder, newName)
+                    }
+                }
+            }
+
             val zipParameters = ZipParameters()
             zipParameters.compressionMethod = settings.compressionMethod
             zipParameters.compressionLevel = settings.compressionLevel
@@ -476,19 +525,19 @@ object ZipUtils {
             
             if (filesToAdd.isNotEmpty() && !FileOperationsManager.isCancelled.value) {
                 zipFile.addFiles(filesToAdd, zipParameters)
-                monitorProgress(progressMonitor)
+                monitorProgress(progressMonitor, context)
             }
             
             for (folder in foldersToAdd) {
                 if (FileOperationsManager.isCancelled.value) break
                 zipFile.addFolder(folder, zipParameters)
-                monitorProgress(progressMonitor)
+                monitorProgress(progressMonitor, context)
             }
             
         } catch (e: Exception) {
             e.printStackTrace()
             withContext(Dispatchers.Main) {
-                Toast.makeText(context, "Compression failed: ${e.message}", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, context.getString(R.string.msg_compression_failed, e.message), Toast.LENGTH_SHORT).show()
             }
         } finally {
             withContext(Dispatchers.Main) {
@@ -497,7 +546,7 @@ object ZipUtils {
         }
     }
 
-    private suspend fun monitorProgress(progressMonitor: net.lingala.zip4j.progress.ProgressMonitor) {
+    private suspend fun monitorProgress(progressMonitor: net.lingala.zip4j.progress.ProgressMonitor, context: Context) {
         var lastUpdateTime = System.currentTimeMillis()
         val speedWindow = ArrayDeque<Pair<Long, Long>>()
         speedWindow.add(lastUpdateTime to 0L)
@@ -531,7 +580,7 @@ object ZipUtils {
                         totalBytes = total,
                         speed = currentSpeed,
                         remainingMillis = timeRemaining,
-                        fileName = progressMonitor.fileName ?: "File"
+                        fileName = getEntryName(progressMonitor.fileName ?: context.getString(R.string.file))
                     )
                 }
                 lastUpdateTime = now
@@ -542,7 +591,7 @@ object ZipUtils {
         
         // Final check to catch exceptions
         if (progressMonitor.result == net.lingala.zip4j.progress.ProgressMonitor.Result.ERROR) {
-            throw progressMonitor.exception ?: Exception("Unknown compression error")
+            throw progressMonitor.exception ?: Exception(context.getString(R.string.msg_unknown_compression_error))
         }
     }
 }

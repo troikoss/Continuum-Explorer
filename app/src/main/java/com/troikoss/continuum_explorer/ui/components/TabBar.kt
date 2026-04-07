@@ -17,25 +17,20 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Outline
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.PointerType
 import androidx.compose.ui.input.pointer.isTertiaryPressed
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.Density
-import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.troikoss.continuum_explorer.model.UniversalFile
 import com.troikoss.continuum_explorer.utils.FileExplorerState
 import com.troikoss.continuum_explorer.utils.IconHelper
+import com.troikoss.continuum_explorer.R
 import kotlinx.coroutines.launch
 
 /**
@@ -142,7 +137,7 @@ fun TabBar(
                 ) {
                     Icon(
                         Icons.Default.Add,
-                        contentDescription = "New Tab",
+                        contentDescription = stringResource(R.string.new_tab),
                         tint = Color.LightGray,
                         modifier = Modifier.size(20.dp)
                     )
@@ -209,7 +204,7 @@ private fun TabItem(
             Spacer(Modifier.width(8.dp))
             Icon(
                 imageVector = Icons.Default.Close,
-                contentDescription = "Close Tab",
+                contentDescription = stringResource(R.string.close),
                 modifier = Modifier
                     .size(14.dp)
 

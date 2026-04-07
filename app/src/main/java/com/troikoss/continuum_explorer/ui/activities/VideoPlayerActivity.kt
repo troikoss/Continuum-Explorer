@@ -1,6 +1,7 @@
 package com.troikoss.continuum_explorer.ui.activities
 
 import android.annotation.SuppressLint
+import android.app.Activity
 import android.graphics.Bitmap
 import android.media.MediaMetadataRetriever
 import android.net.Uri
@@ -28,7 +29,6 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.FastForward
 import androidx.compose.material.icons.filled.Forward10
 import androidx.compose.material.icons.filled.Fullscreen
-import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.PauseCircle
 import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.material.icons.filled.Repeat
@@ -65,7 +65,6 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -75,7 +74,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
@@ -87,6 +85,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.isCtrlPressed
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
@@ -95,8 +94,9 @@ import androidx.compose.ui.input.pointer.PointerType
 import androidx.compose.ui.input.pointer.isPrimaryPressed
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -133,12 +133,12 @@ data class TrackOption(
 
 /** All supported aspect-ratio resize modes with display names. */
 @androidx.media3.common.util.UnstableApi
-enum class ResizeMode(val label: String, val value: Int) {
-    FIT("Fit (default)", AspectRatioFrameLayout.RESIZE_MODE_FIT),
-    FILL("Fill screen", AspectRatioFrameLayout.RESIZE_MODE_FILL),
-    ZOOM("Zoom (crop)", AspectRatioFrameLayout.RESIZE_MODE_ZOOM),
-    FIXED_WIDTH("Fixed width", AspectRatioFrameLayout.RESIZE_MODE_FIXED_WIDTH),
-    FIXED_HEIGHT("Fixed height", AspectRatioFrameLayout.RESIZE_MODE_FIXED_HEIGHT),
+enum class ResizeMode(val labelRes: Int, val value: Int) {
+    FIT(R.string.video_fit, AspectRatioFrameLayout.RESIZE_MODE_FIT),
+    FILL(R.string.video_fill, AspectRatioFrameLayout.RESIZE_MODE_FILL),
+    ZOOM(R.string.video_zoom, AspectRatioFrameLayout.RESIZE_MODE_ZOOM),
+    FIXED_WIDTH(R.string.video_fixed_w, AspectRatioFrameLayout.RESIZE_MODE_FIXED_WIDTH),
+    FIXED_HEIGHT(R.string.video_fixed_h, AspectRatioFrameLayout.RESIZE_MODE_FIXED_HEIGHT),
 }
 
 
@@ -173,6 +173,8 @@ fun VideoPlayerScreen(
     onToggleFullscreen: () -> Unit
 ) {
     val context = LocalContext.current
+    val resources = LocalResources.current
+    val activity = (LocalView.current.context as? Activity)
     val focusRequester = remember { FocusRequester() }
 
     val exoPlayer = remember { ExoPlayer.Builder(context).build() }
@@ -237,7 +239,7 @@ fun VideoPlayerScreen(
                 val label = when {
                     fmt.label    != null -> fmt.label!!
                     lang.isNotEmpty()    -> lang
-                    else                 -> "Audio track ${gi + 1}"
+                    else                 -> resources.getString(R.string.video_audio_track, gi + 1)
                 }
                 // A track group is selected when the player actually rendered it
                 TrackOption(label, gi, 0, group.isSelected)
@@ -251,7 +253,7 @@ fun VideoPlayerScreen(
                 val label = when {
                     fmt.label    != null -> fmt.label!!
                     lang.isNotEmpty()    -> lang
-                    else                 -> "Subtitle track ${gi + 1}"
+                    else                 -> resources.getString(R.string.video_subtitle_track, gi + 1)
                 }
                 TrackOption(label, gi, 0, group.isSelected)
             }
@@ -324,8 +326,8 @@ fun VideoPlayerScreen(
     }
 
     // ── Auto-hide UI ────────────────────────────────────────────────────────
-    LaunchedEffect(isUiVisible, hideTimerTrigger, isPlaying, isHoveringControls) {
-        if (isUiVisible && isPlaying && !isHoveringControls) {
+    LaunchedEffect(isUiVisible, hideTimerTrigger, isPlaying, isHoveringControls, optionsMenuExpanded) {
+        if (isUiVisible && isPlaying && !isHoveringControls && !optionsMenuExpanded) {
             delay(3000)
             isUiVisible = false
         }
@@ -409,7 +411,8 @@ fun VideoPlayerScreen(
                     onShowSkipForwardIndicator = { showSkipForwardIndicator = true },
                     onShowPauseIndicator  = { showPauseIndicator  = true },
                     onShowPlayIndicator   = { showPlayIndicator   = true },
-                    onShowUi = { isUiVisible = true; hideTimerTrigger++ }
+                    onShowUi = { isUiVisible = true; hideTimerTrigger++ },
+                    activity = activity
                 )
         ) {
 
@@ -631,14 +634,14 @@ fun VideoPlayerScreen(
 
                         // Previous
                         IconButton(onClick = { if (hasPrev) exoPlayer.seekToPreviousMediaItem() }) {
-                            Icon(Icons.Default.SkipPrevious, "Previous",
+                            Icon(Icons.Default.SkipPrevious, stringResource(R.string.media_previous),
                                 tint = if (hasPrev) Color.White else Color.Gray,
                                 modifier = Modifier.size(48.dp))
                         }
 
                         // Next
                         IconButton(onClick = { if (hasNext) exoPlayer.seekToNextMediaItem() }) {
-                            Icon(Icons.Default.SkipNext, "Next",
+                            Icon(Icons.Default.SkipNext, stringResource(R.string.media_next),
                                 tint = if (hasNext) Color.White else Color.Gray,
                                 modifier = Modifier.size(48.dp))
                         }
@@ -654,7 +657,7 @@ fun VideoPlayerScreen(
                                     volume < 0.5f -> Icons.AutoMirrored.Filled.VolumeDown
                                     else          -> Icons.AutoMirrored.Filled.VolumeUp
                                 },
-                                contentDescription = "Volume",
+                                contentDescription = stringResource(R.string.video_volume),
                                 tint = Color.White,
                                 modifier = Modifier.size(24.dp)
                             )
@@ -694,7 +697,7 @@ fun VideoPlayerScreen(
 
                         // Loop indicator
                         if (loopEnabled) {
-                            Icon(Icons.Default.Repeat, "Loop",
+                            Icon(Icons.Default.Repeat, stringResource(R.string.video_loop),
                                 tint     = Color.Red,
                                 modifier = Modifier
                                     .size(20.dp)
@@ -794,7 +797,7 @@ fun VideoPlayerScreen(
                                             text = { Text(stringResource(R.string.menu_aspect_ratio)) },
                                             trailingIcon = {
                                                 Row {
-                                                    Text(resizeMode.label, color = Color.Gray)
+                                                    Text(stringResource(resizeMode.labelRes), color = Color.Gray)
                                                     Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null)
                                                 }
                                             },
@@ -807,7 +810,7 @@ fun VideoPlayerScreen(
                                         DropdownMenuItem(
                                             leadingIcon  = { Icon(Icons.Default.Repeat, null,
                                                 tint = if (loopEnabled) Color.Red else Color.Gray) },
-                                            text = { Text(if (loopEnabled) "Loop: On" else "Loop: Off") },
+                                            text = { Text(if (loopEnabled) stringResource(R.string.video_loop_on) else stringResource(R.string.video_loop_off)) },
                                             trailingIcon = {
                                                 if (loopEnabled) Icon(Icons.Default.Check, null)
                                             },
@@ -823,7 +826,7 @@ fun VideoPlayerScreen(
                                         // Back
                                         DropdownMenuItem(
                                             leadingIcon = { Icon(Icons.AutoMirrored.Filled.ArrowBack, null) },
-                                            text = { Text("Back") },
+                                            text = { Text(stringResource(R.string.back)) },
                                             onClick = { optionsScreen = "MAIN" }
                                         )
                                         HorizontalDivider()
@@ -832,7 +835,7 @@ fun VideoPlayerScreen(
                                         speeds.forEach { speed ->
                                             DropdownMenuItem(
                                                 text = {
-                                                    Text(if (speed == 1f) "Normal (1×)" else "${speed}×")
+                                                    Text(if (speed == 1f) stringResource(R.string.video_speed_normal) else "${speed}×")
                                                 },
                                                 trailingIcon = {
                                                     if (playbackSpeed == speed) Icon(Icons.Default.Check, null)
@@ -849,14 +852,14 @@ fun VideoPlayerScreen(
                                     "AUDIO" -> {
                                         DropdownMenuItem(
                                             leadingIcon = { Icon(Icons.AutoMirrored.Filled.ArrowBack, null) },
-                                            text = { Text("Back") },
+                                            text = { Text(stringResource(R.string.back)) },
                                             onClick = { optionsScreen = "MAIN" }
                                         )
                                         HorizontalDivider()
 
                                         if (audioTracks.isEmpty()) {
                                             DropdownMenuItem(
-                                                text    = { Text("No audio tracks found") },
+                                                text    = { Text(stringResource(R.string.video_no_audio_tracks)) },
                                                 enabled = false,
                                                 onClick = {}
                                             )
@@ -894,7 +897,7 @@ fun VideoPlayerScreen(
                                     "SUBTITLES" -> {
                                         DropdownMenuItem(
                                             leadingIcon = { Icon(Icons.AutoMirrored.Filled.ArrowBack, null) },
-                                            text = { Text("Back") },
+                                            text = { Text(stringResource(R.string.back)) },
                                             onClick = { optionsScreen = "MAIN" }
                                         )
                                         HorizontalDivider()
@@ -902,7 +905,7 @@ fun VideoPlayerScreen(
                                         // "Off" option — disable all text tracks
                                         val subtitlesOff = subtitleTracks.none { it.isSelected }
                                         DropdownMenuItem(
-                                            text = { Text("Off") },
+                                            text = { Text(stringResource(R.string.off)) },
                                             trailingIcon = {
                                                 if (subtitlesOff) Icon(Icons.Default.Check, null)
                                             },
@@ -949,14 +952,14 @@ fun VideoPlayerScreen(
                                     "ASPECT" -> {
                                         DropdownMenuItem(
                                             leadingIcon = { Icon(Icons.AutoMirrored.Filled.ArrowBack, null) },
-                                            text = { Text("Back") },
+                                            text = { Text(stringResource(R.string.back)) },
                                             onClick = { optionsScreen = "MAIN" }
                                         )
                                         HorizontalDivider()
 
                                         ResizeMode.entries.forEach { mode ->
                                             DropdownMenuItem(
-                                                text = { Text(mode.label) },
+                                                text = { Text(stringResource(mode.labelRes)) },
                                                 trailingIcon = {
                                                     if (resizeMode == mode) Icon(Icons.Default.Check, null)
                                                 },
@@ -1125,7 +1128,8 @@ fun Modifier.videoKeyboardControls(
     onShowSkipForwardIndicator: () -> Unit,
     onShowPauseIndicator: () -> Unit,
     onShowPlayIndicator: () -> Unit,
-    onShowUi: () -> Unit
+    onShowUi: () -> Unit,
+    activity: Activity?
 ): Modifier = this.onKeyEvent { keyEvent ->
     if (keyEvent.type != KeyEventType.KeyDown) return@onKeyEvent false
     when (keyEvent.key) {
@@ -1155,6 +1159,12 @@ fun Modifier.videoKeyboardControls(
         }
         Key.F -> { onToggleFullscreen(); true }
         Key.M -> { onVolumeChange(if (volume > 0f) 0f else 1f); true }
+        Key.W -> {
+            if (keyEvent.isCtrlPressed) {
+                activity?.finish()
+                true
+            } else false
+        }
         else  -> false
     }
 }

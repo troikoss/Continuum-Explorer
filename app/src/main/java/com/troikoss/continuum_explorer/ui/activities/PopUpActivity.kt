@@ -28,10 +28,10 @@ import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
@@ -50,6 +50,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
@@ -137,6 +138,7 @@ fun PropertiesContent(onClose: () -> Unit) {
     }
 
     val context = LocalContext.current
+    val resources = LocalResources.current
     val focusRequester = remember { FocusRequester() }
 
     LaunchedEffect(Unit) {
@@ -158,7 +160,7 @@ fun PropertiesContent(onClose: () -> Unit) {
 
         if (targets.size == 1) {
             val file = targets.first()
-            val fileType = remember(file) { getFileType(file) }
+            val fileType = remember(file) { getFileType(file, context) }
             val formatter = remember { SimpleDateFormat("MMM dd, yyyy HH:mm:ss", Locale.getDefault()) }
             val formattedDate = remember(file.lastModified) { formatter.format(file.lastModified) }
 
@@ -186,7 +188,7 @@ fun PropertiesContent(onClose: () -> Unit) {
                     calculatedSizeOnDisk = ((file.length + 4095L) / 4096L) * 4096L
                 }
 
-                if (fileType == "Image") {
+                if (fileType == resources.getString(R.string.image)) {
                     isLoadingExtra = true
                     withContext(Dispatchers.IO) {
                         val res = getImageResolution(context, file)
@@ -195,7 +197,7 @@ fun PropertiesContent(onClose: () -> Unit) {
                             isLoadingExtra = false
                         }
                     }
-                } else if (fileType == "Video") {
+                } else if (fileType == resources.getString(R.string.video)) {
                     isLoadingExtra = true
                     withContext(Dispatchers.IO) {
                         val res = getVideoResolution(context, file)
@@ -206,7 +208,7 @@ fun PropertiesContent(onClose: () -> Unit) {
                             isLoadingExtra = false
                         }
                     }
-                } else if (fileType == "Audio") {
+                } else if (fileType == resources.getString(R.string.audio)) {
                      isLoadingExtra = true
                      withContext(Dispatchers.IO) {
                          val duration = getMediaDuration(context, file)
@@ -533,13 +535,13 @@ fun ArchiveOptionsContent(onClose: () -> Unit) {
                 readOnly = true,
                 label = { Text(stringResource(R.string.archive_comp_method)) },
                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expCompMethod) },
-                modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable).fillMaxWidth()
+                modifier = Modifier.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable).fillMaxWidth()
             )
             ExposedDropdownMenu(
                 expanded = expCompMethod,
                 onDismissRequest = { expCompMethod = false }
             ) {
-                CompressionMethod.values().forEach { method ->
+                CompressionMethod.entries.forEach { method ->
                     DropdownMenuItem(
                         text = { Text(method.name) },
                         onClick = {
@@ -566,13 +568,13 @@ fun ArchiveOptionsContent(onClose: () -> Unit) {
                 enabled = compressionMethod == CompressionMethod.DEFLATE,
                 label = { Text(stringResource(R.string.archive_comp_level)) },
                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expCompLevel) },
-                modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable).fillMaxWidth()
+                modifier = Modifier.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable).fillMaxWidth()
             )
             ExposedDropdownMenu(
                 expanded = expCompLevel,
                 onDismissRequest = { expCompLevel = false }
             ) {
-                CompressionLevel.values().forEach { level ->
+                CompressionLevel.entries.forEach { level ->
                     DropdownMenuItem(
                         text = { Text(level.name) },
                         onClick = {
@@ -598,13 +600,13 @@ fun ArchiveOptionsContent(onClose: () -> Unit) {
                 readOnly = true,
                 label = { Text(stringResource(R.string.archive_enc_method)) },
                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expEncMethod) },
-                modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable).fillMaxWidth()
+                modifier = Modifier.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable).fillMaxWidth()
             )
             ExposedDropdownMenu(
                 expanded = expEncMethod,
                 onDismissRequest = { expEncMethod = false }
             ) {
-                EncryptionMethod.values().forEach { method ->
+                EncryptionMethod.entries.forEach { method ->
                     DropdownMenuItem(
                         text = { Text(method.name) },
                         onClick = {
@@ -959,10 +961,10 @@ fun DeletePermanentConfirmContent() {
 @Composable
 fun ProgressContent (onClose: () -> Unit) {
     val context = LocalContext.current
+    val resources = LocalResources.current
     val progress = FileOperationsManager.progress.floatValue
-    val message = FileOperationsManager.statusMessage.value
     val isRunning = FileOperationsManager.isOperating.value
-    val currentFileName = FileOperationsManager.currentFileName.value
+    val currentFileName = FileOperationsManager.currentFileName.value ?: ""
     val itemsTotal = FileOperationsManager.itemsTotal.intValue
     val itemsProcessed = FileOperationsManager.itemsProcessed.intValue
     val totalSize = FileOperationsManager.totalSize.longValue
@@ -978,11 +980,11 @@ fun ProgressContent (onClose: () -> Unit) {
     }
     
     val timeString = remember(timeRemainingMillis, isRunning) {
-        if (!isRunning) context.getString(R.string.done)
-        else if (timeRemainingMillis <= 0) context.getString(R.string.calculating)
+        if (!isRunning) resources.getString(R.string.done)
+        else if (timeRemainingMillis <= 0) resources.getString(R.string.calculating)
         else {
             val seconds = timeRemainingMillis / 1000
-            if (seconds > 60) context.getString(R.string.op_min_remaining, seconds / 60) else context.getString(R.string.op_sec_remaining, seconds)
+            if (seconds > 60) resources.getString(R.string.op_min_remaining, seconds / 60) else resources.getString(R.string.op_sec_remaining, seconds)
         }
     }
 
@@ -993,18 +995,9 @@ fun ProgressContent (onClose: () -> Unit) {
             onClose() 
         } 
     }
-    
-    val titleText = if (isRunning) {
-        if (message.startsWith("Deleting", ignoreCase = true)) stringResource(R.string.op_deleting)
-        else if (message.startsWith("Extracting", ignoreCase = true)) stringResource(R.string.op_extracting)
-        else if (message.startsWith("Compressing", ignoreCase = true)) stringResource(R.string.op_compressing)
-        else stringResource(R.string.op_processing)
-    } else stringResource(R.string.op_finished)
 
     Column(modifier = Modifier.padding(16.dp)) {
-        Text(text = titleText, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-        Spacer(modifier = Modifier.height(4.dp))
-        Text(text = message, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(text = FileOperationsManager.getTitleText(context), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
         Spacer(modifier = Modifier.height(16.dp))
         Box(modifier = Modifier.fillMaxWidth().height(18.dp).clip(MaterialTheme.shapes.small).background(MaterialTheme.colorScheme.surfaceVariant)) {
             Box(modifier = Modifier.fillMaxWidth(progress).fillMaxHeight().background(MaterialTheme.colorScheme.primary))
@@ -1015,7 +1008,7 @@ fun ProgressContent (onClose: () -> Unit) {
         DetailRow(label = stringResource(R.string.prop_name), value = currentFileName)
         DetailRow(label = stringResource(R.string.op_time_remaining), value = timeString)
         DetailRow(label = stringResource(R.string.op_items_remaining), value = "$itemsRemaining ($sizeRemainingString)")
-        DetailRow(label = stringResource(R.string.op_speed), value = "${Formatter.formatFileSize(context, speedBytesPerSec)}/s")
+        DetailRow(label = stringResource(R.string.op_speed), value = "${Formatter.formatFileSize(context, speedBytesPerSec)}/${resources.getString(R.string.op_sec)}")
         Spacer(modifier = Modifier.height(16.dp))
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
             if (!isRunning) {
@@ -1044,11 +1037,12 @@ fun DetailRow(label: String, value: String) {
 private fun formatSizeWithBytes(context: Context, sizeInBytes: Long): String {
     val formattedSize = Formatter.formatFileSize(context, sizeInBytes)
     val exactBytes = NumberFormat.getInstance().format(sizeInBytes)
-    return "$formattedSize ($exactBytes bytes)"
+    return "$formattedSize ($exactBytes ${context.getString(R.string.prop_bytes)})"
 }
 
 // Helper to calculate actual space taken on the storage drive (using standard 4KB blocks)
 private fun calculateSizeOnDiskRecursively(file: UniversalFile): Long {
+
 
     if (!file.isDirectory) {
         val length = file.length

@@ -464,7 +464,7 @@ fun BackgroundContextMenu(
                 HorizontalDivider()
 
                 DropdownMenuItem(
-                    text = { Text(stringResource(R.string.menu_folder)) },
+                    text = { Text(stringResource(R.string.folder)) },
                     leadingIcon = { Icon(Icons.Default.Folder, null) },
                     onClick = {
                         appState.createNewFolder()

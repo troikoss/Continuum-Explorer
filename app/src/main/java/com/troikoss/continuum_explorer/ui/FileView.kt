@@ -17,6 +17,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
+import com.troikoss.continuum_explorer.managers.SettingsManager
 import com.troikoss.continuum_explorer.managers.selectionBackground
 import com.troikoss.continuum_explorer.model.*
 import com.troikoss.continuum_explorer.ui.components.ItemContextMenu
@@ -194,6 +195,7 @@ private fun FileContentView(
 ) {
     val formattedSize = remember(file) { appState.formatSize(file.length) }
     val formattedDate = remember(file)  { appState.formatDate(file.lastModified) }
+    val iconSelectionEnabled = SettingsManager.iconTouchSelection.value
 
     Column {
         ListItem(
@@ -212,7 +214,9 @@ private fun FileContentView(
                 FileThumbnail(
                     file = file,
                     tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary,
-                    modifier = Modifier.size(40.dp)
+                    modifier = Modifier
+                        .size(40.dp)
+                        .then(if (iconSelectionEnabled) Modifier.iconTouchToggle(file, appState.selectionManager) else Modifier)
                 )
             },
             colors = ListItemDefaults.colors(containerColor = Color.Transparent),
@@ -229,6 +233,8 @@ private fun FileDetailsView(
     appState: FileExplorerState,
     onOverflowChange: (Boolean) -> Unit
 ) {
+    val iconSelectionEnabled = SettingsManager.iconTouchSelection.value
+
     Column {
         Row(
             modifier = Modifier.fillMaxWidth().padding(8.dp),
@@ -236,7 +242,9 @@ private fun FileDetailsView(
         ) {
             FileThumbnail(
                 file = file,
-                modifier = Modifier.size(24.dp),
+                modifier = Modifier
+                    .size(24.dp)
+                    .then(if (iconSelectionEnabled) Modifier.iconTouchToggle(file, appState.selectionManager) else Modifier),
                 tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary
             )
             Spacer(Modifier.width(12.dp))

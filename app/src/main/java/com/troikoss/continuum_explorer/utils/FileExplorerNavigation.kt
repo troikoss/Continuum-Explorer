@@ -113,7 +113,7 @@ fun FileExplorerState.getLocationName(location: NavLocation): String {
         val inner = location.archivePath ?: ""
         if (inner.isEmpty()) base else "$base/${inner.removeSuffix("/")}"
     } else if (location.archiveUri != null) {
-        val base = context.getString(R.string.nav_archive)
+        val base = context.getString(R.string.archive)
         val inner = location.archivePath ?: ""
         if (inner.isEmpty()) base else "$base/${inner.removeSuffix("/")}"
     } else if (location.path != null) {

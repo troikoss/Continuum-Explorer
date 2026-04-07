@@ -51,6 +51,7 @@ fun SettingsScreen(onBack: () -> Unit) {
     val detailsMode = SettingsManager.detailsMode.value
     val isCommandBarVisible = SettingsManager.isCommandBarVisible.value
     val showHiddenFiles = SettingsManager.showHiddenFiles.value
+    val iconTouchSelection = SettingsManager.iconTouchSelection.value
 
     var showDeleteDialog by remember { mutableStateOf(false) }
     var showThemeDialog by remember { mutableStateOf(false) }
@@ -175,6 +176,17 @@ fun SettingsScreen(onBack: () -> Unit) {
                     Switch(
                         checked = isDefaultArchiveViewerEnabled,
                         onCheckedChange = { SettingsManager.setDefaultArchiveViewerEnabled(context, it) }
+                    )
+                }
+            )
+
+            ListItem(
+                headlineContent = { Text(stringResource(R.string.settings_icon_selection)) },
+                supportingContent = { Text(stringResource(R.string.settings_icon_selection_desc)) },
+                trailingContent = {
+                    Switch(
+                        checked = iconTouchSelection,
+                        onCheckedChange = { SettingsManager.setIconTouchSelection(context, it) }
                     )
                 }
             )

@@ -55,7 +55,7 @@ object NotificationHelper {
     private fun createNotificationChannel(context: Context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val name = context.getString(R.string.settings_file_ops)
-            val descriptionText = "Progress of file operations"
+            val descriptionText = context.getString(R.string.notif_description)
             val importance = NotificationManager.IMPORTANCE_LOW
             val channel = NotificationChannel(CHANNEL_ID, name, importance).apply {
                 description = descriptionText
@@ -78,7 +78,6 @@ object NotificationHelper {
         val isRunning = FileOperationsManager.isOperating.value
         val isCancelled = FileOperationsManager.isCancelled.value
         val progress = FileOperationsManager.progress.floatValue
-        val message = FileOperationsManager.statusMessage.value
         val fileName = FileOperationsManager.currentFileName.value
         
         // Detailed Stats
@@ -138,11 +137,11 @@ object NotificationHelper {
         val speedString = "${Formatter.formatFileSize(context, speedBytesPerSec)}/s"
         val timeString = when {
             timeRemainingMillis <= 0 -> context.getString(R.string.calculating)
-            timeRemainingMillis < 60000 -> "${timeRemainingMillis / 1000}s left"
-            else -> "${timeRemainingMillis / 60000}m left"
+            timeRemainingMillis < 60000 -> context.getString(R.string.op_sec_remaining, timeRemainingMillis / 1000)
+            else -> context.getString(R.string.op_min_remaining, timeRemainingMillis / 60000)
         }
 
-        val title = if (isCancelled) context.getString(R.string.msg_cancelling) else message
+        val title = if (isCancelled) context.getString(R.string.msg_cancelled) else FileOperationsManager.getTitleText(context)
         val contentText = "$speedString • $timeString"
         val progressInt = (progress * 100).toInt()
 

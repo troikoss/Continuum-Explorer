@@ -231,7 +231,7 @@ fun CommandBar(
                     
                     if (canUndo) {
                         CommandButton(
-                            text = stringResource(R.string.menu_undo).split(" ").first(),
+                            text = stringResource(R.string.menu_undo),
                             icon = Icons.AutoMirrored.Filled.Undo,
                             onClick = { appState.undo() }
                         )
@@ -239,7 +239,7 @@ fun CommandBar(
                     
                     if (canRedo) {
                         CommandButton(
-                            text = stringResource(R.string.menu_redo).split(" ").last(),
+                            text = stringResource(R.string.menu_redo),
                             icon = Icons.AutoMirrored.Filled.Redo,
                             onClick = { appState.redo() }
                         )
@@ -251,7 +251,7 @@ fun CommandBar(
                     // New Menu
                     CommandDropDown(text = stringResource(R.string.menu_new), icon = Icons.Default.Add) { onDismiss ->
                         DropdownMenuItem(
-                            text = { Text(stringResource(R.string.menu_folder)) },
+                            text = { Text(stringResource(R.string.folder)) },
                             leadingIcon = { Icon(Icons.Default.Folder, null) },
                             onClick = { appState.createNewFolder(); onDismiss() })
                         DropdownMenuItem(
@@ -348,7 +348,7 @@ fun CommandBar(
                     
                     if (canUndo) {
                         CommandButton(
-                            text = stringResource(R.string.menu_undo).split(" ").first(),
+                            text = stringResource(R.string.menu_undo),
                             icon = Icons.AutoMirrored.Filled.Undo,
                             onClick = { appState.undo() }
                         )
@@ -356,7 +356,7 @@ fun CommandBar(
                     
                     if (canRedo) {
                         CommandButton(
-                            text = stringResource(R.string.menu_redo).split(" ").last(),
+                            text = stringResource(R.string.menu_redo),
                             icon = Icons.AutoMirrored.Filled.Redo,
                             onClick = { appState.redo() }
                         )

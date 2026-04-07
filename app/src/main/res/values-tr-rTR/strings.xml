@@ -39,6 +39,7 @@
     <string name="prop_selected_count">%1$d seçili</string>
     <string name="prop_loading_metadata">Meta veri yükleniyor...</string>
     <string name="prop_total_size">Toplam Boyut:</string>
+    <string name="prop_bytes">bayt</string>
     <string name="details_item_count_singular">1 öğe</string>
     <string name="details_item_count_plural">%1$d öğe</string>
     <string name="details_date_modified">Değiştirilme Tarihi: %1$s</string>
@@ -124,9 +125,9 @@
     <string name="delete_permanent_message">%1$s kalıcı silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.</string>
     <string name="op_deleting">Öğeler siliniyor...</string>
     <string name="op_extracting">Arşiv çıkartılıyor...</string>
-    <string name="op_compressing">Arşiv oluşturuluyor...</string>
+    <string name="op_compressing">Öğeler sıkıştırılıyor...</string>
     <string name="op_processing">Öğeler işleniyor...</string>
-    <string name="op_finished">İşlem Bitti</string>
+    <string name="op_finished">Bitti</string>
     <string name="op_time_remaining">Geriye kalan zaman:</string>
     <string name="op_items_remaining">Geriye kalan öğeler:</string>
     <string name="op_speed">Hız:</string>
@@ -134,6 +135,21 @@
     <string name="op_min_remaining">Yaklaşık %1$d dk. kaldı</string>
     <string name="op_sec_remaining">Yaklaşık %1$d sn. kaldı</string>
     <string name="op_renaming">%1$s Yeniden adlandırılıyor...</string>
+    <string name="op_copying">1 öğe kopyalanıyor</string>
+    <string name="op_trashing">1 öğe Geri Dönüşüm Kutusuna taşınıyor</string>
+    <string name="op_extracting_an_archive">1 öğe çıkartılıyor</string>
+    <string name="op_extracting_archives">%1$d arşivden çıkartılıyor…</string>
+    <string name="op_compressing_an_item">1 öğe sıkıştırılıyor…</string>
+    <string name="op_compressing_items">%1$d öğe sıkıştırılıyor…</string>
+    <string name="op_copying_items">%1$d öğe kopyalanıyor…</string>
+    <string name="op_deleting_an_item">1 öğe siliniyor…</string>
+    <string name="op_deleting_items">%1$d öğe siliniyor…</string>
+    <string name="op_trashing_items">%1$d öğe Geri Dönüşüm Kutusuna taşınıyor…</string>
+    <string name="op_sec">sn</string>
+
+    <!-- Notifications -->
+    <string name="notif_description">Dosya işlemlerinin ilerleyişi</string>
+
     <string name="settings">Ayarlar</string>
     <string name="settings_appearance">Görünüm</string>
     <string name="settings_theme">Tema</string>
@@ -148,6 +164,8 @@
     <string name="settings_show_command_bar_desc">Adres çubuğunun altında, dosya işlem düğmelerinin bulunduğu araç çubuğu.</string>
     <string name="settings_show_hidden_files">Gizli dosya/klasörleri göster</string>
     <string name="settings_show_hidden_files_desc">Nokta ile başlayan dosya ve klasörleri göster.</string>
+    <string name="settings_icon_selection">Simge Seçimi Modu</string>
+    <string name="settings_icon_selection_desc">Dosya simgesine dokunarak seçimi aç/kapat.</string>
     <string name="settings_file_ops">Dosya İşlemleri</string>
     <string name="settings_deletion_behavior">Silme Davranışı</string>
     <string name="settings_del_ask">Her zaman sor</string>
@@ -164,6 +182,7 @@
     <string name="settings_language_english">İngilizce</string>
     <string name="settings_language_turkish">Türkçe</string>
     <string name="settings_language_french">Fransızca</string>
+    <string name="settings_language_portuguese">Portekizce</string>
     <string name="settings_language_spanish">İspanyolca</string>
     <string name="settings_choose_language">Dil Seç</string>
     <string name="menu_restore">Geri Yükle</string>
@@ -189,7 +208,7 @@
     <string name="menu_view">Görünüm</string>
     <string name="menu_empty_recycle_bin">Geri Dönüşüm Kutusunu Boşalt</string>
     <string name="menu_refresh">Yenile</string>
-    <string name="menu_folder">Klasör</string>
+    <string name="folder">Klasör</string>
     <string name="menu_text_document">Metin Belgesi</string>
     <string name="menu_by_name">Ada Göre</string>
     <string name="menu_by_date">Tarihe Göre</string>
@@ -229,10 +248,11 @@
     <string name="nav_sd_card">SD Kart</string>
     <string name="nav_external_location">Harici Konum</string>
     <string name="nav_unknown_folder">Bilinmeyen Klasör</string>
-    <string name="nav_archive">Arşiv</string>
+    <string name="archive">Arşiv</string>
     <string name="nav_collapse">Katla</string>
     <string name="nav_expand">Genişlet</string>
     <string name="nav_storage_usage_label">%2$s içinde %1$s boş</string>
+    <string name="file">Dosya</string>
     <string name="msg_preparing">Hazırlanıyor...</string>
     <string name="msg_starting">Başlatılıyor...</string>
     <string name="msg_cancelling">İptal ediliyor...</string>
@@ -259,6 +279,8 @@
     <string name="msg_op_completed">Dosya işlemi bitti.</string>
     <string name="msg_already_at_storage_root">Zaten depolama birimi kök dizinindesiniz</string>
     <string name="msg_already_at_saf_root">Zaten seçilen klasörün kök dizinindesiniz</string>
+    <string name="msg_empty_clipboard">Pano boş</string>
+    <string name="msg_compression_failed">Sıkıştırma başarısız oldu: %1$s</string>
     <string name="dialog_new_folder">Yeni Klasör</string>
     <string name="dialog_new_file">Yeni Metin Belgesi</string>
     <string name="dialog_rename">Yeniden adlandır</string>
@@ -266,10 +288,35 @@
     <string name="search_subfolders">Bütün alt klasörleri ara</string>
     <string name="search_kind">kind: (Dosya türü)</string>
     <string name="search_ext">*.ext (Uzantı)</string>
+    <string name="unknown_resolution">Bilinmeyen çözünürlük</string>
     <string name="video_playing">Oynatılıyor</string>
     <string name="video_paused">Duraklatıldı</string>
     <string name="details_header_name">Ad</string>
     <string name="details_header_size">Boyut</string>
     <string name="details_header_date">Tarih</string>
-    <string name="settings_language_portuguese">Portekizce</string>
+    <string name="msg_unknown_compression_error">Bilinmeyen sıkıştırma hatası</string>
+    <string name="video_loop_on">Döngü: Açık</string>
+    <string name="video_loop_off">Döngü: Kapalı</string>
+    <string name="video_speed_normal">Normal (1x)</string>
+    <string name="video_no_audio_tracks">Ses parçası bulunamadı</string>
+    <string name="off">Kapalı</string>
+    <string name="video_fit">Sığdır (Varsayılan)</string>
+    <string name="video_fill">Doldur</string>
+    <string name="video_zoom">Yakınlaştır (Kırp)</string>
+    <string name="video_fixed_w">Sabit genişlik</string>
+    <string name="video_fixed_h">Sabit yükseklik</string>
+    <string name="video_audio_track">Ses parçası $1%d</string>
+    <string name="video_subtitle_track">Altyazı parçası $1%d</string>
+    <string name="media_previous">Önceki</string>
+    <string name="media_next">Sonraki</string>
+    <string name="video_volume">Ses Seviyesi</string>
+    <string name="video_loop">Döngü</string>
+    <string name="media_viewed">Görüntülenen resim</string>
+    <string name="menu_set_wallpaper_failed">Duvar kağıdı ayarlanamadı</string>
+    <string name="share_image_failed">Resim paylaşılamadı</string>
+    <string name="media_thumbnail">Küçük resim</string>
+    <string name="image">Görsel</string>
+    <string name="video">Video</string>
+    <string name="audio">Ses</string>
+    <string name="document">Doküman</string>
 </resources>

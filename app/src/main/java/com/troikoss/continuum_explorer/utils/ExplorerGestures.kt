@@ -384,9 +384,14 @@ fun Modifier.containerGestures(
                 while (true) {
                     val event = awaitPointerEvent()
                     val isMouse = event.changes.any { it.type == PointerType.Mouse }
+                    val isTouch = event.changes.any { it.type == PointerType.Touch }
+                    val isStylus = event.changes.any { it.type == PointerType.Stylus }
                     val wasHandled = event.changes.any { it.isConsumed }
                     if (isMouse && event.type == PointerEventType.Press && !wasHandled && event.buttons.isPrimaryPressed) {
                         selectionManager.clear(true)
+                        focusRequester.requestFocus()
+                    }else if ((isTouch || isStylus) && event.type == PointerEventType.Press && !wasHandled) {
+                        selectionManager.clear(false)
                         focusRequester.requestFocus()
                     }
                 }
@@ -414,7 +419,11 @@ fun Modifier.itemGestures(
                 val isTouch = event.changes.any { it.type == PointerType.Touch }
                 val isStylus = event.changes.any { it.type == PointerType.Stylus }
 
-                if ((isTouch || isStylus) && event.type == PointerEventType.Press) {
+                val wasConsumed = event.changes.any { it.isConsumed }
+                if ((isTouch || isStylus) && event.type == PointerEventType.Press && !wasConsumed) {
+                    // Consume immediately so containerGestures knows a finger landed on an item
+                    // and doesn't clear selection via its own touch-press handler.
+                    event.changes.forEach { it.consume() }
                     val pointerId = event.changes[0].id
                     val longPress = awaitLongPressOrCancellation(pointerId)
                     if (longPress != null && !selectionManager.isInSelectionMode()) {
@@ -769,5 +778,27 @@ fun Modifier.trackPosition(
 ): Modifier = this.onGloballyPositioned { coordinates ->
     if (containerCoordinates != null && containerCoordinates.isAttached) {
         itemPositions[item] = containerCoordinates.localBoundingBoxOf(coordinates)
+    }
+}
+
+/**
+ * Detects touch/stylus taps on file icons to toggle selection.
+ * Consuming the event prevents the parent itemGestures from opening the file.
+ */
+fun Modifier.iconTouchToggle(
+    file: UniversalFile,
+    selectionManager: SelectionManager
+): Modifier = composed {
+    this.pointerInput(file, selectionManager) {
+        awaitPointerEventScope {
+            while (true) {
+                val event = awaitPointerEvent()
+                val isTouch = event.changes.any { it.type == PointerType.Touch || it.type == PointerType.Stylus }
+                if (isTouch && event.type == PointerEventType.Press) {
+                    selectionManager.touchToggle(file)
+                    event.changes.forEach { it.consume() }
+                }
+            }
+        }
     }
 }

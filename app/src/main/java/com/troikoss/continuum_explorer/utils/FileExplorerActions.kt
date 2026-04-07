@@ -7,6 +7,7 @@ import android.os.Environment
 import android.widget.Toast
 import com.troikoss.continuum_explorer.R
 import com.troikoss.continuum_explorer.managers.FileOperationsManager
+import com.troikoss.continuum_explorer.managers.OperationType
 import com.troikoss.continuum_explorer.managers.SettingsManager
 import com.troikoss.continuum_explorer.managers.UndoManager
 import com.troikoss.continuum_explorer.ui.activities.MainActivity
@@ -138,27 +139,48 @@ fun FileExplorerState.deleteSelection(forcePermanent: Boolean = false) {
 }
 
 fun FileExplorerState.restoreSelection() {
+    FileOperationsManager.start()
+    val intent = Intent(context, PopUpActivity::class.java).apply {
+        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    }
+    context.startActivity(intent)
+
     scope.launch {
         restoreFiles(context, selectionManager.selectedItems.toList())
         refresh()
         selectionManager.clear()
         GlobalEvents.triggerRefresh()
+        FileOperationsManager.finish()
     }
 }
 
 fun FileExplorerState.undo() {
+    FileOperationsManager.start()
+    val intent = Intent(context, PopUpActivity::class.java).apply {
+        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    }
+    context.startActivity(intent)
+
     scope.launch {
         UndoManager.undo()
         refresh()
         GlobalEvents.triggerRefresh()
+        FileOperationsManager.finish()
     }
 }
 
 fun FileExplorerState.redo() {
+    FileOperationsManager.start()
+    val intent = Intent(context, PopUpActivity::class.java).apply {
+        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    }
+    context.startActivity(intent)
+
     scope.launch {
         UndoManager.redo()
         refresh()
         GlobalEvents.triggerRefresh()
+        FileOperationsManager.finish()
     }
 }
 
@@ -190,7 +212,8 @@ fun FileExplorerState.compressSelection() {
     val selected = selectionManager.selectedItems.toList()
     if (selected.isEmpty()) return
     val targetFolder = currentPath ?: return
-    val defaultName = if (selected.size == 1) "${selected[0].name}.zip" else "Archive.zip"
+    val folderName = targetFolder.name.ifEmpty { context.getString(R.string.archive) }
+    val defaultName = if (selected.size == 1) "${selected[0].name}.zip" else "$folderName.zip"
 
     scope.launch {
         val intent = Intent(context, PopUpActivity::class.java).apply {
@@ -214,7 +237,7 @@ fun FileExplorerState.renameSelection() {
     val selected = selectionManager.selectedItems.toList()
     if (selected.size == 1) {
         val target = selected[0]
-        FileOperationsManager.openRename(target) { newName ->
+        FileOperationsManager.openRename(target, context) { newName ->
             confirmRename(target, newName)
         }
         val intent = Intent(context, PopUpActivity::class.java).apply {
@@ -230,7 +253,7 @@ fun FileExplorerState.renameSelection() {
 
 fun FileExplorerState.confirmRename(target: UniversalFile, newName: String) {
     FileOperationsManager.start()
-    FileOperationsManager.update(0, 1, context.getString(R.string.op_renaming, target.name))
+    FileOperationsManager.update(0, 1, operationType = OperationType.RENAME)
     FileOperationsManager.currentFileName.value = target.name
 
     val intent = Intent(context, PopUpActivity::class.java).apply {
@@ -257,7 +280,7 @@ fun FileExplorerState.confirmRename(target: UniversalFile, newName: String) {
 }
 
 fun FileExplorerState.createNewFolder() {
-    FileOperationsManager.openCreateFolder { name ->
+    FileOperationsManager.openCreateFolder(context) { name ->
         scope.launch {
             val success = createDirectory(context, currentPath, currentSafUri, name)
             withContext(Dispatchers.Main) {
@@ -279,7 +302,7 @@ fun FileExplorerState.createNewFolder() {
 }
 
 fun FileExplorerState.createNewFile() {
-    FileOperationsManager.openCreateFile { name ->
+    FileOperationsManager.openCreateFile(context) { name ->
         scope.launch {
             val success = createFile(context, currentPath, currentSafUri, name)
             withContext(Dispatchers.Main) {

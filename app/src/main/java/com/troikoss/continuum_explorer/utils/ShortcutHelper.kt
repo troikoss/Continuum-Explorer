@@ -26,7 +26,7 @@ object ShortcutHelper {
         // Android limits the number of shortcuts (usually 4-5 dynamic ones)
         val shortcuts = favoritePaths.take(4).map { path ->
             val file = File(path)
-            val name = file.name.ifEmpty { "Folder" }
+            val name = file.name.ifEmpty { context.getString(R.string.folder) }
             
             val intent = Intent(context, MainActivity::class.java).apply {
                 action = Intent.ACTION_VIEW
