@@ -252,7 +252,7 @@
     <string name="menu_undo">Deshacer</string>
     <string name="menu_redo">Rehacer</string>
     <string name="menu_set_wallpaper_failed">Error al establecer fondo</string>
-    <string name="share_image_failed">Error al compartir imagen</string>
+    <string name="media_share_image_failed">Error al compartir imagen</string>
 
     <!-- Navigation -->
     <string name="nav_library_items">Elementos de biblioteca</string>
@@ -317,24 +317,24 @@
     <string name="search_ext">*.ext (Extensión)</string>
 
     <!-- Image Viewer/ Video Player -->
-    <string name="video_playing">Reproduciendo</string>
-    <string name="video_paused">Pausado</string>
-    <string name="video_loop_on">Bucle: activado</string>
-    <string name="video_loop_off">Bucle: desactivado</string>
-    <string name="video_speed_normal">Normal (1x)</string>
-    <string name="video_no_audio_tracks">No se han encontrado pistas de audio</string>
+    <string name="media_playing">Reproduciendo</string>
+    <string name="media_paused">Pausado</string>
+    <string name="media_loop_on">Bucle: activado</string>
+    <string name="media_loop_off">Bucle: desactivado</string>
+    <string name="media_speed_normal">Normal (1x)</string>
+    <string name="media_no_audio_tracks">No se han encontrado pistas de audio</string>
     <string name="off">Desactivado</string>
-    <string name="video_fit">Ajustar (predeterminado)</string>
-    <string name="video_fill">Rellenar</string>
-    <string name="video_zoom">Zoom (recortar)</string>
-    <string name="video_fixed_w">Ancho fijo</string>
-    <string name="video_fixed_h">Alto fijo</string>
-    <string name="video_audio_track">Pista de audio $1%d</string>
-    <string name="video_subtitle_track">Pista de subtítulos $1%d</string>
-    <string name="media_previous">Anterior</string>
-    <string name="media_next">Siguiente</string>
-    <string name="video_volume">Volumen</string>
-    <string name="video_loop">Bucle</string>
+    <string name="media_fit">Ajustar (predeterminado)</string>
+    <string name="media_fill">Rellenar</string>
+    <string name="media_zoom">Zoom (recortar)</string>
+    <string name="media_fixed_w">Ancho fijo</string>
+    <string name="media_fixed_h">Alto fijo</string>
+    <string name="media_audio_track">Pista de audio $1%d</string>
+    <string name="media_subtitle_track">Pista de subtítulos $1%d</string>
+    <string name="previous">Anterior</string>
+    <string name="next">Siguiente</string>
+    <string name="media_volume">Volumen</string>
+    <string name="media_loop">Bucle</string>
     <string name="media_viewed">Imagen vista</string>
     <string name="media_thumbnail">Miniatura</string>
 

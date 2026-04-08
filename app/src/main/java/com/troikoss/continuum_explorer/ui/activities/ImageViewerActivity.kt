@@ -400,7 +400,7 @@ fun ImageViewerScreen(
                 if (currentIndex > 0 && scale == 1f) {
                     AsyncImage(
                         model = siblingImages[currentIndex - 1],
-                        contentDescription = stringResource(R.string.media_previous),
+                        contentDescription = stringResource(R.string.previous),
                         contentScale = ContentScale.Fit,
                         modifier = Modifier
                             .fillMaxSize()
@@ -431,7 +431,7 @@ fun ImageViewerScreen(
                 if (currentIndex < siblingImages.size - 1 && scale == 1f) {
                     AsyncImage(
                         model = siblingImages[currentIndex + 1],
-                        contentDescription = stringResource(R.string.media_next),
+                        contentDescription = stringResource(R.string.next),
                         contentScale = ContentScale.Fit,
                         modifier = Modifier
                             .fillMaxSize()
@@ -586,7 +586,7 @@ fun ImageViewerScreen(
                                     }
                                     context.startActivity(Intent.createChooser(shareIntent, resources.getString(R.string.msg_share_image_via)))
                                 } catch (e: Exception) {
-                                    Toast.makeText(context, resources.getString(R.string.share_image_failed), Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(context, resources.getString(R.string.media_share_image_failed), Toast.LENGTH_SHORT).show()
                                 }
                             }
                         }

@@ -323,33 +323,33 @@
 
     <!-- Image Viewer/ Video Player -->
     <string name="unknown_resolution">Résolution inconnue</string>
-    <string name="video_playing">Lecture en cours</string>
-    <string name="video_paused">En pause</string>
+    <string name="media_playing">Lecture en cours</string>
+    <string name="media_paused">En pause</string>
 
     <!-- Details Headers -->
     <string name="details_header_name">Nom</string>
     <string name="details_header_size">Taille</string>
     <string name="details_header_date">Date</string>
     <string name="msg_unknown_compression_error">Erreur de compression inconnue</string>
-    <string name="video_loop_on">Boucle : Activée</string>
-    <string name="video_loop_off">Boucle : Désactivée</string>
-    <string name="video_speed_normal">Normal (1x)</string>
-    <string name="video_no_audio_tracks">Aucune piste audio trouvée</string>
+    <string name="media_loop_on">Boucle : Activée</string>
+    <string name="media_loop_off">Boucle : Désactivée</string>
+    <string name="media_speed_normal">Normal (1x)</string>
+    <string name="media_no_audio_tracks">Aucune piste audio trouvée</string>
     <string name="off">Désactivé</string>
-    <string name="video_fit">Ajuster (par défaut)</string>
-    <string name="video_fill">Remplir</string>
-    <string name="video_zoom">Zoom (rogner)</string>
-    <string name="video_fixed_w">Largeur fixe</string>
-    <string name="video_fixed_h">Hauteur fixe</string>
-    <string name="video_audio_track">Piste audio $1%d</string>
-    <string name="video_subtitle_track">Piste de sous-titres $1%d</string>
-    <string name="media_previous">Précédent</string>
-    <string name="media_next">Suivant</string>
-    <string name="video_volume">Volume</string>
-    <string name="video_loop">Boucle</string>
+    <string name="media_fit">Ajuster (par défaut)</string>
+    <string name="media_fill">Remplir</string>
+    <string name="media_zoom">Zoom (rogner)</string>
+    <string name="media_fixed_w">Largeur fixe</string>
+    <string name="media_fixed_h">Hauteur fixe</string>
+    <string name="media_audio_track">Piste audio $1%d</string>
+    <string name="media_subtitle_track">Piste de sous-titres $1%d</string>
+    <string name="previous">Précédent</string>
+    <string name="next">Suivant</string>
+    <string name="media_volume">Volume</string>
+    <string name="media_loop">Boucle</string>
     <string name="media_viewed">Image vue</string>
     <string name="menu_set_wallpaper_failed">Échec de la définition du fond d\'écran</string>
-    <string name="share_image_failed">Échec du partage de l\'image</string>
+    <string name="media_share_image_failed">Échec du partage de l\'image</string>
     <string name="media_thumbnail">Miniature</string>
 
 </resources>

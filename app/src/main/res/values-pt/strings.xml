@@ -323,27 +323,27 @@
 
     <!-- Image Viewer/ Video Player -->
     <string name="unknown_resolution">Resolução desconhecida</string>
-    <string name="video_playing">Reproduzindo</string>
-    <string name="video_paused">Pausado</string>
-    <string name="video_loop_on">Loop: Ativado</string>
-    <string name="video_loop_off">Loop: Desativado</string>
-    <string name="video_speed_normal">Normal (1x)</string>
-    <string name="video_no_audio_tracks">Nenhuma faixa de áudio encontrada</string>
+    <string name="media_playing">Reproduzindo</string>
+    <string name="media_paused">Pausado</string>
+    <string name="media_loop_on">Loop: Ativado</string>
+    <string name="media_loop_off">Loop: Desativado</string>
+    <string name="media_speed_normal">Normal (1x)</string>
+    <string name="media_no_audio_tracks">Nenhuma faixa de áudio encontrada</string>
     <string name="off">Desativado</string>
-    <string name="video_fit">Ajustar (Padrão)</string>
-    <string name="video_fill">Preencher</string>
-    <string name="video_zoom">Zoom (Recortar)</string>
-    <string name="video_fixed_w">Largura fixa</string>
-    <string name="video_fixed_h">Altura fixa</string>
-    <string name="video_audio_track">Faixa de áudio $1%d</string>
-    <string name="video_subtitle_track">Faixa de legenda $1%d</string>
-    <string name="media_previous">Anterior</string>
-    <string name="media_next">Próximo</string>
-    <string name="video_volume">Volume</string>
-    <string name="video_loop">Loop</string>
+    <string name="media_fit">Ajustar (Padrão)</string>
+    <string name="media_fill">Preencher</string>
+    <string name="media_zoom">Zoom (Recortar)</string>
+    <string name="media_fixed_w">Largura fixa</string>
+    <string name="media_fixed_h">Altura fixa</string>
+    <string name="media_audio_track">Faixa de áudio $1%d</string>
+    <string name="media_subtitle_track">Faixa de legenda $1%d</string>
+    <string name="previous">Anterior</string>
+    <string name="next">Próximo</string>
+    <string name="media_volume">Volume</string>
+    <string name="media_loop">Loop</string>
     <string name="media_viewed">Imagem visualizada</string>
     <string name="menu_set_wallpaper_failed">Falha ao definir papel de parede</string>
-    <string name="share_image_failed">Falha ao compartilhar imagem</string>
+    <string name="media_share_image_failed">Falha ao compartilhar imagem</string>
     <string name="media_thumbnail">Miniatura</string>
 
     <!-- Details Headers -->

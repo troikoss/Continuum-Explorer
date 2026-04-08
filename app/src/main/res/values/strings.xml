@@ -13,8 +13,8 @@
     <string name="no">No</string>
     <string name="back">Back</string>
     <string name="done">Done</string>
-    <string name="loading">Loading...</string>
-    <string name="calculating">Calculating...</string>
+    <string name="loading">Loading…</string>
+    <string name="calculating">Calculating…</string>
     <string name="unknown">Unknown</string>
     <string name="home">Home</string>
     <string name="new_tab">New Tab</string>
@@ -24,8 +24,11 @@
     <string name="up">Up</string>
     <string name="menu">Menu</string>
     <string name="search">Search</string>
-    <string name="search_hint">Search...</string>
+    <string name="search_hint">Search…</string>
     <string name="options">Options</string>
+    <string name="off">Off</string>
+    <string name="previous">Previous</string>
+    <string name="next">Next</string>
 
     <!-- Properties / Details -->
     <string name="properties">Properties</string>
@@ -42,7 +45,7 @@
     <string name="prop_folders_count">%1$d Folders</string>
     <string name="prop_files_count">%1$d Files</string>
     <string name="prop_selected_count">%1$d selected</string>
-    <string name="prop_loading_metadata">Loading metadata...</string>
+    <string name="prop_loading_metadata">Loading metadata…</string>
     <string name="prop_total_size">Total Size:</string>
     <string name="prop_bytes">bytes</string>
     <string name="details_item_count_singular">1 item</string>
@@ -128,7 +131,6 @@
     <string name="conflict_remember">Remember selection for this session</string>
     <string name="conflict_keep_both">Keep Both</string>
     <string name="conflict_replace">Replace</string>
-
     <string name="delete_confirm_title">Confirm Delete</string>
     <string name="delete_item_this">this item</string>
     <string name="delete_items_count">%1$d items</string>
@@ -162,8 +164,6 @@
     <string name="op_trashing">Moving 1 item to Recycle Bin…</string>
     <string name="op_trashing_items">Moving %1$d items to Recycle Bin…</string>
     <string name="op_sec">sec</string>
-
-
 
     <!-- Notifications -->
     <string name="notif_description">Progress of file operations</string>
@@ -210,14 +210,14 @@
     <string name="menu_delete_permanently">Delete Permanently</string>
     <string name="menu_properties">Properties</string>
     <string name="menu_open">Open</string>
-    <string name="menu_open_with">Open With...</string>
+    <string name="menu_open_with">Open With…</string>
     <string name="menu_open_new_tab">Open in New Tab</string>
     <string name="menu_open_new_window">Open in New Window</string>
     <string name="menu_remove_favorites">Remove from Favorites</string>
     <string name="menu_add_favorites">Add to Favorites</string>
     <string name="menu_add_home">Add to Home</string>
-    <string name="menu_extract">Extract...</string>
-    <string name="menu_compress">Compress...</string>
+    <string name="menu_extract">Extract…</string>
+    <string name="menu_compress">Compress…</string>
     <string name="menu_cut">Cut</string>
     <string name="menu_copy">Copy</string>
     <string name="menu_paste">Paste</string>
@@ -284,9 +284,9 @@
     <string name="folder">Folder</string>
 
     <!-- Actions/Operations Messages -->
-    <string name="msg_preparing">Preparing...</string>
-    <string name="msg_starting">Starting...</string>
-    <string name="msg_cancelling">Cancelling...</string>
+    <string name="msg_preparing">Preparing…</string>
+    <string name="msg_starting">Starting…</string>
+    <string name="msg_cancelling">Cancelling…</string>
     <string name="msg_cancelled">Cancelled</string>
     <string name="msg_rename_failed">Rename failed</string>
     <string name="msg_select_rename">Select a file to rename</string>
@@ -313,6 +313,8 @@
     <string name="msg_already_at_saf_root">Already at picked folder root</string>
     <string name="msg_empty_clipboard">Clipboard is empty</string>
     <string name="msg_compression_failed">Compression failed: %1$s</string>
+    <string name="msg_unknown_compression_error">Unknown compression error</string>
+    <string name="menu_set_wallpaper_failed">Failed to set wallpaper</string>
 
 
     <!-- Dialog Titles -->
@@ -331,33 +333,28 @@
 
     <!-- Image Viewer/ Video Player -->
     <string name="unknown_resolution">Unknown Resolution</string>
-    <string name="video_playing">Playing</string>
-    <string name="video_paused">Paused</string>
+    <string name="media_playing">Playing</string>
+    <string name="media_paused">Paused</string>
+    <string name="media_loop_on">Loop: On</string>
+    <string name="media_loop_off">Loop: Off</string>
+    <string name="media_speed_normal">Normal (1x)</string>
+    <string name="media_no_audio_tracks">No audio tracks found</string>
+    <string name="media_fit">Fit (Default)</string>
+    <string name="media_fill">Fill</string>
+    <string name="media_zoom">Zoom (Crop)</string>
+    <string name="media_fixed_w">Fixed width</string>
+    <string name="media_fixed_h">Fixed height</string>
+    <string name="media_audio_track">Audio track $1%d</string>
+    <string name="media_subtitle_track">Subtitle track $1%d</string>
+    <string name="media_volume">Volume</string>
+    <string name="media_loop">Loop</string>
+    <string name="media_viewed">Viewed image</string>
+    <string name="media_share_image_failed">Failed to share image</string>
+    <string name="media_thumbnail">Thumbnail</string>
 
     <!-- Details Headers -->
     <string name="details_header_name">Name</string>
     <string name="details_header_size">Size</string>
     <string name="details_header_date">Date</string>
-    <string name="msg_unknown_compression_error">Unknown compression error</string>
-    <string name="video_loop_on">Loop: On</string>
-    <string name="video_loop_off">Loop: Off</string>
-    <string name="video_speed_normal">Normal (1x)</string>
-    <string name="video_no_audio_tracks">No audio tracks found</string>
-    <string name="off">Off</string>
-    <string name="video_fit">Fit (Default)</string>
-    <string name="video_fill">Fill</string>
-    <string name="video_zoom">Zoom (Crop)</string>
-    <string name="video_fixed_w">Fixed width</string>
-    <string name="video_fixed_h">Fixed height</string>
-    <string name="video_audio_track">Audio track $1%d</string>
-    <string name="video_subtitle_track">Subtitle track $1%d</string>
-    <string name="media_previous">Previous</string>
-    <string name="media_next">Next</string>
-    <string name="video_volume">Volume</string>
-    <string name="video_loop">Loop</string>
-    <string name="media_viewed">Viewed image</string>
-    <string name="menu_set_wallpaper_failed">Failed to set wallpaper</string>
-    <string name="share_image_failed">Failed to share image</string>
-    <string name="media_thumbnail">Thumbnail</string>
 
 </resources>

@@ -134,11 +134,11 @@ data class TrackOption(
 /** All supported aspect-ratio resize modes with display names. */
 @androidx.media3.common.util.UnstableApi
 enum class ResizeMode(val labelRes: Int, val value: Int) {
-    FIT(R.string.video_fit, AspectRatioFrameLayout.RESIZE_MODE_FIT),
-    FILL(R.string.video_fill, AspectRatioFrameLayout.RESIZE_MODE_FILL),
-    ZOOM(R.string.video_zoom, AspectRatioFrameLayout.RESIZE_MODE_ZOOM),
-    FIXED_WIDTH(R.string.video_fixed_w, AspectRatioFrameLayout.RESIZE_MODE_FIXED_WIDTH),
-    FIXED_HEIGHT(R.string.video_fixed_h, AspectRatioFrameLayout.RESIZE_MODE_FIXED_HEIGHT),
+    FIT(R.string.media_fit, AspectRatioFrameLayout.RESIZE_MODE_FIT),
+    FILL(R.string.media_fill, AspectRatioFrameLayout.RESIZE_MODE_FILL),
+    ZOOM(R.string.media_zoom, AspectRatioFrameLayout.RESIZE_MODE_ZOOM),
+    FIXED_WIDTH(R.string.media_fixed_w, AspectRatioFrameLayout.RESIZE_MODE_FIXED_WIDTH),
+    FIXED_HEIGHT(R.string.media_fixed_h, AspectRatioFrameLayout.RESIZE_MODE_FIXED_HEIGHT),
 }
 
 
@@ -239,7 +239,7 @@ fun VideoPlayerScreen(
                 val label = when {
                     fmt.label    != null -> fmt.label!!
                     lang.isNotEmpty()    -> lang
-                    else                 -> resources.getString(R.string.video_audio_track, gi + 1)
+                    else                 -> resources.getString(R.string.media_audio_track, gi + 1)
                 }
                 // A track group is selected when the player actually rendered it
                 TrackOption(label, gi, 0, group.isSelected)
@@ -253,7 +253,7 @@ fun VideoPlayerScreen(
                 val label = when {
                     fmt.label    != null -> fmt.label!!
                     lang.isNotEmpty()    -> lang
-                    else                 -> resources.getString(R.string.video_subtitle_track, gi + 1)
+                    else                 -> resources.getString(R.string.media_subtitle_track, gi + 1)
                 }
                 TrackOption(label, gi, 0, group.isSelected)
             }
@@ -453,12 +453,12 @@ fun VideoPlayerScreen(
             // ── Indicators ──────────────────────────────────────────────────
             AnimatedVisibility(visible = showPauseIndicator, enter = fadeIn(), exit = fadeOut(),
                 modifier = Modifier.align(Alignment.Center)) {
-                Icon(Icons.Default.PauseCircle, stringResource(R.string.video_paused),
+                Icon(Icons.Default.PauseCircle, stringResource(R.string.media_paused),
                     tint = Color.White, modifier = Modifier.size(96.dp))
             }
             AnimatedVisibility(visible = showPlayIndicator, enter = fadeIn(), exit = fadeOut(),
                 modifier = Modifier.align(Alignment.Center)) {
-                Icon(Icons.Default.PlayCircle, stringResource(R.string.video_playing),
+                Icon(Icons.Default.PlayCircle, stringResource(R.string.media_playing),
                     tint = Color.White, modifier = Modifier.size(96.dp))
             }
             AnimatedVisibility(visible = showSkipBackIndicator, enter = fadeIn(), exit = fadeOut(),
@@ -626,7 +626,7 @@ fun VideoPlayerScreen(
                         ) {
                             Icon(
                                 imageVector     = if (isPlaying) Icons.Default.PauseCircle else Icons.Default.PlayCircle,
-                                contentDescription = stringResource(if (isPlaying) R.string.video_paused else R.string.video_playing),
+                                contentDescription = stringResource(if (isPlaying) R.string.media_paused else R.string.media_playing),
                                 tint   = Color.White,
                                 modifier = Modifier.size(64.dp)
                             )
@@ -634,14 +634,14 @@ fun VideoPlayerScreen(
 
                         // Previous
                         IconButton(onClick = { if (hasPrev) exoPlayer.seekToPreviousMediaItem() }) {
-                            Icon(Icons.Default.SkipPrevious, stringResource(R.string.media_previous),
+                            Icon(Icons.Default.SkipPrevious, stringResource(R.string.previous),
                                 tint = if (hasPrev) Color.White else Color.Gray,
                                 modifier = Modifier.size(48.dp))
                         }
 
                         // Next
                         IconButton(onClick = { if (hasNext) exoPlayer.seekToNextMediaItem() }) {
-                            Icon(Icons.Default.SkipNext, stringResource(R.string.media_next),
+                            Icon(Icons.Default.SkipNext, stringResource(R.string.next),
                                 tint = if (hasNext) Color.White else Color.Gray,
                                 modifier = Modifier.size(48.dp))
                         }
@@ -657,7 +657,7 @@ fun VideoPlayerScreen(
                                     volume < 0.5f -> Icons.AutoMirrored.Filled.VolumeDown
                                     else          -> Icons.AutoMirrored.Filled.VolumeUp
                                 },
-                                contentDescription = stringResource(R.string.video_volume),
+                                contentDescription = stringResource(R.string.media_volume),
                                 tint = Color.White,
                                 modifier = Modifier.size(24.dp)
                             )
@@ -697,7 +697,7 @@ fun VideoPlayerScreen(
 
                         // Loop indicator
                         if (loopEnabled) {
-                            Icon(Icons.Default.Repeat, stringResource(R.string.video_loop),
+                            Icon(Icons.Default.Repeat, stringResource(R.string.media_loop),
                                 tint     = Color.Red,
                                 modifier = Modifier
                                     .size(20.dp)
@@ -810,7 +810,7 @@ fun VideoPlayerScreen(
                                         DropdownMenuItem(
                                             leadingIcon  = { Icon(Icons.Default.Repeat, null,
                                                 tint = if (loopEnabled) Color.Red else Color.Gray) },
-                                            text = { Text(if (loopEnabled) stringResource(R.string.video_loop_on) else stringResource(R.string.video_loop_off)) },
+                                            text = { Text(if (loopEnabled) stringResource(R.string.media_loop_on) else stringResource(R.string.media_loop_off)) },
                                             trailingIcon = {
                                                 if (loopEnabled) Icon(Icons.Default.Check, null)
                                             },
@@ -835,7 +835,7 @@ fun VideoPlayerScreen(
                                         speeds.forEach { speed ->
                                             DropdownMenuItem(
                                                 text = {
-                                                    Text(if (speed == 1f) stringResource(R.string.video_speed_normal) else "${speed}×")
+                                                    Text(if (speed == 1f) stringResource(R.string.media_speed_normal) else "${speed}×")
                                                 },
                                                 trailingIcon = {
                                                     if (playbackSpeed == speed) Icon(Icons.Default.Check, null)
@@ -859,7 +859,7 @@ fun VideoPlayerScreen(
 
                                         if (audioTracks.isEmpty()) {
                                             DropdownMenuItem(
-                                                text    = { Text(stringResource(R.string.video_no_audio_tracks)) },
+                                                text    = { Text(stringResource(R.string.media_no_audio_tracks)) },
                                                 enabled = false,
                                                 onClick = {}
                                             )
