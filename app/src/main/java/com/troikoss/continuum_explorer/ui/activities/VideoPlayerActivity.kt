@@ -111,7 +111,7 @@ import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import com.troikoss.continuum_explorer.R
 import com.troikoss.continuum_explorer.ui.theme.FileExplorerTheme
-import com.troikoss.continuum_explorer.utils.FileScannerUtils
+import com.troikoss.continuum_explorer.utils.getSiblingFiles
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.CancellationException
@@ -300,7 +300,7 @@ fun VideoPlayerScreen(
     LaunchedEffect(initialVideoUri) {
         if (initialVideoUri != null) {
             val videoExtensions = setOf("mp4", "mkv", "webm", "avi", "mov")
-            val allVideos = FileScannerUtils.getSiblingFiles(context, initialVideoUri, videoExtensions)
+            val allVideos = getSiblingFiles(context, initialVideoUri, videoExtensions)
             allVideos.forEach { uri -> exoPlayer.addMediaItem(MediaItem.fromUri(uri)) }
             val targetName = Uri.parse(initialVideoUri).lastPathSegment
             val startIndex = if (targetName != null)

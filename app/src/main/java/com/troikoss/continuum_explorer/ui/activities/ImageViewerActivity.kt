@@ -92,9 +92,9 @@ import com.troikoss.continuum_explorer.managers.FileOperationsManager
 import com.troikoss.continuum_explorer.managers.OperationType
 import com.troikoss.continuum_explorer.utils.GlobalEvents
 import com.troikoss.continuum_explorer.ui.theme.FileExplorerTheme
-import com.troikoss.continuum_explorer.utils.FileScannerUtils
 import com.troikoss.continuum_explorer.utils.contextMenuDetector
 import com.troikoss.continuum_explorer.utils.deleteFiles
+import com.troikoss.continuum_explorer.utils.getSiblingFiles
 import com.troikoss.continuum_explorer.utils.renameFile
 import com.troikoss.continuum_explorer.utils.toUniversal
 import kotlinx.coroutines.Dispatchers
@@ -153,7 +153,7 @@ fun ImageViewerScreen(
         if (initialImageUri != null) {
             withContext(Dispatchers.IO) {
                 val extensions = setOf("jpg", "jpeg", "png", "gif", "webp", "bmp")
-                val images = FileScannerUtils.getSiblingFiles(context, initialImageUri, extensions)
+                val images = getSiblingFiles(context, initialImageUri, extensions)
                 withContext(Dispatchers.Main) {
                     siblingImages = images
                     val initialFileSegment = Uri.parse(initialImageUri).lastPathSegment

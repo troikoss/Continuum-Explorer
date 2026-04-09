@@ -375,6 +375,6 @@
     <string name="settings_touch_drag_ask">Demander à chaque fois</string>
     <string name="settings_touch_drag_copy">Toujours copier</string>
     <string name="settings_touch_drag_move">Toujours déplacer</string>
-    <string name="msg_deletion">Suppression annulée</string>
-    <string name="msg_cancelled_deletion">%1$d fichiers supprimés</string>
+    <string name="msg_cancelled_deletion">Suppression annulée</string>
+    <string name="msg_deletion">%1$d fichiers supprimés</string>
 </resources>

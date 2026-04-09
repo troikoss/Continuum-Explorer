@@ -136,33 +136,42 @@ object UndoManager {
             is UndoAction.Paste -> {
                 var success = true
                 action.items.forEach { (sourcePath, destPath) ->
-                    val destFile = File(destPath)
-                    if (destFile.exists()) {
-                        if (action.isMove) {
-                            var sourceFile = File(sourcePath)
-                            if (sourceFile.exists()) {
-                                val result = FileOperationsManager.resolveCollision(sourceFile.name)
-                                when (result) {
-                                CollisionResult.CANCEL -> { success = false; return@forEach }
-                                CollisionResult.REPLACE -> {
-                                if (sourceFile.isDirectory) sourceFile.deleteRecursively() else sourceFile.delete()
+                    // destPath may be a local file path or a content:// URI (SAF destination)
+                    if (destPath.startsWith("content://")) {
+                        val destDoc = DocumentFile.fromSingleUri(context, destPath.toUri())
+                        if (destDoc != null && destDoc.exists()) {
+                            if (!destDoc.delete()) success = false
+                        } else if (action.isMove) success = false
+                        // Move undo for SAF destinations is not recoverable without a tree URI — skip source restore
+                    } else {
+                        val destFile = File(destPath)
+                        if (destFile.exists()) {
+                            if (action.isMove) {
+                                var sourceFile = File(sourcePath)
+                                if (sourceFile.exists()) {
+                                    val result = FileOperationsManager.resolveCollision(sourceFile.name)
+                                    when (result) {
+                                        CollisionResult.CANCEL -> { success = false; return@forEach }
+                                        CollisionResult.REPLACE -> {
+                                            if (sourceFile.isDirectory) sourceFile.deleteRecursively() else sourceFile.delete()
+                                        }
+                                        CollisionResult.KEEP_BOTH -> {
+                                            val parent = sourceFile.parentFile
+                                            val newName = getUniqueName(sourceFile.name) { File(parent, it).exists() }
+                                            sourceFile = File(parent, newName)
+                                        }
+                                        CollisionResult.MERGE -> {
+                                            // No-op: fall through to recurse into existing directory
+                                        }
+                                    }
                                 }
-                                CollisionResult.KEEP_BOTH -> {
-                                val parent = sourceFile.parentFile
-                                val newName = getUniqueName(sourceFile.name) { File(parent, it).exists() }
-                                sourceFile = File(parent, newName)
-                                }
-                                    CollisionResult.MERGE -> {
-                                    // No-op: fall through to recurse into existing directory
-                                }
+                                sourceFile.parentFile?.mkdirs()
+                                if (!destFile.renameTo(sourceFile)) success = false
+                            } else {
+                                if (destFile.isDirectory) destFile.deleteRecursively() else destFile.delete()
                             }
-                            }
-                            sourceFile.parentFile?.mkdirs()
-                            if (!destFile.renameTo(sourceFile)) success = false
-                        } else {
-                            if (destFile.isDirectory) destFile.deleteRecursively() else destFile.delete()
-                        }
-                    } else if (action.isMove) success = false
+                        } else if (action.isMove) success = false
+                    }
                 }
                 success
             }
@@ -273,7 +282,9 @@ object UndoManager {
                             if (!sourceFile.renameTo(destFile)) success = false
                         } else success = false
                     } else {
-                        // For Copy Redo, it remains complex.
+                        // Copy redo is not supported: the original source data may no longer exist.
+                        success = false
+                        return@forEach
                     }
                 }
                 success

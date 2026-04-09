@@ -342,6 +342,6 @@
     <string name="settings_touch_drag_ask">Her zaman sor</string>
     <string name="settings_touch_drag_copy">Her zaman kopyala</string>
     <string name="settings_touch_drag_move">Her zaman taşı</string>
-    <string name="msg_deletion">Silme İptal Edildi</string>
-    <string name="msg_cancelled_deletion">%1$d dosya silindi</string>
+    <string name="msg_cancelled_deletion">Silme İptal Edildi</string>
+    <string name="msg_deletion">%1$d dosya silindi</string>
 </resources>

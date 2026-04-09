@@ -150,7 +150,6 @@ fun FileExplorerState.restoreSelection() {
         refresh()
         selectionManager.clear()
         GlobalEvents.triggerRefresh()
-        FileOperationsManager.finish()
     }
 }
 

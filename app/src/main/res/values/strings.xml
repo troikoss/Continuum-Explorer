@@ -379,7 +379,7 @@
     <string name="settings_touch_drag_ask">Ask each time</string>
     <string name="settings_touch_drag_copy">Always copy</string>
     <string name="settings_touch_drag_move">Always move</string>
-    <string name="msg_deletion">Deletion Cancelled</string>
-    <string name="msg_cancelled_deletion">Deleted %1$d files</string>
+    <string name="msg_cancelled_deletion">Deletion Cancelled</string>
+    <string name="msg_deletion">Deleted %1$d files</string>
 
 </resources>

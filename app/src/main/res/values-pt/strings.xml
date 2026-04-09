@@ -374,6 +374,6 @@
     <string name="settings_touch_drag_ask">Perguntar sempre</string>
     <string name="settings_touch_drag_copy">Sempre copiar</string>
     <string name="settings_touch_drag_move">Sempre mover</string>
-    <string name="msg_deletion">Exclusão cancelada</string>
-    <string name="msg_cancelled_deletion">Excluídos %1$d arquivos</string>
+    <string name="msg_cancelled_deletion">Exclusão cancelada</string>
+    <string name="msg_deletion">Excluídos %1$d arquivos</string>
 </resources>
