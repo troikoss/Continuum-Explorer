@@ -69,6 +69,7 @@ import com.troikoss.continuum_explorer.managers.CollisionResult
 import com.troikoss.continuum_explorer.managers.DeleteResult
 import com.troikoss.continuum_explorer.managers.ExtractSettings
 import com.troikoss.continuum_explorer.managers.FileOperationsManager
+import com.troikoss.continuum_explorer.managers.MoveCopyResult
 import com.troikoss.continuum_explorer.utils.NotificationHelper
 import com.troikoss.continuum_explorer.managers.PopupType
 import com.troikoss.continuum_explorer.utils.calculateSizeRecursively
@@ -109,6 +110,7 @@ class PopUpActivity : ComponentActivity() {
                         when (popupType) {
                             PopupType.INPUT_TEXT -> InputContent(onClose = { finish() })
                             PopupType.COLLISION -> CollisionContent()
+                            PopupType.MOVE_COPY_CHOICE -> MoveCopyContent(onClose = { finish() })
                             PopupType.DELETE_CONFIRM -> DeleteConfirmContent()
                             PopupType.DELETE_PERMANENT_CONFIRM -> DeletePermanentConfirmContent()
                             PopupType.PASSWORD_INPUT -> PasswordInputContent(onClose = { finish() })
@@ -890,6 +892,53 @@ fun CollisionContent() {
                 onClick = { FileOperationsManager.onCollisionChoice(CollisionResult.REPLACE, rememberSelection) },
                 modifier = Modifier.focusRequester(focusRequester)
             ) { Text(stringResource(R.string.conflict_replace)) }
+        }
+    }
+}
+
+@Composable
+fun MoveCopyContent(onClose: () -> Unit) {
+    val focusRequester = remember { FocusRequester() }
+
+    LaunchedEffect(Unit) {
+        focusRequester.requestFocus()
+    }
+
+    Column(modifier = Modifier.padding(16.dp)) {
+        Text(
+            text = stringResource(R.string.move_or_copy_title),
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = stringResource(R.string.move_or_copy_message),
+            style = MaterialTheme.typography.bodyMedium
+        )
+        Spacer(modifier = Modifier.height(24.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End)
+        ) {
+            TextButton(onClick = {
+                FileOperationsManager.onMoveCopyChoice(MoveCopyResult.CANCEL)
+                onClose()
+            }) {
+                Text(stringResource(R.string.cancel))
+            }
+            Button(onClick = {
+                FileOperationsManager.onMoveCopyChoice(MoveCopyResult.COPY)
+            }) {
+                Text(stringResource(R.string.menu_copy))
+            }
+            Button(
+                onClick = {
+                    FileOperationsManager.onMoveCopyChoice(MoveCopyResult.MOVE)
+                },
+                modifier = Modifier.focusRequester(focusRequester)
+            ) {
+                Text(stringResource(R.string.menu_move))
+            }
         }
     }
 }

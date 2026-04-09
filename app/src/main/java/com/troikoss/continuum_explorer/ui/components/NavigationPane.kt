@@ -64,6 +64,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.PointerType
 import androidx.compose.ui.input.pointer.pointerInput
@@ -237,7 +238,7 @@ fun NavigationPane(
                                 )
                             }
                             .shadow(elevation)
-                            .background(if (isDragging) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.surface)
+                            .background(if (isDragging) MaterialTheme.colorScheme.surfaceVariant else Color.Transparent)
                             .pointerInput(path) {
                                 awaitEachGesture {
                                     val down = awaitFirstDown(requireUnconsumed = false)
@@ -339,7 +340,7 @@ fun NavigationPane(
                                 )
                             }
                             .shadow(elevation)
-                            .background(if (isDragging) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.surface)
+                            .background(if (isDragging) MaterialTheme.colorScheme.surfaceVariant else Color.Transparent)
                             .pointerInput(id) {
                                 awaitEachGesture {
                                     val down = awaitFirstDown(requireUnconsumed = false)

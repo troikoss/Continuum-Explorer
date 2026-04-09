@@ -164,6 +164,8 @@
     <string name="op_deleting_items">Deleting %1$d items…</string>
     <string name="op_trashing">Moving 1 item to Recycle Bin…</string>
     <string name="op_trashing_items">Moving %1$d items to Recycle Bin…</string>
+    <string name="op_restoring">Restoring 1 item…</string>
+    <string name="op_restoring_items">Restoring %1$d items…</string>
     <string name="op_sec">sec</string>
 
     <!-- Notifications -->
@@ -297,6 +299,17 @@
     <string name="msg_recycle_bin_empty">Recycle Bin is already empty</string>
     <string name="msg_select_pin">Select a file or folder to add</string>
     <string name="msg_select_one_pin">Select only one item to add</string>
+    <string name="msg_operation_cancelled">Operation Cancelled</string>
+    <string name="msg_pasted_count">Pasted %1$d files</string>
+    <string name="msg_moved_count">Moved %1$d files</string>
+    <string name="msg_restored_count">Restored %1$d files</string>
+    <string name="msg_moved_to_recycle_bin">Moved to Recycle Bin</string>
+    <string name="msg_moved_to_recycle_bin_count">Moved %1$d files to Recycle Bin</string>
+    <string name="msg_moved_to_recycle_bin_partial">Moved %1$d files to Recycle Bin (some failed)</string>
+    <string name="msg_share_failed_prepare">Could not prepare files for sharing</string>
+    <string name="msg_no_app_share">No app found to share this file</string>
+    <string name="msg_no_app_open">No app found to open this file</string>
+    <string name="msg_apk_install_permission">Please allow permission, then click the APK again to install.</string>
     <string name="msg_search_results" translatable="false">search_results</string>
     <string name="msg_search_failed">Search failed</string>
     <string name="msg_invalid_path">Invalid path</string>
@@ -357,5 +370,16 @@
     <string name="details_header_name">Name</string>
     <string name="details_header_size">Size</string>
     <string name="details_header_date">Date</string>
+
+    <string name="menu_move">Move</string>
+    <string name="move_or_copy_title">Move or Copy?</string>
+    <string name="move_or_copy_message">Do you want to move or copy the dragged files to this location?</string>
+    <string name="settings_touch_drag">Touch drag behavior</string>
+    <string name="settings_touch_drag_title">Choose touch drag behavior</string>
+    <string name="settings_touch_drag_ask">Ask each time</string>
+    <string name="settings_touch_drag_copy">Always copy</string>
+    <string name="settings_touch_drag_move">Always move</string>
+    <string name="msg_deletion">Deletion Cancelled</string>
+    <string name="msg_cancelled_deletion">Deleted %1$d files</string>
 
 </resources>

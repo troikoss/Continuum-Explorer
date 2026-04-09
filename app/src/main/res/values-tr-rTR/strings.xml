@@ -146,6 +146,8 @@
     <string name="op_deleting_an_item">1 öğe siliniyor…</string>
     <string name="op_deleting_items">%1$d öğe siliniyor…</string>
     <string name="op_trashing_items">%1$d öğe Geri Dönüşüm Kutusuna taşınıyor…</string>
+    <string name="op_restoring">1 öğe geri yükleniyor…</string>
+    <string name="op_restoring_items">%1$d öğe geri yükleniyor…</string>
     <string name="op_sec">sn</string>
 
     <!-- Notifications -->
@@ -266,6 +268,18 @@
     <string name="msg_recycle_bin_empty">Geri Dönüşüm Kutusu zaten boş</string>
     <string name="msg_select_pin">Ana ekrana eklemek için bir dosya veya klasör seçiniz</string>
     <string name="msg_select_one_pin">Ana ekrana eklemek için sadece bir öğe seçiniz</string>
+    <string name="msg_operation_cancelled">İşlem İptal Edildi</string>
+    <string name="msg_pasted_count">%1$d dosya yapıştırıldı</string>
+    <string name="msg_moved_count">%1$d dosya taşındı</string>
+    <string name="msg_restored_count">%1$d dosya geri yüklendi</string>
+    <string name="msg_moved_to_recycle_bin">Geri Dönüşüm Kutusuna taşındı</string>
+    <string name="msg_moved_to_recycle_bin_count">%1$d dosya Geri Dönüşüm Kutusuna taşındı</string>
+    <string name="msg_moved_to_recycle_bin_partial">%1$d dosya Geri Dönüşüm Kutusuna taşındı (bazıları başarısız oldu)</string>
+    <string name="msg_share_failed_prepare">Dosyalar paylaşım için hazırlanamadı</string>
+    <string name="msg_no_app_share">Bu dosyayı paylaşmak için uygulama bulunamadı</string>
+    <string name="msg_no_app_open">Bu dosyayı açmak için uygulama bulunamadı</string>
+    <string name="msg_apk_install_permission">Lütfen izin verin, ardından yüklemek için APK\'ya tekrar tıklayın.</string>
+    <string name="msg_search_results" translatable="false">search_results</string>
     <string name="msg_search_failed">Arama başarısız oldu</string>
     <string name="msg_invalid_path">Geçersiz yol</string>
     <string name="msg_file_not_found">Dosya ya da klasör bulunamadı</string>
@@ -320,4 +334,14 @@
     <string name="video">Video</string>
     <string name="audio">Ses</string>
     <string name="document">Doküman</string>
+    <string name="menu_move">Taşı</string>
+    <string name="move_or_copy_title">Taşı mı Kopyala mı?</string>
+    <string name="move_or_copy_message">Sürüklenen dosyaları buraya taşımak mı yoksa kopyalamak mı istersiniz?</string>
+    <string name="settings_touch_drag">Dokunmatik sürükleme davranışı</string>
+    <string name="settings_touch_drag_title">Dokunmatik sürükleme davranışını seçin</string>
+    <string name="settings_touch_drag_ask">Her zaman sor</string>
+    <string name="settings_touch_drag_copy">Her zaman kopyala</string>
+    <string name="settings_touch_drag_move">Her zaman taşı</string>
+    <string name="msg_deletion">Silme İptal Edildi</string>
+    <string name="msg_cancelled_deletion">%1$d dosya silindi</string>
 </resources>

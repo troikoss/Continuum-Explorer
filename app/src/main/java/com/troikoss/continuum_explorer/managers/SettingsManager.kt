@@ -19,6 +19,12 @@ enum class DeleteBehavior {
     PERMANENT
 }
 
+enum class TouchDragBehavior {
+    ASK,
+    COPY,
+    MOVE
+}
+
 enum class ThemeMode {
     SYSTEM,
     LIGHT,
@@ -28,6 +34,8 @@ enum class ThemeMode {
 object SettingsManager {
     private const val PREFS_NAME = "explorer_settings"
     private const val KEY_DELETE_BEHAVIOR = "delete_behavior"
+
+    private const val KEY_TOUCH_DRAG_BEHAVIOR = "touch_drag_behavior"
     private const val KEY_DEFAULT_ARCHIVE_VIEWER = "default_archive_viewer"
     private const val KEY_THEME_MODE = "theme_mode"
 
@@ -40,6 +48,9 @@ object SettingsManager {
 
     private val _deleteBehavior = mutableStateOf(DeleteBehavior.ASK)
     val deleteBehavior: State<DeleteBehavior> = _deleteBehavior
+
+    private val _touchDragBehavior = mutableStateOf(TouchDragBehavior.ASK)
+    val touchDragBehavior: State<TouchDragBehavior> = _touchDragBehavior
 
     private val _themeMode = mutableStateOf(ThemeMode.SYSTEM)
     val themeMode: State<ThemeMode> = _themeMode
@@ -77,6 +88,13 @@ object SettingsManager {
         }
         
         updateBehaviorInternal(behavior)
+
+        val savedTouchDrag = prefs.getString(KEY_TOUCH_DRAG_BEHAVIOR, TouchDragBehavior.ASK.name)
+        _touchDragBehavior.value = try {
+            TouchDragBehavior.valueOf(savedTouchDrag ?: TouchDragBehavior.ASK.name)
+        } catch (e: Exception) {
+            TouchDragBehavior.ASK
+        }
 
         val savedTheme = prefs.getString(KEY_THEME_MODE, ThemeMode.SYSTEM.name)
         val theme = try {
@@ -156,6 +174,12 @@ object SettingsManager {
         updateBehaviorInternal(behavior)
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         prefs.edit().putString(KEY_DELETE_BEHAVIOR, behavior.name).apply()
+    }
+
+    fun setTouchDragBehavior(context: Context, behavior: TouchDragBehavior) {
+        _touchDragBehavior.value = behavior
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putString(KEY_TOUCH_DRAG_BEHAVIOR, behavior.name).apply()
     }
 
     fun setThemeMode(context: Context, mode: ThemeMode) {

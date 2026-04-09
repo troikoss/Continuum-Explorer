@@ -28,6 +28,7 @@ import com.troikoss.continuum_explorer.managers.DetailsMode
 import com.troikoss.continuum_explorer.managers.FileOperationsManager
 import com.troikoss.continuum_explorer.managers.SettingsManager
 import com.troikoss.continuum_explorer.managers.ThemeMode
+import com.troikoss.continuum_explorer.managers.TouchDragBehavior
 
 class SettingsActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -45,6 +46,7 @@ class SettingsActivity : ComponentActivity() {
 fun SettingsScreen(onBack: () -> Unit) {
     val context = LocalContext.current
     val deleteBehavior = SettingsManager.deleteBehavior.value
+    val touchDragBehavior = SettingsManager.touchDragBehavior.value
     val isDefaultArchiveViewerEnabled = SettingsManager.isDefaultArchiveViewerEnabled.value
     val themeMode = SettingsManager.themeMode.value
     val language = SettingsManager.language.value
@@ -54,6 +56,7 @@ fun SettingsScreen(onBack: () -> Unit) {
     val iconTouchSelection = SettingsManager.iconTouchSelection.value
 
     var showDeleteDialog by remember { mutableStateOf(false) }
+    var showTouchDragDialog by remember { mutableStateOf(false) }
     var showThemeDialog by remember { mutableStateOf(false) }
     var showLanguageDialog by remember { mutableStateOf(false) }
     var showShortcutsDialog by remember { mutableStateOf(false) }
@@ -170,6 +173,19 @@ fun SettingsScreen(onBack: () -> Unit) {
             )
 
             ListItem(
+                headlineContent = { Text(stringResource(R.string.settings_touch_drag)) },
+                supportingContent = {
+                    val text = when (touchDragBehavior) {
+                        TouchDragBehavior.ASK  -> stringResource(R.string.settings_touch_drag_ask)
+                        TouchDragBehavior.COPY -> stringResource(R.string.settings_touch_drag_copy)
+                        TouchDragBehavior.MOVE -> stringResource(R.string.settings_touch_drag_move)
+                    }
+                    Text(text)
+                },
+                modifier = Modifier.clickable { showTouchDragDialog = true }
+            )
+
+            ListItem(
                 headlineContent = { Text(stringResource(R.string.settings_internal_archive)) },
                 supportingContent = { Text(stringResource(R.string.settings_internal_archive_desc)) },
                 trailingContent = {
@@ -234,6 +250,46 @@ fun SettingsScreen(onBack: () -> Unit) {
                     },
                     confirmButton = {
                         TextButton(onClick = { showDeleteDialog = false }) {
+                            Text(stringResource(R.string.cancel))
+                        }
+                    }
+                )
+            }
+
+            if (showTouchDragDialog) {
+                AlertDialog(
+                    onDismissRequest = { showTouchDragDialog = false },
+                    title = { Text(stringResource(R.string.settings_touch_drag_title)) },
+                    text = {
+                        Column {
+                            OptionItem(
+                                label = stringResource(R.string.settings_touch_drag_ask),
+                                selected = touchDragBehavior == TouchDragBehavior.ASK,
+                                onClick = {
+                                    SettingsManager.setTouchDragBehavior(context, TouchDragBehavior.ASK)
+                                    showTouchDragDialog = false
+                                }
+                            )
+                            OptionItem(
+                                label = stringResource(R.string.settings_touch_drag_copy),
+                                selected = touchDragBehavior == TouchDragBehavior.COPY,
+                                onClick = {
+                                    SettingsManager.setTouchDragBehavior(context, TouchDragBehavior.COPY)
+                                    showTouchDragDialog = false
+                                }
+                            )
+                            OptionItem(
+                                label = stringResource(R.string.settings_touch_drag_move),
+                                selected = touchDragBehavior == TouchDragBehavior.MOVE,
+                                onClick = {
+                                    SettingsManager.setTouchDragBehavior(context, TouchDragBehavior.MOVE)
+                                    showTouchDragDialog = false
+                                }
+                            )
+                        }
+                    },
+                    confirmButton = {
+                        TextButton(onClick = { showTouchDragDialog = false }) {
                             Text(stringResource(R.string.cancel))
                         }
                     }

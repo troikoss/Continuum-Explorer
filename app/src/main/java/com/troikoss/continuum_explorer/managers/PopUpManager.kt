@@ -22,7 +22,8 @@ enum class PopupType {
     EXTRACT_OPTIONS,
     ARCHIVE_OPTIONS,
     SHORTCUTS,
-    PROPERTIES
+    PROPERTIES,
+    MOVE_COPY_CHOICE
 }
 
 enum class CollisionResult {
@@ -45,9 +46,15 @@ enum class OperationType {
     DELETE,
     NONE,
     COPY,
-    TRASH
+    TRASH,
+    RESTORE
 }
 
+enum class MoveCopyResult {
+    MOVE,
+    COPY,
+    CANCEL
+}
 
 data class ExtractSettings(
     val toSeparateFolder: Boolean,
@@ -83,9 +90,6 @@ object FileOperationsManager {
     // The current progress (0.0 to 1.0)
     var progress = mutableFloatStateOf(0f)
 
-    // The text message (e.g. "Pasting file 1 of 5")
-    var statusMessage = mutableStateOf("Preparing...")
-
     // Detailed Stats
     var totalSize = mutableLongStateOf(0L)
     var processedSize = mutableLongStateOf(0L)
@@ -110,6 +114,9 @@ object FileOperationsManager {
     var collisionIsDirectory = mutableStateOf(false)
     var rememberedCollisionResult: CollisionResult? = null
     private var collisionDeferred: CompletableDeferred<CollisionResult>? = null
+
+    // Move/Copy Choice State
+    private var moveCopyDeferred: CompletableDeferred<MoveCopyResult>? = null
 
     // Delete Confirmation State
     var deleteItemCount = mutableIntStateOf(0)
@@ -171,6 +178,10 @@ object FileOperationsManager {
                 if (count == 1) context.getString(R.string.op_trashing)
                 else context.getString(R.string.op_trashing_items, count)
             }
+            OperationType.RESTORE -> {
+                if (count == 1) context.getString(R.string.op_restoring)
+                else context.getString(R.string.op_restoring_items, count)
+            }
             OperationType.NONE -> ""
         }
     }
@@ -193,6 +204,7 @@ object FileOperationsManager {
         
         rememberedCollisionResult = null
         collisionDeferred = null
+        moveCopyDeferred = null
         deleteDeferred = null
         passwordDeferred = null
         extractDeferred = null
@@ -239,6 +251,22 @@ object FileOperationsManager {
         }
         collisionDeferred?.complete(result)
         collisionDeferred = null
+    }
+
+    suspend fun requestMoveCopyChoice(): MoveCopyResult {
+        popupType.value = PopupType.MOVE_COPY_CHOICE
+        val deferred = CompletableDeferred<MoveCopyResult>()
+        moveCopyDeferred = deferred
+        notifyListeners()
+        val result = deferred.await()
+        popupType.value = PopupType.PROGRESS
+        notifyListeners()
+        return result
+    }
+
+    fun onMoveCopyChoice(result: MoveCopyResult) {
+        moveCopyDeferred?.complete(result)
+        moveCopyDeferred = null
     }
 
     suspend fun confirmDelete(count: Int, permanentOnly: Boolean = false): DeleteResult {
@@ -357,10 +385,16 @@ object FileOperationsManager {
         )
     }
 
+    fun cancelSoft() {
+        isCancelled.value = true
+        notifyListeners()
+    }
+
     fun cancel() {
         isCancelled.value = true
         // Also cancel any pending dialogs
-        collisionDeferred?.complete(CollisionResult.CANCEL)
+        collisionDeferred?.takeIf { !it.isCompleted }?.complete(CollisionResult.CANCEL)
+        moveCopyDeferred?.complete(MoveCopyResult.CANCEL)
         deleteDeferred?.complete(DeleteResult.CANCEL)
         passwordDeferred?.complete(null)
         extractDeferred?.complete(ExtractSettings(false, false, true))

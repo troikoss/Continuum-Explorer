@@ -161,6 +161,8 @@
     <string name="op_deleting_an_item">Suppression d\'un élément…</string>
     <string name="op_deleting_items">Suppression de %1$d éléments…</string>
     <string name="op_trashing_items">Déplacement de %1$d éléments vers la corbeille…</string>
+    <string name="op_restoring">Restauration d\'un élément…</string>
+    <string name="op_restoring_items">Restauration de %1$d éléments…</string>
     <string name="op_sec">s</string>
 
     <!-- Notifications -->
@@ -294,6 +296,18 @@
     <string name="msg_recycle_bin_empty">La corbeille est déjà vide</string>
     <string name="msg_select_pin">Sélectionnez un fichier ou un dossier à ajouter</string>
     <string name="msg_select_one_pin">Sélectionnez un seul élément à ajouter</string>
+    <string name="msg_operation_cancelled">Opération annulée</string>
+    <string name="msg_pasted_count">%1$d fichiers collés</string>
+    <string name="msg_moved_count">%1$d fichiers déplacés</string>
+    <string name="msg_restored_count">%1$d fichiers restaurés</string>
+    <string name="msg_moved_to_recycle_bin">Déplacé vers la corbeille</string>
+    <string name="msg_moved_to_recycle_bin_count">%1$d fichiers déplacés vers la corbeille</string>
+    <string name="msg_moved_to_recycle_bin_partial">%1$d fichiers déplacés vers la corbeille (certains ont échoué)</string>
+    <string name="msg_share_failed_prepare">Impossible de préparer les fichiers pour le partage</string>
+    <string name="msg_no_app_share">Aucune application trouvée pour partager ce fichier</string>
+    <string name="msg_no_app_open">Aucune application trouvée pour ouvrir ce fichier</string>
+    <string name="msg_apk_install_permission">Veuillez accorder l\'autorisation, puis cliquez à nouveau sur l\'APK pour l\'installer.</string>
+    <string name="msg_search_results" translatable="false">search_results</string>
     <string name="msg_search_failed">Échec de la recherche</string>
     <string name="msg_invalid_path">Chemin invalide</string>
     <string name="msg_file_not_found">Fichier ou répertoire non trouvé</string>
@@ -353,4 +367,14 @@
     <string name="media_share_image_failed">Échec du partage de l\'image</string>
     <string name="media_thumbnail">Miniature</string>
 
+    <string name="menu_move">Déplacer</string>
+    <string name="move_or_copy_title">Déplacer ou copier ?</string>
+    <string name="move_or_copy_message">Voulez-vous déplacer ou copier les fichiers glissés vers cet emplacement ?</string>
+    <string name="settings_touch_drag">Comportement du glisser tactile</string>
+    <string name="settings_touch_drag_title">Choisir le comportement du glisser tactile</string>
+    <string name="settings_touch_drag_ask">Demander à chaque fois</string>
+    <string name="settings_touch_drag_copy">Toujours copier</string>
+    <string name="settings_touch_drag_move">Toujours déplacer</string>
+    <string name="msg_deletion">Suppression annulée</string>
+    <string name="msg_cancelled_deletion">%1$d fichiers supprimés</string>
 </resources>

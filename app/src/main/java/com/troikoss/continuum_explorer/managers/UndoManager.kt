@@ -1,7 +1,10 @@
 package com.troikoss.continuum_explorer.managers
 
+import android.content.Context
 import android.os.Environment
 import androidx.compose.runtime.mutableStateOf
+import androidx.core.net.toUri
+import androidx.documentfile.provider.DocumentFile
 import com.troikoss.continuum_explorer.utils.getUniqueName
 import com.troikoss.continuum_explorer.utils.removeTrashMetadata
 import com.troikoss.continuum_explorer.utils.saveTrashMetadata
@@ -10,6 +13,7 @@ import java.util.Stack
 
 sealed class UndoAction {
     data class Rename(val parentDir: File, val oldName: String, val newName: String) : UndoAction()
+    data class RenameSaf(val parentUri: String, val oldName: String, val newName: String) : UndoAction()
     data class Recycle(val recycledItems: List<Pair<String, String>>) : UndoAction() // RecycledName to OriginalPath
     data class Paste(val isMove: Boolean, val items: List<Pair<String, String>>) : UndoAction() // SourcePath to DestPath
 }
@@ -32,27 +36,27 @@ object UndoManager {
         canRedo.value = redoStack.isNotEmpty()
     }
 
-    suspend fun undo() {
+    suspend fun undo(context: Context) {
         if (undoStack.isEmpty()) return
         val action = undoStack.pop()
         
-        if (performUndo(action)) {
+        if (performUndo(action, context)) {
             redoStack.push(action)
         }
         updateStates()
     }
 
-    suspend fun redo() {
+    suspend fun redo(context: Context) {
         if (redoStack.isEmpty()) return
         val action = redoStack.pop()
         
-        if (performRedo(action)) {
+        if (performRedo(action, context)) {
             undoStack.push(action)
         }
         updateStates()
     }
 
-    private suspend fun performUndo(action: UndoAction): Boolean {
+    private suspend fun performUndo(action: UndoAction, context: Context): Boolean {
         return when (action) {
             is UndoAction.Rename -> {
                 val currentFile = File(action.parentDir, action.newName)
@@ -75,6 +79,27 @@ object UndoManager {
                     }
                 }
                 currentFile.exists() && currentFile.renameTo(targetFile)
+            }
+            is UndoAction.RenameSaf -> {
+                val parentDoc = DocumentFile.fromTreeUri(context, action.parentUri.toUri()) ?: return false
+                val currentFile = parentDoc.findFile(action.newName) ?: return false
+                var targetName = action.oldName
+
+                val existing = parentDoc.findFile(targetName)
+                if (existing != null) {
+                    val result = FileOperationsManager.resolveCollision(targetName)
+                    when (result) {
+                        CollisionResult.CANCEL -> return false
+                        CollisionResult.REPLACE -> {
+                            existing.delete()
+                        }
+                        CollisionResult.KEEP_BOTH -> {
+                            targetName = getUniqueName(targetName) { parentDoc.findFile(it) != null }
+                        }
+                        CollisionResult.MERGE -> {}
+                    }
+                }
+                currentFile.renameTo(targetName)
             }
             is UndoAction.Recycle -> {
                 val trashDir = File(Environment.getExternalStorageDirectory(), ".Trash")
@@ -144,7 +169,7 @@ object UndoManager {
         }
     }
 
-    private suspend fun performRedo(action: UndoAction): Boolean {
+    private suspend fun performRedo(action: UndoAction, context: Context): Boolean {
         return when (action) {
             is UndoAction.Rename -> {
                 val oldFile = File(action.parentDir, action.oldName)
@@ -167,6 +192,27 @@ object UndoManager {
                     }
                 }
                 oldFile.exists() && oldFile.renameTo(newFile)
+            }
+            is UndoAction.RenameSaf -> {
+                val parentDoc = DocumentFile.fromTreeUri(context, action.parentUri.toUri()) ?: return false
+                val currentFile = parentDoc.findFile(action.oldName) ?: return false
+                var targetName = action.newName
+
+                val existing = parentDoc.findFile(targetName)
+                if (existing != null) {
+                    val result = FileOperationsManager.resolveCollision(targetName)
+                    when (result) {
+                        CollisionResult.CANCEL -> return false
+                        CollisionResult.REPLACE -> {
+                            existing.delete()
+                        }
+                        CollisionResult.KEEP_BOTH -> {
+                            targetName = getUniqueName(targetName) { parentDoc.findFile(it) != null }
+                        }
+                        CollisionResult.MERGE -> {}
+                    }
+                }
+                currentFile.renameTo(targetName)
             }
             is UndoAction.Recycle -> {
                 val trashDir = File(Environment.getExternalStorageDirectory(), ".Trash")

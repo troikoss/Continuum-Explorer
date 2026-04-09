@@ -161,6 +161,8 @@
     <string name="op_deleting_an_item">Eliminando 1 elemento…</string>
     <string name="op_deleting_items">Eliminando %1$d elementos…</string>
     <string name="op_trashing_items">Moviendo %1$d elementos a la papelera…</string>
+    <string name="op_restoring">Restaurando 1 elemento…</string>
+    <string name="op_restoring_items">Restaurando %1$d elementos…</string>
     <string name="op_sec">seg</string>
 
     <!-- Notifications -->
@@ -289,6 +291,18 @@
     <string name="msg_recycle_bin_empty">La papelera ya está vacía</string>
     <string name="msg_select_pin">Seleccione un archivo o carpeta para añadir</string>
     <string name="msg_select_one_pin">Seleccione solo un elemento para añadir</string>
+    <string name="msg_operation_cancelled">Operación cancelada</string>
+    <string name="msg_pasted_count">Se han pegado %1$d archivos</string>
+    <string name="msg_moved_count">Se han movido %1$d archivos</string>
+    <string name="msg_restored_count">Se han restaurado %1$d archivos</string>
+    <string name="msg_moved_to_recycle_bin">Movido a la papelera</string>
+    <string name="msg_moved_to_recycle_bin_count">Se han movido %1$d archivos a la papelera</string>
+    <string name="msg_moved_to_recycle_bin_partial">Se han movido %1$d archivos a la papelera (algunos fallaron)</string>
+    <string name="msg_share_failed_prepare">No se pudieron preparar los archivos para compartir</string>
+    <string name="msg_no_app_share">No se encontró ninguna aplicación para compartir este archivo</string>
+    <string name="msg_no_app_open">No se encontró ninguna aplicación para abrir este archivo</string>
+    <string name="msg_apk_install_permission">Por favor, conceda el permiso y luego vuelva a hacer clic en el APK para instalarlo.</string>
+    <string name="msg_search_results" translatable="false">search_results</string>
     <string name="msg_search_failed">Error en la búsqueda</string>
     <string name="msg_invalid_path">Ruta no válida</string>
     <string name="msg_file_not_found">Archivo o directorio no encontrado</string>
@@ -351,4 +365,14 @@
     <string name="unknown_resolution">Resolución desconocida</string>
     <string name="msg_unknown_compression_error">Error de compresión desconocido</string>
 
+    <string name="menu_move">Mover</string>
+    <string name="move_or_copy_title">¿Mover o copiar?</string>
+    <string name="move_or_copy_message">¿Desea mover o copiar los archivos arrastrados a esta ubicación?</string>
+    <string name="settings_touch_drag">Comportamiento de arrastre táctil</string>
+    <string name="settings_touch_drag_title">Elija el comportamiento de arrastre táctil</string>
+    <string name="settings_touch_drag_ask">Preguntar cada vez</string>
+    <string name="settings_touch_drag_copy">Siempre copiar</string>
+    <string name="settings_touch_drag_move">Siempre mover</string>
+    <string name="msg_deletion">Eliminación cancelada</string>
+    <string name="msg_cancelled_deletion">Se han eliminado %1$d archivos</string>
 </resources>

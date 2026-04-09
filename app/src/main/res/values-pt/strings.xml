@@ -161,6 +161,8 @@
     <string name="op_deleting_an_item">Excluindo 1 item…</string>
     <string name="op_deleting_items">Excluindo %1$d itens…</string>
     <string name="op_trashing_items">Movendo %1$d itens para a lixeira…</string>
+    <string name="op_restoring">Restaurando 1 item…</string>
+    <string name="op_restoring_items">Restaurando %1$d itens…</string>
     <string name="op_sec">seg</string>
 
     <!-- Notifications -->
@@ -294,6 +296,17 @@
     <string name="msg_recycle_bin_empty">A Lixeira já está vazia</string>
     <string name="msg_select_pin">Selecione um arquivo ou pasta para adicionar</string>
     <string name="msg_select_one_pin">Selecione apenas um item para adicionar</string>
+    <string name="msg_operation_cancelled">Operação cancelada</string>
+    <string name="msg_pasted_count">Colados %1$d arquivos</string>
+    <string name="msg_moved_count">Movidos %1$d arquivos</string>
+    <string name="msg_restored_count">Restaurados %1$d arquivos</string>
+    <string name="msg_moved_to_recycle_bin">Movido para a lixeira</string>
+    <string name="msg_moved_to_recycle_bin_count">Movidos %1$d arquivos para a lixeira</string>
+    <string name="msg_moved_to_recycle_bin_partial">Movidos %1$d arquivos para a lixeira (alguns falharam)</string>
+    <string name="msg_share_failed_prepare">Não foi possível preparar os arquivos para compartilhamento</string>
+    <string name="msg_no_app_share">Nenhum aplicativo encontrado para compartilhar este arquivo</string>
+    <string name="msg_no_app_open">Nenhum aplicativo encontrado para abrir este arquivo</string>
+    <string name="msg_apk_install_permission">Por favor, conceda a permissão e clique no APK novamente para instalar.</string>
     <string name="msg_search_failed">Falha na pesquisa</string>
     <string name="msg_invalid_path">Caminho inválido</string>
     <string name="msg_file_not_found">Arquivo ou diretório não encontrado</string>
@@ -353,4 +366,14 @@
     <string name="details_header_date">Data</string>
     <string name="msg_unknown_compression_error">Erro de compactação desconhecido</string>
 
+    <string name="menu_move">Mover</string>
+    <string name="move_or_copy_title">Mover ou Copiar?</string>
+    <string name="move_or_copy_message">Deseja mover ou copiar os arquivos arrastados para este local?</string>
+    <string name="settings_touch_drag">Comportamento de arrastar por toque</string>
+    <string name="settings_touch_drag_title">Escolha o comportamento de arrastar por toque</string>
+    <string name="settings_touch_drag_ask">Perguntar sempre</string>
+    <string name="settings_touch_drag_copy">Sempre copiar</string>
+    <string name="settings_touch_drag_move">Sempre mover</string>
+    <string name="msg_deletion">Exclusão cancelada</string>
+    <string name="msg_cancelled_deletion">Excluídos %1$d arquivos</string>
 </resources>

@@ -218,7 +218,7 @@ fun copyToClipboard(context: Context, files: List<UniversalFile>) {
     // Reset any pending move state
     PendingCut.clear()
     PendingCut.files = files
-    PendingCut.isActive = false 
+    PendingCut.isActive = false
 
     val firstUri = getUriForUniversalFile(context, files[0]) ?: return
     val clipData = ClipData.newUri(context.contentResolver, "File", firstUri)
@@ -247,7 +247,7 @@ fun cutToClipboard(context: Context, files: List<UniversalFile>) {
  */
 suspend fun calculateSizeRecursively(context: Context, file: UniversalFile): Long {
     if (FileOperationsManager.isCancelled.value) return 0L
-    
+
     if (file.isDirectory) {
         var size = 0L
         try {
@@ -262,9 +262,9 @@ suspend fun calculateSizeRecursively(context: Context, file: UniversalFile): Lon
                     }
                 }
             } else if (file.fileRef != null) {
-                file.fileRef.listFiles()?.forEach { 
+                file.fileRef.listFiles()?.forEach {
                      if (FileOperationsManager.isCancelled.value) return 0L
-                    size += calculateSizeRecursively(context, it.toUniversal()) 
+                    size += calculateSizeRecursively(context, it.toUniversal())
                 }
             } else if (file.documentFileRef != null) {
                 file.documentFileRef.listFiles().forEach {
@@ -283,18 +283,22 @@ suspend fun calculateSizeRecursively(context: Context, file: UniversalFile): Lon
 
 fun getUniqueName(name: String, exists: (String) -> Boolean): String {
     if (!exists(name)) return name
-    
+
     val lastDot = name.lastIndexOf('.')
     val base = if (lastDot != -1) name.substring(0, lastDot) else name
     val ext = if (lastDot != -1) name.substring(lastDot) else ""
-    
+
     var count = 1
     var newName: String
     do {
         newName = "$base ($count)$ext"
         count++
+        if (count > 999) {
+            // Reasonable cap: use timestamp to avoid O(n) loop on massive collisions
+            return "${base}_${System.currentTimeMillis()}$ext"
+        }
     } while (exists(newName))
-    
+
     return newName
 }
 
@@ -312,7 +316,7 @@ suspend fun copyRecursively(
     if (FileOperationsManager.isCancelled.value) return null
 
     var targetName = source.name
-    
+
     // Check for collision at this level
     val alreadyExists = if (destLocal != null) {
         File(destLocal, targetName).exists()
@@ -324,7 +328,7 @@ suspend fun copyRecursively(
         val result = FileOperationsManager.resolveCollision(targetName, source.isDirectory)
         when (result) {
             CollisionResult.CANCEL -> {
-                FileOperationsManager.cancel()
+                FileOperationsManager.cancelSoft()
                 return null
             }
             CollisionResult.REPLACE -> {
@@ -352,7 +356,7 @@ suspend fun copyRecursively(
         // Create directory in destination
         var newDestLocal: File? = null
         var newDestSaf: DocumentFile? = null
-        
+
         if (destLocal != null) {
             newDestLocal = File(destLocal, targetName)
             if (!newDestLocal.exists()) {
@@ -361,7 +365,7 @@ suspend fun copyRecursively(
         } else if (destSaf != null) {
             newDestSaf = destSaf.findFile(targetName) ?: destSaf.createDirectory(targetName)
         }
-        
+
         // Iterate children
         if (source.isArchiveEntry) {
             val parts = source.absolutePath.split("::")
@@ -384,17 +388,21 @@ suspend fun copyRecursively(
                 copyRecursively(context, child.toUniversal(), newDestLocal, newDestSaf, onCopyFile)
             }
         }
-        
+
     } else {
         // Copy file
         val outputStream: OutputStream? = if (destLocal != null) {
              FileOutputStream(File(destLocal, targetName))
         } else if (destSaf != null) {
-             val mime = source.documentFileRef?.type ?: "*/*"
+            val mime = source.documentFileRef?.type
+                ?: MimeTypeMap.getSingleton().getMimeTypeFromExtension(
+                    source.name.substringAfterLast('.', "").lowercase()
+                )
+                ?: "application/octet-stream"
              val newFile = destSaf.createFile(mime, targetName)
              if (newFile != null) context.contentResolver.openOutputStream(newFile.uri) else null
         } else null
-        
+
         if (outputStream != null) {
              try {
                 onCopyFile(source, outputStream)
@@ -402,7 +410,7 @@ suspend fun copyRecursively(
                 throw e
              } finally {
                  try { outputStream.close() } catch (_: Exception) {}
-                 
+
                  // If cancelled, delete the partial file
                  if (FileOperationsManager.isCancelled.value) {
                      if (destLocal != null) {
@@ -465,11 +473,11 @@ suspend fun pasteFromClipboard(
 
     val trashDir = File(Environment.getExternalStorageDirectory(), ".Trash")
     val isPasteToTrash = currentPath?.absolutePath == trashDir.absolutePath
-    
+
     // Check if we can use our internal file references safely
     val firstClipUriStr = clipData.getItemAt(0).uri?.toString()
     val firstPendingUriStr = if (PendingCut.files.isNotEmpty()) getUriForUniversalFile(context, PendingCut.files[0])?.toString() else null
-    val usePendingCut = PendingCut.files.isNotEmpty() && 
+    val usePendingCut = PendingCut.files.isNotEmpty() &&
                         PendingCut.files.size == totalCount &&
                         firstClipUriStr != null && firstPendingUriStr != null &&
                         (firstClipUriStr == firstPendingUriStr || Uri.decode(firstClipUriStr) == Uri.decode(firstPendingUriStr))
@@ -479,7 +487,7 @@ suspend fun pasteFromClipboard(
 
     // 1. Calculate Total Size
     var totalBytesToCopy = 0L
-    
+
     withContext(Dispatchers.IO) {
         if (usePendingCut) {
             totalBytesToCopy = PendingCut.files.sumOf { calculateSizeRecursively(context, it) }
@@ -497,26 +505,25 @@ suspend fun pasteFromClipboard(
              }
         }
     }
-    
+
     if (FileOperationsManager.isCancelled.value) {
         withContext(Dispatchers.Main) { FileOperationsManager.finish() }
         return emptyList()
     }
-    
+
     withContext(Dispatchers.Main) {
-        FileOperationsManager.start()
         FileOperationsManager.totalSize.longValue = totalBytesToCopy
         FileOperationsManager.itemsTotal.intValue = totalCount
         FileOperationsManager.currentProcessedItems.intValue = totalCount
-        PendingCut.isActive = isMove 
+        PendingCut.isActive = isMove
     }
-    
+
     var globalBytesCopied = 0L
-    val buffer = ByteArray(32 * 1024) 
+    val buffer = ByteArray(32 * 1024)
     var lastUpdateTime = System.currentTimeMillis()
-    val speedWindow = ArrayDeque<Pair<Long, Long>>() 
+    val speedWindow = ArrayDeque<Pair<Long, Long>>()
     speedWindow.add(lastUpdateTime to 0L)
-    val windowMs = 3000L 
+    val windowMs = 3000L
 
     withContext(Dispatchers.IO) {
         for (i in 0 until totalCount) {
@@ -524,15 +531,15 @@ suspend fun pasteFromClipboard(
 
             val item = clipData.getItemAt(i)
             val sourceUri = item.uri ?: continue
-            
+
             val sourceFile = if (usePendingCut) {
                 PendingCut.files[i]
             } else {
                 val name = getFileName(context, sourceUri)
-                
+
                 var isDir = false
                 var fileRef: File? = null
-                
+
                 if (sourceUri.scheme == "file") {
                     val f = File(sourceUri.path ?: "")
                     isDir = f.isDirectory
@@ -543,15 +550,15 @@ suspend fun pasteFromClipboard(
                         isDir = true
                     }
                 }
-                
+
                 val docFile = DocumentFile.fromSingleUri(context, sourceUri)
                 if (!isDir && docFile != null && docFile.isDirectory) {
                     isDir = true
                 }
-                
+
                 UniversalFile(
                     name = name,
-                    isDirectory = isDir, 
+                    isDirectory = isDir,
                     lastModified = docFile?.lastModified() ?: 0L,
                     length = docFile?.length() ?: 0L,
                     fileRef = fileRef,
@@ -559,7 +566,7 @@ suspend fun pasteFromClipboard(
                     absolutePath = sourceUri.toString()
                 )
             }
-            
+
              withContext(Dispatchers.Main) {
                 FileOperationsManager.update(i, totalCount, operationType = OperationType.COPY)
                 FileOperationsManager.currentFileName.value = sourceFile.name
@@ -621,13 +628,18 @@ suspend fun pasteFromClipboard(
                         }
                     }
                 }
-                
+
                 if (!FileOperationsManager.isCancelled.value && finalTargetName != null) {
                     pastedFileNames.add(sourceFile.name)
                     if (currentPath != null) {
                         pasteLog.add(sourceFile.absolutePath to File(currentPath, finalTargetName).absolutePath)
+                    } else if (destSafDoc != null) {
+                        // Log SAF destination so undo can at least delete the pasted copy
+                        val destFileUri = destSafDoc.findFile(finalTargetName)?.uri?.toString()
+                        if (destFileUri != null) {
+                            pasteLog.add(sourceFile.absolutePath to destFileUri)
+                        }
                     }
-                    // Save restore metadata if pasting to trash
                     if (isPasteToTrash && sourceFile.fileRef != null) {
                         saveTrashMetadata(finalTargetName, sourceFile.fileRef.absolutePath)
                     }
@@ -635,16 +647,19 @@ suspend fun pasteFromClipboard(
             } catch (e: Exception) {
                 e.printStackTrace()
             }
-             
+
             withContext(Dispatchers.Main) { FileOperationsManager.itemsProcessed.intValue = i + 1 }
         }
-        
+
         if (isMove && pastedFileNames.isNotEmpty() && !FileOperationsManager.isCancelled.value) {
-            // Perform a silent permanent delete after moving
-            deleteFiles(context, PendingCut.files, forcePermanent = true, silent = true)
+            val successfullyCopiedPaths = pasteLog.map { it.first }.toSet()
+            val filesToDelete = PendingCut.files.filter { it.absolutePath in successfullyCopiedPaths }
+            if (filesToDelete.isNotEmpty()) {
+                deleteFiles(context, filesToDelete, forcePermanent = true, silent = true)
+            }
             PendingCut.clear()
         }
-        
+
         if (pastedFileNames.isNotEmpty()) {
             UndoManager.record(UndoAction.Paste(isMove, pasteLog))
         }
@@ -653,10 +668,16 @@ suspend fun pasteFromClipboard(
     withContext(Dispatchers.Main) {
         val wasCancelled = FileOperationsManager.isCancelled.value
         FileOperationsManager.finish()
-        val message = if (wasCancelled) "Operation Cancelled" else if (isMove) "Moved ${pastedFileNames.size} files" else "Pasted ${pastedFileNames.size} files"
+        val message = if (wasCancelled) {
+            context.getString(R.string.msg_operation_cancelled)
+        } else if (isMove) {
+            context.getString(R.string.msg_moved_count, pastedFileNames.size)
+        } else {
+            context.getString(R.string.msg_pasted_count, pastedFileNames.size)
+        }
         Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
     }
-    
+
     return pastedFileNames
 }
 
@@ -669,7 +690,7 @@ suspend fun deleteRecursivelyWithProgress(
     onProgress: suspend (UniversalFile, Long) -> Unit
 ): Boolean {
     if (FileOperationsManager.isCancelled.value) return false
-    val length = file.length 
+    val length = file.length
     if (file.isDirectory) {
         val children = try {
             if (file.isArchiveEntry) {
@@ -682,10 +703,12 @@ suspend fun deleteRecursivelyWithProgress(
             } else emptyList()
         } catch (_: Exception) { emptyList() }
         children?.forEach { child ->
-             if (FileOperationsManager.isCancelled.value) return@forEach
-             deleteRecursivelyWithProgress(context, child, onProgress)
+            if (FileOperationsManager.isCancelled.value) return@forEach
+            deleteRecursivelyWithProgress(context, child, onProgress)
         }
     }
+
+    if (FileOperationsManager.isCancelled.value) return false
     val success = try {
         if (file.isArchiveEntry) {
              false // Deleting archive entries not supported yet
@@ -700,15 +723,15 @@ suspend fun deleteRecursivelyWithProgress(
  * Deletes a list of files from the system.
  */
 suspend fun deleteFiles(
-    context: Context, 
-    files: List<UniversalFile>, 
+    context: Context,
+    files: List<UniversalFile>,
     forcePermanent: Boolean = false,
     silent: Boolean = false
 ) {
     if (files.isEmpty()) return
-    
+
     val behavior = SettingsManager.deleteBehavior.value
-    
+
     val result = if (silent) {
         if (forcePermanent) DeleteResult.PERMANENT else DeleteResult.RECYCLE
     } else {
@@ -739,9 +762,9 @@ suspend fun deleteFiles(
 
     var globalBytesDeleted = 0L
     var lastUpdateTime = System.currentTimeMillis()
-    val speedWindow = ArrayDeque<Pair<Long, Long>>() 
+    val speedWindow = ArrayDeque<Pair<Long, Long>>()
     speedWindow.add(lastUpdateTime to 0L)
-    val windowMs = 3000L 
+    val windowMs = 3000L
 
     withContext(Dispatchers.IO) {
         var deletedCount = 0
@@ -761,7 +784,7 @@ suspend fun deleteFiles(
                      val startPoint = speedWindow.first
                      val timeDiff = now - startPoint.first
                      val bytesDiff = globalBytesDeleted - startPoint.second
-                     val currentSpeed = if (now - startPoint.first > 0) (globalBytesDeleted - startPoint.second) * 1000 / (now - startPoint.first) else 0L
+                     val currentSpeed = if (timeDiff > 0) (bytesDiff * 1000) / timeDiff else 0L
                      val remainingBytes = totalBytesToDelete - globalBytesDeleted
                      val timeRemaining = if (currentSpeed > 0) (remainingBytes * 1000) / currentSpeed else 0L
                      withContext(Dispatchers.Main) {
@@ -777,7 +800,11 @@ suspend fun deleteFiles(
         }
         withContext(Dispatchers.Main) {
             FileOperationsManager.finish()
-            val msg = if (FileOperationsManager.isCancelled.value) "Deletion Cancelled" else "Deleted $deletedCount files"
+            val msg = if (FileOperationsManager.isCancelled.value) {
+                context.getString(R.string.msg_deletion)
+            } else {
+                context.getString(R.string.msg_cancelled_deletion, deletedCount)
+            }
             Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
         }
     }
@@ -789,12 +816,13 @@ private fun getTrashMetadataFile(): File {
     return File(trashDir, ".metadata")
 }
 
-fun saveTrashMetadata(recycledName: String, originalPath: String) {
+fun saveTrashMetadata(recycledName: String, originalPath: String, parentUri: String? = null) {
     try {
         val metadataFile = getTrashMetadataFile()
         val props = Properties()
         if (metadataFile.exists()) { metadataFile.inputStream().use { props.load(it) } }
-        props.setProperty(recycledName, originalPath)
+        val entryValue = if (parentUri != null) "$originalPath|$parentUri" else originalPath
+        props.setProperty(recycledName, entryValue)
         metadataFile.outputStream().use { props.store(it, null) }
     } catch (e: Exception) { e.printStackTrace() }
 }
@@ -848,25 +876,76 @@ suspend fun moveToRecycleBin(context: Context, files: List<UniversalFile>) {
             }
             if (file.fileRef != null) {
                 val recycledName = getUniqueName(file.name) { name -> File(trashDir, name).exists() }
-                val target = File(trashDir, recycledName)
-                if (file.fileRef.renameTo(target)) {
-                saveTrashMetadata(recycledName, file.fileRef.absolutePath)
-                recycleLog.add(recycledName to file.fileRef.absolutePath)
-                movedCount++
-                } else {
-                // Cross-filesystem fallback: copy then delete
+                val tempTarget = File(trashDir, recycledName)
                 try {
-                    val tempTarget = File(trashDir, recycledName)
-                    if (!tempTarget.exists()) tempTarget.mkdirs()
-                    file.fileRef.copyRecursively(tempTarget, overwrite = false)
-                    file.fileRef.deleteRecursively()
+                    if (file.fileRef.isDirectory) {
+                        // Directories can't reliably use renameTo across volumes, so copy+delete
+                        file.fileRef.copyRecursively(tempTarget, overwrite = false)
+                        file.fileRef.deleteRecursively()
+                    } else {
+                        // Files on same volume: fast atomic rename
+                        if (!file.fileRef.renameTo(tempTarget)) {
+                            // Fallback if rename fails (e.g. cross-volume)
+                            file.fileRef.copyTo(tempTarget, overwrite = false)
+                            file.fileRef.delete()
+                        }
+                    }
                     saveTrashMetadata(recycledName, file.fileRef.absolutePath)
                     recycleLog.add(recycledName to file.fileRef.absolutePath)
                     movedCount++
                 } catch (e: Exception) {
                     e.printStackTrace()
+                    tempTarget.deleteRecursively() // clean up partial copy
                 }
-            }
+            } else if (file.documentFileRef != null) {
+                val recycledName = getUniqueName(file.name) { name -> File(trashDir, name).exists() }
+                val target = File(trashDir, recycledName)
+                try {
+                    if (file.documentFileRef.isDirectory) {
+                        // Recursively copy SAF directory tree into local trash
+                        fun copyDocDirToLocal(srcDoc: DocumentFile, destDir: File) {
+                            destDir.mkdirs()
+                            srcDoc.listFiles().forEach { child ->
+                                val childDest = File(destDir, child.name ?: return@forEach)
+                                if (child.isDirectory) {
+                                    copyDocDirToLocal(child, childDest)
+                                } else {
+                                    context.contentResolver.openInputStream(child.uri)?.use { input ->
+                                        FileOutputStream(childDest).use { input.copyTo(it) }
+                                    }
+                                }
+                            }
+                        }
+                        copyDocDirToLocal(file.documentFileRef, target)
+                        // Verify by item count rather than byte size (directories report length 0)
+                        if (target.exists()) {
+                            file.documentFileRef.delete()
+                            val parentUri = file.documentFileRef.parentFile?.uri?.toString()
+                            saveTrashMetadata(recycledName, file.documentFileRef.uri.toString(), parentUri)
+                            recycleLog.add(recycledName to file.documentFileRef.uri.toString())
+                            movedCount++
+                        } else {
+                            target.deleteRecursively()
+                        }
+                    } else {
+                        // Existing file logic unchanged
+                        context.contentResolver.openInputStream(file.documentFileRef.uri)?.use { input ->
+                            FileOutputStream(target).use { output -> input.copyTo(output) }
+                        }
+                        if (target.exists() && target.length() == file.length) {
+                            file.documentFileRef.delete()
+                            val parentUri = file.documentFileRef.parentFile?.uri?.toString()
+                            saveTrashMetadata(recycledName, file.documentFileRef.uri.toString(), parentUri)
+                            recycleLog.add(recycledName to file.documentFileRef.uri.toString())
+                            movedCount++
+                        } else {
+                            target.delete()
+                        }
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    target.deleteRecursively()
+                }
             }
         }
         if (recycleLog.isNotEmpty()) {
@@ -875,7 +954,11 @@ suspend fun moveToRecycleBin(context: Context, files: List<UniversalFile>) {
     }
     withContext(Dispatchers.Main) {
         FileOperationsManager.finish()
-        val msg = if (movedCount == files.size) "Moved to Recycle Bin" else "Moved $movedCount files to Recycle Bin (some failed)"
+        val msg = if (movedCount == files.size) {
+            context.getString(R.string.msg_moved_to_recycle_bin)
+        } else {
+            context.getString(R.string.msg_moved_to_recycle_bin_partial, movedCount)
+        }
         Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
     }
 }
@@ -884,82 +967,276 @@ suspend fun moveToRecycleBin(context: Context, files: List<UniversalFile>) {
  * Restores files from the Recycle Bin to their original locations.
  */
 suspend fun restoreFiles(context: Context, files: List<UniversalFile>) {
-withContext(Dispatchers.IO) {
-    var restoredCount = 0
-    for (file in files) {
-    val originalPath = getOriginalPath(file.name) ?: continue
-    var target = File(originalPath)
-
-    if (target.exists()) {
-        val result = FileOperationsManager.resolveCollision(target.name, target.isDirectory)
-        when (result) {
-            CollisionResult.CANCEL -> break
-            CollisionResult.REPLACE -> {
-                if (target.isDirectory) target.deleteRecursively() else target.delete()
-            }
-            CollisionResult.KEEP_BOTH -> {
-                val parent = target.parentFile
-                val newName = getUniqueName(target.name) { File(parent, it).exists() }
-                target = File(parent, newName)
-            }
-            CollisionResult.MERGE -> {
-                // No-op: fall through to recurse into existing directory
-            }
-        }
+    withContext(Dispatchers.Main) {
+        FileOperationsManager.start()
+        FileOperationsManager.currentOperationType.value = OperationType.RESTORE
+        FileOperationsManager.itemsTotal.intValue = files.size
     }
 
-target.parentFile?.mkdirs()
-if (file.fileRef != null && file.fileRef.renameTo(target)) {
-        removeTrashMetadata(file.name)
-            restoredCount++
-            } else if (file.fileRef != null) {
+    withContext(Dispatchers.IO) {
+        var restoredCount = 0
+        for ((index, file) in files.withIndex()) {
+            if (FileOperationsManager.isCancelled.value) break
+
+            val rawMetadata = getOriginalPath(file.name) ?: continue
+            val metadataParts = rawMetadata.split("|", limit = 2)
+            val originalPath = metadataParts[0]
+            val parentUriStr = if (metadataParts.size > 1) metadataParts[1] else null
+
+            withContext(Dispatchers.Main) {
+                FileOperationsManager.update(index, files.size, operationType = OperationType.RESTORE)
+                FileOperationsManager.currentFileName.value = file.name
+            }
+
+            // originalPath might be a File path or a SAF Uri string
+            if (originalPath.startsWith("content://")) {
+                val sourceFile = file.fileRef ?: continue
+
+                try {
+                    // The original URI is dead after deletion — we MUST use the parent tree URI
+                    if (parentUriStr == null) continue
+                    val parentDoc = DocumentFile.fromTreeUri(context, Uri.parse(parentUriStr)) ?: continue
+
+                    // Recover the original filename from the document ID encoded in the URI
+                    // SAF doc IDs look like "primary:Downloads/myfile.txt"
+                    val originalUri = Uri.parse(originalPath)
+                    val originalFileName = try {
+                        val docId = DocumentsContract.getDocumentId(originalUri)
+                        docId.substringAfterLast('/')
+                    } catch (e: Exception) {
+                        // Fallback: grab last path segment and URL-decode it
+                        Uri.decode(originalUri.lastPathSegment)
+                            ?.substringAfterLast('/')
+                            ?: file.name
+                    }
+
+                    // Determine MIME type — fall back to octet-stream if unresolvable
+                    val mimeType = MimeTypeMap.getSingleton()
+                        .getMimeTypeFromExtension(
+                            MimeTypeMap.getFileExtensionFromUrl(originalFileName)?.lowercase()
+                        ) ?: "application/octet-stream"
+
+                    // Collision check against the parent directory
+                    val existingFile = parentDoc.findFile(originalFileName)
+                    val targetDoc: DocumentFile? = if (existingFile != null) {
+                        val result = FileOperationsManager.resolveCollision(
+                            existingFile.name ?: originalFileName,
+                            existingFile.isDirectory
+                        )
+                        when (result) {
+                            CollisionResult.CANCEL -> break
+                            CollisionResult.REPLACE -> {
+                                existingFile.delete()
+                                parentDoc.createFile(mimeType, originalFileName)
+                            }
+                            CollisionResult.KEEP_BOTH -> {
+                                val newName = getUniqueName(originalFileName) { parentDoc.findFile(it) != null }
+                                parentDoc.createFile(mimeType, newName)
+                            }
+                            CollisionResult.MERGE -> existingFile // no-op for files
+                        }
+                    } else {
+                        parentDoc.createFile(mimeType, originalFileName)
+                    }
+
+                    if (targetDoc != null) {
+                        context.contentResolver.openOutputStream(targetDoc.uri)?.use { output ->
+                            sourceFile.inputStream().use { input -> input.copyTo(output) }
+                        }
+                        sourceFile.delete()
+                        removeTrashMetadata(file.name)
+                        restoredCount++
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            } else {
+                var target = File(originalPath)
+
+                if (target.exists()) {
+                    val result = FileOperationsManager.resolveCollision(target.name, target.isDirectory)
+                    when (result) {
+                        CollisionResult.CANCEL -> break
+                        CollisionResult.REPLACE -> {
+                            if (target.isDirectory) target.deleteRecursively() else target.delete()
+                        }
+                        CollisionResult.KEEP_BOTH -> {
+                            val parent = target.parentFile
+                            val newName = getUniqueName(target.name) { File(parent, it).exists() }
+                            target = File(parent, newName)
+                        }
+                        CollisionResult.MERGE -> {
+                            // No-op: fall through to recurse into existing directory
+                        }
+                    }
+                }
+
+                target.parentFile?.mkdirs()
+                if (file.fileRef != null && file.fileRef.renameTo(target)) {
+                    removeTrashMetadata(file.name)
+                    restoredCount++
+                } else if (file.fileRef != null) {
                     // renameTo failed, try cross-filesystem fallback
                     try {
-                        val tempTarget = File(originalPath)
-                        if (!tempTarget.exists()) tempTarget.mkdirs()
-                        file.fileRef.copyRecursively(tempTarget, overwrite = false)
+                        if (file.fileRef.isDirectory) {
+                            file.fileRef.copyRecursively(target, overwrite = false)
+                        } else {
+                            file.fileRef.copyTo(target, overwrite = false)
+                        }
                         file.fileRef.deleteRecursively()
                         removeTrashMetadata(file.name)
                         restoredCount++
                     } catch (e: Exception) {
                         e.printStackTrace()
                     }
-                } else {
-                    // file.fileRef is null, skip this file
-                    continue
                 }
             }
-        withContext(Dispatchers.Main) { Toast.makeText(context, "Restored $restoredCount files", Toast.LENGTH_SHORT).show() }
+        }
+        withContext(Dispatchers.Main) {
+            FileOperationsManager.finish()
+            Toast.makeText(context, context.getString(R.string.msg_restored_count, restoredCount), Toast.LENGTH_SHORT).show()
+        }
+    }
+}
+
+/**
+ * Decodes an ExternalStorageProvider document URI to an absolute file path.
+ * Returns null if the URI cannot be decoded (e.g. non-primary volume without a known mount point,
+ * or a URI from a different provider).
+ */
+fun safUriToFilePath(uri: Uri): String? {
+    val docId = try {
+        DocumentsContract.getDocumentId(uri)
+    } catch (_: Exception) { return null }
+    // Some providers (e.g. Termux) use the absolute path directly as the document ID
+    if (docId.startsWith("/")) return docId
+    // ExternalStorageProvider format: "volumeId:relativePath"
+    val colon = docId.indexOf(':')
+    if (colon < 0) return null
+    val volume = docId.substring(0, colon)
+    val relative = docId.substring(colon + 1)
+    val root = if (volume.equals("primary", ignoreCase = true)) {
+        Environment.getExternalStorageDirectory().absolutePath
+    } else {
+        "/storage/$volume"
+    }
+    return "$root/$relative"
+}
+
+/**
+ * Renames a file via SAF by copying to a new document then deleting the original.
+ * Used as a last resort when the provider doesn't support DocumentsContract.renameDocument().
+ */
+fun safCopyRename(context: Context, src: DocumentFile, parent: DocumentFile, targetName: String): Boolean {
+    val mimeType = src.type ?: "application/octet-stream"
+    val newDoc = parent.createFile(mimeType, targetName) ?: run {
+        android.util.Log.e("FileUtils", "safCopyRename: createFile failed for $targetName")
+        return false
+    }
+    return try {
+        context.contentResolver.openInputStream(src.uri)?.use { input ->
+            context.contentResolver.openOutputStream(newDoc.uri)?.use { output ->
+                input.copyTo(output)
+            }
+        }
+        src.delete()
+        true
+    } catch (e: Exception) {
+        newDoc.delete()
+        android.util.Log.e("FileUtils", "safCopyRename failed: ${e.message}", e)
+        false
     }
 }
 
 /**
  * Renames a file.
  */
-suspend fun renameFile(file: UniversalFile, newName: String): Boolean {
+suspend fun renameFile(file: UniversalFile, newName: String, context: Context? = null): Boolean {
     if (FileOperationsManager.isCancelled.value) return false
     return withContext(Dispatchers.IO) {
         try {
             if (file.fileRef != null) {
                 val oldName = file.fileRef.name
                 if (oldName == newName) return@withContext true
-                
-                // Collision behavior: Always auto-suffix with a number
-                val targetName = getUniqueName(newName) { File(file.fileRef.parentFile, it).exists() }
-                
+
+                var targetName = newName
+                if (File(file.fileRef.parentFile, newName).exists()) {
+                    val result = FileOperationsManager.resolveCollision(newName)
+                    when (result) {
+                        CollisionResult.CANCEL -> return@withContext false
+                        CollisionResult.REPLACE -> {
+                            val existing = File(file.fileRef.parentFile, newName)
+                            if (existing.isDirectory) existing.deleteRecursively() else existing.delete()
+                            // targetName stays as newName
+                        }
+                        CollisionResult.KEEP_BOTH -> {
+                            targetName = getUniqueName(newName) { File(file.fileRef.parentFile, it).exists() }
+                        }
+                        CollisionResult.MERGE -> {
+                            // No-op: fall through to recurse into existing directory
+                        }
+                    }
+                }
+
                 val newFile = File(file.fileRef.parentFile, targetName)
                 if (file.fileRef.renameTo(newFile)) {
                     UndoManager.record(UndoAction.Rename(newFile.parentFile, oldName, targetName))
                     true
                 } else false
             } else if (file.documentFileRef != null) {
-                // Collision behavior: Always auto-suffix with a number
-                val parent = file.documentFileRef.parentFile
-                val targetName = if (parent != null) {
-                    getUniqueName(newName) { parent.findFile(it) != null }
-                } else newName
+                val oldName = file.documentFileRef.name ?: file.name
+                if (oldName == newName) return@withContext true
 
-                file.documentFileRef.renameTo(targetName)
+                val parent = file.documentFileRef.parentFile
+                var targetName = newName
+                if (parent?.findFile(newName) != null) {
+                    val result = FileOperationsManager.resolveCollision(newName)
+                    when (result) {
+                        CollisionResult.CANCEL -> return@withContext false
+                        CollisionResult.REPLACE -> {
+                            parent.findFile(newName)?.delete()
+                            // targetName stays as newName
+                        }
+                        CollisionResult.KEEP_BOTH -> {
+                            targetName = if (parent != null) {
+                                getUniqueName(newName) { parent.findFile(it) != null }
+                            } else newName
+                        }
+                        CollisionResult.MERGE -> {
+                            // No-op
+                        }
+                    }
+                }
+
+                val success = try {
+                    if (context != null) {
+                        DocumentsContract.renameDocument(context.contentResolver, file.documentFileRef.uri, targetName) != null
+                    } else {
+                        file.documentFileRef.renameTo(targetName)
+                    }
+                } catch (e: UnsupportedOperationException) {
+                    // Provider doesn't support SAF rename — try File fallback, then copy+delete
+                    val filePath = safUriToFilePath(file.documentFileRef.uri)
+                    val fileRenamed = if (filePath != null) {
+                        val f = File(filePath)
+                        val dest = File(f.parent, targetName)
+                        f.renameTo(dest)
+                    } else false
+                    if (!fileRenamed && context != null && parent != null) {
+                        safCopyRename(context, file.documentFileRef, parent, targetName)
+                    } else fileRenamed
+                } catch (e: Exception) {
+                    android.util.Log.e("FileUtils", "SAF rename error: ${e.javaClass.simpleName}: ${e.message}", e)
+                    false
+                }
+                if (success) {
+                    UndoManager.record(UndoAction.RenameSaf(
+                        parent?.uri?.toString() ?: "",
+                        oldName,
+                        targetName
+                    ))
+                }
+                success
             } else false
         } catch (e: Exception) { e.printStackTrace(); false }
     }
@@ -1026,7 +1303,7 @@ fun shareFiles(context: Context, files: List<UniversalFile>) {
         if (uri != null) uris.add(uri)
     }
     if (uris.isEmpty()) {
-        Toast.makeText(context, "Could not prepare files for sharing", Toast.LENGTH_SHORT).show()
+        Toast.makeText(context, context.getString(R.string.msg_share_failed_prepare), Toast.LENGTH_SHORT).show()
         return
     }
     val shareIntent = Intent().apply {
@@ -1041,8 +1318,8 @@ fun shareFiles(context: Context, files: List<UniversalFile>) {
             type = "*/*"
         }
     }
-    try { context.startActivity(Intent.createChooser(shareIntent, "Share via")) }
-    catch (_: Exception) { Toast.makeText(context, "No app found to share this file", Toast.LENGTH_SHORT).show() }
+    try { context.startActivity(Intent.createChooser(shareIntent, context.getString(R.string.menu_share))) }
+    catch (_: Exception) { Toast.makeText(context, context.getString(R.string.msg_no_app_share), Toast.LENGTH_SHORT).show() }
 }
 
 /**
@@ -1050,7 +1327,7 @@ fun shareFiles(context: Context, files: List<UniversalFile>) {
  */
 fun openWith(context: Context, file: UniversalFile) {
     val uri = getUriForUniversalFile(context, file) ?: return
-    
+
     // Guess MIME type from extension if possible
     val extension = MimeTypeMap.getFileExtensionFromUrl(uri.toString())
     val mimeType = if (extension != null) {
@@ -1058,17 +1335,17 @@ fun openWith(context: Context, file: UniversalFile) {
     } else {
         context.contentResolver.getType(uri)
     } ?: "*/*"
-    
+
     val intent = Intent(Intent.ACTION_VIEW).apply {
         setDataAndType(uri, mimeType)
         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
     }
-    
+
     try {
-        context.startActivity(Intent.createChooser(intent, "Open with..."))
+        context.startActivity(Intent.createChooser(intent, context.getString(R.string.menu_open_with_no_dots)))
     } catch (_: Exception) {
-        Toast.makeText(context, "No app found to open this file", Toast.LENGTH_SHORT).show()
+        Toast.makeText(context, context.getString(R.string.msg_no_app_open), Toast.LENGTH_SHORT).show()
     }
 }
 
@@ -1091,13 +1368,13 @@ fun openFile(context: Context, file: UniversalFile) {
                 context.startActivity(settingsIntent)
 
                 // Tell the user what to do
-                Toast.makeText(context, "Please allow permission, then click the APK again to install.", Toast.LENGTH_LONG).show()
+                Toast.makeText(context, context.getString(R.string.msg_apk_install_permission), Toast.LENGTH_LONG).show()
                 return // Stop here so it doesn't try to open the APK until they grant permission
             }
         }
     }
 
-    
+
     // Guess MIME type from extension if possible
     val extension = MimeTypeMap.getFileExtensionFromUrl(uri.toString())
     val mimeType = if (extension != null) {
@@ -1105,13 +1382,13 @@ fun openFile(context: Context, file: UniversalFile) {
     } else {
         context.contentResolver.getType(uri)
     } ?: "*/*"
-    
+
     val intent = Intent(Intent.ACTION_VIEW).apply {
         setDataAndType(uri, mimeType)
         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
     }
-    
+
     try {
         context.startActivity(intent)
     } catch (_: Exception) {

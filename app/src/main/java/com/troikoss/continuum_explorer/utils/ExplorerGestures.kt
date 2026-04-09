@@ -56,7 +56,10 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.troikoss.continuum_explorer.managers.FileOperationsManager
+import com.troikoss.continuum_explorer.managers.MoveCopyResult
 import com.troikoss.continuum_explorer.managers.SelectionManager
+import com.troikoss.continuum_explorer.managers.SettingsManager
+import com.troikoss.continuum_explorer.managers.TouchDragBehavior
 import com.troikoss.continuum_explorer.ui.activities.PopUpActivity
 import com.troikoss.continuum_explorer.model.UniversalFile
 import com.troikoss.continuum_explorer.model.ViewMode
@@ -671,17 +674,51 @@ fun Modifier.fileDropTarget(
                             return@launch
                         }
 
-                        FileOperationsManager.start()
-                        val intent = Intent(context, PopUpActivity::class.java).apply {
-                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                        }
-                        context.startActivity(intent)
+                        val isInternalDrag = PendingCut.files.isNotEmpty()
+                        val isTouchDrag = !appState.isMouseInteraction
 
-                        val isMove = (PendingCut.files.isNotEmpty() && appState.isShiftPressed)
-
-                        // Ensure PendingCut.isActive matches the determined operation mode
-                        if (PendingCut.files.isNotEmpty()) {
-                            PendingCut.isActive = isMove
+                        val isMove: Boolean
+                        if (isInternalDrag && isTouchDrag) {
+                            when (SettingsManager.touchDragBehavior.value) {
+                                TouchDragBehavior.COPY -> {
+                                    isMove = false
+                                    PendingCut.isActive = false
+                                    FileOperationsManager.start()
+                                    val intent = Intent(context, PopUpActivity::class.java).apply {
+                                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                    }
+                                    context.startActivity(intent)
+                                }
+                                TouchDragBehavior.MOVE -> {
+                                    isMove = true
+                                    PendingCut.isActive = true
+                                    FileOperationsManager.start()
+                                    val intent = Intent(context, PopUpActivity::class.java).apply {
+                                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                    }
+                                    context.startActivity(intent)
+                                }
+                                TouchDragBehavior.ASK -> {
+                                    FileOperationsManager.start()
+                                    val intent = Intent(context, PopUpActivity::class.java).apply {
+                                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                    }
+                                    context.startActivity(intent)
+                                    val choice = FileOperationsManager.requestMoveCopyChoice()
+                                    if (choice == MoveCopyResult.CANCEL) return@launch
+                                    isMove = (choice == MoveCopyResult.MOVE)
+                                    PendingCut.isActive = isMove
+                                }
+                            }
+                        } else {
+                            // Original mouse / external drag behaviour — unchanged
+                            isMove = (PendingCut.files.isNotEmpty() && appState.isShiftPressed)
+                            if (PendingCut.files.isNotEmpty()) PendingCut.isActive = isMove
+                            FileOperationsManager.start()
+                            val intent = Intent(context, PopUpActivity::class.java).apply {
+                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            }
+                            context.startActivity(intent)
                         }
 
                         val pastedNames = pasteFromClipboard(
@@ -695,6 +732,12 @@ fun Modifier.fileDropTarget(
                         // If it was a Move operation, notify other windows (like the source) to refresh
                         if (isMove) {
                             GlobalEvents.triggerRefresh()
+                            appState.selectionManager.clear()
+                            PendingCut.files = emptyList()
+                            PendingCut.isActive = false
+                        } else if (isTouchDrag) {
+                            // Copy via touch — clear selection too
+                            appState.selectionManager.clear()
                         }
 
                         // Optionally select the newly dropped files if we are currently viewing the destination

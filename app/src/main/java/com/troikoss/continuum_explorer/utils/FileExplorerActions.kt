@@ -162,7 +162,7 @@ fun FileExplorerState.undo() {
     context.startActivity(intent)
 
     scope.launch {
-        UndoManager.undo()
+        UndoManager.undo(context)
         refresh()
         GlobalEvents.triggerRefresh()
         FileOperationsManager.finish()
@@ -177,7 +177,7 @@ fun FileExplorerState.redo() {
     context.startActivity(intent)
 
     scope.launch {
-        UndoManager.redo()
+        UndoManager.redo(context)
         refresh()
         GlobalEvents.triggerRefresh()
         FileOperationsManager.finish()
@@ -189,6 +189,7 @@ fun FileExplorerState.extractSelection() {
     if (selectedArchives.isEmpty()) return
 
     scope.launch {
+        FileOperationsManager.start()
         val intent = Intent(context, PopUpActivity::class.java).apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
@@ -196,7 +197,10 @@ fun FileExplorerState.extractSelection() {
 
         val displayTitle = if (selectedArchives.size == 1) selectedArchives[0].name else context.getString(R.string.delete_items_count, selectedArchives.size)
         val settings = FileOperationsManager.requestExtractOptions(displayTitle)
-        if (settings.isCancelled) return@launch
+        if (settings.isCancelled) {
+            FileOperationsManager.finish()
+            return@launch
+        }
 
         val parentFile = selectedArchives[0].fileRef?.parentFile ?: return@launch
         ZipUtils.extractArchives(context, selectedArchives, parentFile, settings.toSeparateFolder)
@@ -216,13 +220,17 @@ fun FileExplorerState.compressSelection() {
     val defaultName = if (selected.size == 1) "${selected[0].name}.zip" else "$folderName.zip"
 
     scope.launch {
+        FileOperationsManager.start()
         val intent = Intent(context, PopUpActivity::class.java).apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
         context.startActivity(intent)
 
         val settings = FileOperationsManager.requestArchiveOptions(defaultName)
-        if (settings.isCancelled) return@launch
+        if (settings.isCancelled) {
+            FileOperationsManager.finish()
+            return@launch
+        }
 
         ZipUtils.compressFiles(context, selected, targetFolder, settings)
         if (settings.deleteSource) {
@@ -263,7 +271,7 @@ fun FileExplorerState.confirmRename(target: UniversalFile, newName: String) {
 
     scope.launch {
         delay(500)
-        val success = renameFile(target, newName)
+        val success = renameFile(target, newName, context)
         withContext(Dispatchers.Main) {
             if (success) {
                 refresh()
