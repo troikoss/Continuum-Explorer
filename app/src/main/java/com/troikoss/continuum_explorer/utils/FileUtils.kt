@@ -321,7 +321,7 @@ suspend fun copyRecursively(
     } else false
 
     if (alreadyExists) {
-        val result = FileOperationsManager.resolveCollision(targetName)
+        val result = FileOperationsManager.resolveCollision(targetName, source.isDirectory)
         when (result) {
             CollisionResult.CANCEL -> {
                 FileOperationsManager.cancel()
@@ -342,6 +342,9 @@ suspend fun copyRecursively(
                     else destSaf?.findFile(name) != null
                 }
             }
+            CollisionResult.MERGE -> {
+                // No-op: fall through to recurse into existing directory
+            }
         }
     }
 
@@ -353,7 +356,7 @@ suspend fun copyRecursively(
         if (destLocal != null) {
             newDestLocal = File(destLocal, targetName)
             if (!newDestLocal.exists()) {
-                newDestLocal.mkdir()
+                if (!newDestLocal.mkdir()) return null  // was silently ignored before
             }
         } else if (destSaf != null) {
             newDestSaf = destSaf.findFile(targetName) ?: destSaf.createDirectory(targetName)
@@ -847,10 +850,23 @@ suspend fun moveToRecycleBin(context: Context, files: List<UniversalFile>) {
                 val recycledName = getUniqueName(file.name) { name -> File(trashDir, name).exists() }
                 val target = File(trashDir, recycledName)
                 if (file.fileRef.renameTo(target)) {
+                saveTrashMetadata(recycledName, file.fileRef.absolutePath)
+                recycleLog.add(recycledName to file.fileRef.absolutePath)
+                movedCount++
+                } else {
+                // Cross-filesystem fallback: copy then delete
+                try {
+                    val tempTarget = File(trashDir, recycledName)
+                    if (!tempTarget.exists()) tempTarget.mkdirs()
+                    file.fileRef.copyRecursively(tempTarget, overwrite = false)
+                    file.fileRef.deleteRecursively()
                     saveTrashMetadata(recycledName, file.fileRef.absolutePath)
                     recycleLog.add(recycledName to file.fileRef.absolutePath)
                     movedCount++
+                } catch (e: Exception) {
+                    e.printStackTrace()
                 }
+            }
             }
         }
         if (recycleLog.isNotEmpty()) {
@@ -868,33 +884,51 @@ suspend fun moveToRecycleBin(context: Context, files: List<UniversalFile>) {
  * Restores files from the Recycle Bin to their original locations.
  */
 suspend fun restoreFiles(context: Context, files: List<UniversalFile>) {
-    withContext(Dispatchers.IO) {
-        var restoredCount = 0
-        for (file in files) {
-            val originalPath = getOriginalPath(file.name) ?: continue
-            var target = File(originalPath)
-            
-            if (target.exists()) {
-                val result = FileOperationsManager.resolveCollision(target.name)
-                when (result) {
-                    CollisionResult.CANCEL -> break
-                    CollisionResult.REPLACE -> {
-                        if (target.isDirectory) target.deleteRecursively() else target.delete()
-                    }
-                    CollisionResult.KEEP_BOTH -> {
-                        val parent = target.parentFile
-                        val newName = getUniqueName(target.name) { File(parent, it).exists() }
-                        target = File(parent, newName)
-                    }
-                }
-            }
+withContext(Dispatchers.IO) {
+    var restoredCount = 0
+    for (file in files) {
+    val originalPath = getOriginalPath(file.name) ?: continue
+    var target = File(originalPath)
 
-            target.parentFile?.mkdirs()
-            if (file.fileRef != null && file.fileRef.renameTo(target)) {
-                removeTrashMetadata(file.name)
-                restoredCount++
+    if (target.exists()) {
+        val result = FileOperationsManager.resolveCollision(target.name, target.isDirectory)
+        when (result) {
+            CollisionResult.CANCEL -> break
+            CollisionResult.REPLACE -> {
+                if (target.isDirectory) target.deleteRecursively() else target.delete()
+            }
+            CollisionResult.KEEP_BOTH -> {
+                val parent = target.parentFile
+                val newName = getUniqueName(target.name) { File(parent, it).exists() }
+                target = File(parent, newName)
+            }
+            CollisionResult.MERGE -> {
+                // No-op: fall through to recurse into existing directory
             }
         }
+    }
+
+target.parentFile?.mkdirs()
+if (file.fileRef != null && file.fileRef.renameTo(target)) {
+        removeTrashMetadata(file.name)
+            restoredCount++
+            } else if (file.fileRef != null) {
+                    // renameTo failed, try cross-filesystem fallback
+                    try {
+                        val tempTarget = File(originalPath)
+                        if (!tempTarget.exists()) tempTarget.mkdirs()
+                        file.fileRef.copyRecursively(tempTarget, overwrite = false)
+                        file.fileRef.deleteRecursively()
+                        removeTrashMetadata(file.name)
+                        restoredCount++
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                } else {
+                    // file.fileRef is null, skip this file
+                    continue
+                }
+            }
         withContext(Dispatchers.Main) { Toast.makeText(context, "Restored $restoredCount files", Toast.LENGTH_SHORT).show() }
     }
 }

@@ -9,6 +9,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -857,6 +858,7 @@ fun CollisionContent() {
     val fileName = FileOperationsManager.collisionFileName.value
     var rememberSelection by remember { mutableStateOf(false) }
     val focusRequester = remember { FocusRequester() }
+    val isDirectory = FileOperationsManager.collisionIsDirectory.value
 
     LaunchedEffect(Unit) {
         focusRequester.requestFocus()
@@ -872,11 +874,18 @@ fun CollisionContent() {
             Text(text = stringResource(R.string.conflict_remember), style = MaterialTheme.typography.bodySmall)
         }
         Spacer(modifier = Modifier.height(16.dp))
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+        FlowRow(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
             TextButton(onClick = { FileOperationsManager.onCollisionChoice(CollisionResult.CANCEL, false) }) { Text(stringResource(R.string.cancel)) }
-            Spacer(modifier = Modifier.width(8.dp))
+            if (isDirectory) {
+                Button(onClick = { FileOperationsManager.onCollisionChoice(CollisionResult.MERGE, rememberSelection) }) {
+                    Text(stringResource(R.string.conflict_merge))
+                }
+            }
             Button(onClick = { FileOperationsManager.onCollisionChoice(CollisionResult.KEEP_BOTH, rememberSelection) }) { Text(stringResource(R.string.conflict_keep_both)) }
-            Spacer(modifier = Modifier.width(8.dp))
             Button(
                 onClick = { FileOperationsManager.onCollisionChoice(CollisionResult.REPLACE, rememberSelection) },
                 modifier = Modifier.focusRequester(focusRequester)
@@ -901,10 +910,10 @@ fun DeleteConfirmContent() {
         Text(text = stringResource(R.string.delete_confirm_message, itemText), style = MaterialTheme.typography.bodyMedium)
         Spacer(modifier = Modifier.height(24.dp))
 
-        Row(
+        FlowRow(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.End),
-            verticalAlignment = Alignment.CenterVertically
+            verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             TextButton(
                 onClick = { FileOperationsManager.onDeleteChoice(DeleteResult.CANCEL) },

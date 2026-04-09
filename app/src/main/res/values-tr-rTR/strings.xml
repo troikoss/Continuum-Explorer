@@ -113,6 +113,7 @@
     <string name="conflict_title">Dosya Çakışması</string>
     <string name="conflict_message">\"%1$s\" adlı dosya zaten mevcut</string>
     <string name="conflict_remember">Bu oturum için seçimi hatırla</string>
+    <string name="conflict_merge">Birleştir</string>
     <string name="conflict_keep_both">İkisini de Sakla</string>
     <string name="conflict_replace">Yenisiyle Değiştir</string>
     <string name="delete_confirm_title">Silmeyi Onayla</string>

@@ -129,6 +129,7 @@
     <string name="conflict_title">File Conflict</string>
     <string name="conflict_message">A file named \"%1$s\" already exists. What would you like to do?</string>
     <string name="conflict_remember">Remember selection for this session</string>
+    <string name="conflict_merge">Merge</string>
     <string name="conflict_keep_both">Keep Both</string>
     <string name="conflict_replace">Replace</string>
     <string name="delete_confirm_title">Confirm Delete</string>

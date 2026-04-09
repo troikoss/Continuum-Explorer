@@ -399,6 +399,9 @@ object ZipUtils {
                                     val newName = getUniqueName(outFile.name) { File(parent, it).exists() }
                                     outFile = File(parent, newName)
                                 }
+                                CollisionResult.MERGE -> {
+                                    // No-op: fall through to recurse into existing directory
+                                }
                             }
                         }
                         if (FileOperationsManager.isCancelled.value) break
@@ -488,6 +491,9 @@ object ZipUtils {
                     CollisionResult.KEEP_BOTH -> {
                         val newName = getUniqueName(destFile.name) { File(destFolder, it).exists() }
                         destFile = File(destFolder, newName)
+                    }
+                    CollisionResult.MERGE -> {
+                        // No-op: fall through to recurse into existing directory
                     }
                 }
             }

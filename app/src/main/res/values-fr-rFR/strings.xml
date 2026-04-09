@@ -125,6 +125,7 @@
     <string name="conflict_title">Conflit de fichiers</string>
     <string name="conflict_message">Un fichier nommé « %1$s » existe déjà. Que souhaitez-vous faire ?</string>
     <string name="conflict_remember">Se souvenir du choix pour cette session</string>
+    <string name="conflict_merge">Fusionner</string>
     <string name="conflict_keep_both">Conserver les deux</string>
     <string name="conflict_replace">Remplacer</string>
 

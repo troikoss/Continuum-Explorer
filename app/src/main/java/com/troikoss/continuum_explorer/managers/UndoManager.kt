@@ -69,6 +69,9 @@ object UndoManager {
                             val newName = getUniqueName(targetFile.name) { File(action.parentDir, it).exists() }
                             targetFile = File(action.parentDir, newName)
                         }
+                        CollisionResult.MERGE -> {
+                            // No-op: fall through to recurse into existing directory
+                        }
                     }
                 }
                 currentFile.exists() && currentFile.renameTo(targetFile)
@@ -83,16 +86,19 @@ object UndoManager {
                         if (target.exists()) {
                             val result = FileOperationsManager.resolveCollision(target.name)
                             when (result) {
-                                CollisionResult.CANCEL -> { success = false; return@forEach }
-                                CollisionResult.REPLACE -> {
-                                    if (target.isDirectory) target.deleteRecursively() else target.delete()
-                                }
-                                CollisionResult.KEEP_BOTH -> {
-                                    val parent = target.parentFile
-                                    val newName = getUniqueName(target.name) { File(parent, it).exists() }
-                                    target = File(parent, newName)
-                                }
+                            CollisionResult.CANCEL -> { success = false; return@forEach }
+                            CollisionResult.REPLACE -> {
+                            if (target.isDirectory) target.deleteRecursively() else target.delete()
                             }
+                            CollisionResult.KEEP_BOTH -> {
+                            val parent = target.parentFile
+                            val newName = getUniqueName(target.name) { File(parent, it).exists() }
+                            target = File(parent, newName)
+                            }
+                                CollisionResult.MERGE -> {
+                                        // No-op: fall through to recurse into existing directory
+                                    }
+                                }
                         }
                         target.parentFile?.mkdirs()
                         if (recycledFile.renameTo(target)) {
@@ -112,16 +118,19 @@ object UndoManager {
                             if (sourceFile.exists()) {
                                 val result = FileOperationsManager.resolveCollision(sourceFile.name)
                                 when (result) {
-                                    CollisionResult.CANCEL -> { success = false; return@forEach }
-                                    CollisionResult.REPLACE -> {
-                                        if (sourceFile.isDirectory) sourceFile.deleteRecursively() else sourceFile.delete()
-                                    }
-                                    CollisionResult.KEEP_BOTH -> {
-                                        val parent = sourceFile.parentFile
-                                        val newName = getUniqueName(sourceFile.name) { File(parent, it).exists() }
-                                        sourceFile = File(parent, newName)
-                                    }
+                                CollisionResult.CANCEL -> { success = false; return@forEach }
+                                CollisionResult.REPLACE -> {
+                                if (sourceFile.isDirectory) sourceFile.deleteRecursively() else sourceFile.delete()
                                 }
+                                CollisionResult.KEEP_BOTH -> {
+                                val parent = sourceFile.parentFile
+                                val newName = getUniqueName(sourceFile.name) { File(parent, it).exists() }
+                                sourceFile = File(parent, newName)
+                                }
+                                    CollisionResult.MERGE -> {
+                                    // No-op: fall through to recurse into existing directory
+                                }
+                            }
                             }
                             sourceFile.parentFile?.mkdirs()
                             if (!destFile.renameTo(sourceFile)) success = false
@@ -152,6 +161,9 @@ object UndoManager {
                             val newName = getUniqueName(newFile.name) { File(action.parentDir, it).exists() }
                             newFile = File(action.parentDir, newName)
                         }
+                        CollisionResult.MERGE -> {
+                            // No-op: fall through to recurse into existing directory
+                        }
                     }
                 }
                 oldFile.exists() && oldFile.renameTo(newFile)
@@ -167,15 +179,18 @@ object UndoManager {
                         if (target.exists()) {
                             val result = FileOperationsManager.resolveCollision(target.name)
                             when (result) {
-                                CollisionResult.CANCEL -> { success = false; return@forEach }
-                                CollisionResult.REPLACE -> {
-                                    if (target.isDirectory) target.deleteRecursively() else target.delete()
-                                }
-                                CollisionResult.KEEP_BOTH -> {
-                                    val newName = getUniqueName(target.name) { File(trashDir, it).exists() }
-                                    target = File(trashDir, newName)
-                                }
+                            CollisionResult.CANCEL -> { success = false; return@forEach }
+                            CollisionResult.REPLACE -> {
+                            if (target.isDirectory) target.deleteRecursively() else target.delete()
                             }
+                            CollisionResult.KEEP_BOTH -> {
+                            val newName = getUniqueName(target.name) { File(trashDir, it).exists() }
+                            target = File(trashDir, newName)
+                            }
+                                CollisionResult.MERGE -> {
+                                        // No-op: fall through to recurse into existing directory
+                                    }
+                                }
                         }
                         if (originalFile.renameTo(target)) {
                             saveTrashMetadata(recycledName, originalPath)
@@ -194,16 +209,19 @@ object UndoManager {
                             if (destFile.exists()) {
                                 val result = FileOperationsManager.resolveCollision(destFile.name)
                                 when (result) {
-                                    CollisionResult.CANCEL -> { success = false; return@forEach }
-                                    CollisionResult.REPLACE -> {
-                                        if (destFile.isDirectory) destFile.deleteRecursively() else destFile.delete()
-                                    }
-                                    CollisionResult.KEEP_BOTH -> {
-                                        val parent = destFile.parentFile
-                                        val newName = getUniqueName(destFile.name) { File(parent, it).exists() }
-                                        destFile = File(parent, newName)
-                                    }
+                                CollisionResult.CANCEL -> { success = false; return@forEach }
+                                CollisionResult.REPLACE -> {
+                                if (destFile.isDirectory) destFile.deleteRecursively() else destFile.delete()
                                 }
+                                CollisionResult.KEEP_BOTH -> {
+                                val parent = destFile.parentFile
+                                val newName = getUniqueName(destFile.name) { File(parent, it).exists() }
+                                destFile = File(parent, newName)
+                                }
+                                    CollisionResult.MERGE -> {
+                                    // No-op: fall through to recurse into existing directory
+                                }
+                            }
                             }
                             destFile.parentFile?.mkdirs()
                             if (!sourceFile.renameTo(destFile)) success = false

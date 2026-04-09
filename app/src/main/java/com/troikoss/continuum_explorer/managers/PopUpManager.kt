@@ -28,6 +28,7 @@ enum class PopupType {
 enum class CollisionResult {
     REPLACE,
     KEEP_BOTH,
+    MERGE,
     CANCEL
 }
 
@@ -106,6 +107,7 @@ object FileOperationsManager {
 
     // Collision Resolution State
     var collisionFileName = mutableStateOf("")
+    var collisionIsDirectory = mutableStateOf(false)
     var rememberedCollisionResult: CollisionResult? = null
     private var collisionDeferred: CompletableDeferred<CollisionResult>? = null
 
@@ -214,10 +216,11 @@ object FileOperationsManager {
         notifyListeners()
     }
 
-    suspend fun resolveCollision(fileName: String): CollisionResult {
+    suspend fun resolveCollision(fileName: String, isDirectory: Boolean = false): CollisionResult {
         if (rememberedCollisionResult != null) return rememberedCollisionResult!!
         
         collisionFileName.value = fileName
+        collisionIsDirectory.value = isDirectory
         popupType.value = PopupType.COLLISION
         
         val deferred = CompletableDeferred<CollisionResult>()
