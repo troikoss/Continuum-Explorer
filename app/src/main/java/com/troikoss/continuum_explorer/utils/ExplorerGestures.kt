@@ -429,8 +429,13 @@ fun Modifier.itemGestures(
                     event.changes.forEach { it.consume() }
                     val pointerId = event.changes[0].id
                     val longPress = awaitLongPressOrCancellation(pointerId)
-                    if (longPress != null && !selectionManager.isInSelectionMode()) {
-                        selectionManager.touchToggle(file)
+                    if (longPress != null) {
+                        if (selectionManager.isInSelectionMode()) {
+                            // Range select from anchor to this item
+                            selectionManager.handleRowClick(file, isShiftPressed = true, isCtrlPressed = false)
+                        } else {
+                            selectionManager.touchToggle(file)
+                        }
                         longPress.consume()
                     } else {
                         val up = currentEvent.changes.find { it.id == pointerId }

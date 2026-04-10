@@ -115,10 +115,16 @@ class SelectionManager {
     }
 
     fun touchToggle(item: UniversalFile) {
-        selectedItems = if (selectedItems.contains(item)) {
-            selectedItems - item
+        if (selectedItems.contains(item)) {
+            selectedItems = selectedItems - item
+            if (selectedItems.isEmpty()) {
+                anchorItem = null
+                leadItem = null
+            }
         } else {
-            selectedItems + item
+            selectedItems = selectedItems + item
+            if (anchorItem == null) anchorItem = item
+            leadItem = item
         }
     }
 
