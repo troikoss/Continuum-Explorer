@@ -336,7 +336,7 @@ fun TopBar(
                     ) {
                         if (!addressBar && !searchBar) addressBar = true
                     },
-                color = MaterialTheme.colorScheme.onPrimary,
+                color = MaterialTheme.colorScheme.surface,
                 shape = MaterialTheme.shapes.small
             ) {
                 if (searchBar) {
