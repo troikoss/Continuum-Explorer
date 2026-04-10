@@ -39,7 +39,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.PathParser
 import androidx.compose.ui.graphics.vector.VectorGroup
 import androidx.compose.ui.graphics.vector.VectorPath
-import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
@@ -48,7 +47,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.graphics.createBitmap
 import coil.Coil
-import coil.compose.AsyncImage
+import coil.compose.AsyncImagePainter
+import coil.compose.SubcomposeAsyncImage
+import coil.compose.SubcomposeAsyncImageContent
 import coil.request.ImageRequest
 import coil.request.SuccessResult
 import com.troikoss.continuum_explorer.model.UniversalFile
@@ -68,7 +69,8 @@ object IconHelper {
     fun FileThumbnail(
         file: UniversalFile,
         modifier: Modifier = Modifier,
-        tint: Color = MaterialTheme.colorScheme.primary,
+        iconModifier: Modifier = Modifier,
+        tint: Color = MaterialTheme.colorScheme.secondary,
         isDetailView: Boolean = false
     ) {
         val fallbackIcon = getIconForItem(file)
@@ -76,25 +78,29 @@ object IconHelper {
         if (!file.isDirectory && isMimeTypePreviewable(file)) {
             val name = file.name.lowercase()
             when {
-                name.endsWith(".pdf") -> PdfThumbnail(file, fallbackIcon, modifier, tint)
-                name.endsWith(".apk") -> ApkThumbnail(file, fallbackIcon, modifier, tint)
+                name.endsWith(".pdf") -> PdfThumbnail(file, fallbackIcon, modifier, iconModifier, tint)
+                name.endsWith(".apk") -> ApkThumbnail(file, fallbackIcon, modifier, iconModifier, tint)
                 name.endsWith(".txt") -> TextFilePreview(file, fallbackIcon, modifier, tint, isDetailView)
                 else -> {
-                    AsyncImage(
+                    SubcomposeAsyncImage(
                         model = file.documentFileRef?.uri ?: file.fileRef?.absolutePath,
                         contentDescription = null,
                         modifier = modifier,
                         contentScale = ContentScale.Fit,
-                        placeholder = rememberVectorPainter(fallbackIcon),
-                        error = rememberVectorPainter(fallbackIcon)
-                    )
+                    ) {
+                        if (painter.state is AsyncImagePainter.State.Success) {
+                            SubcomposeAsyncImageContent()
+                        } else {
+                            Icon(imageVector = fallbackIcon, contentDescription = null, modifier = iconModifier, tint = tint)
+                        }
+                    }
                 }
             }
         } else {
             Icon(
                 imageVector = fallbackIcon,
                 contentDescription = null,
-                modifier = modifier,
+                modifier = iconModifier,
                 tint = tint
             )
         }
@@ -164,6 +170,7 @@ object IconHelper {
         file: UniversalFile,
         fallbackIcon: ImageVector,
         modifier: Modifier = Modifier,
+        iconModifier: Modifier = Modifier,
         tint: Color = MaterialTheme.colorScheme.primary
     ) {
         val context = LocalContext.current
@@ -177,7 +184,7 @@ object IconHelper {
             }
         }
 
-        ThumbnailImage(isReady, thumbFile, fallbackIcon, modifier, tint)
+        ThumbnailImage(isReady, thumbFile, fallbackIcon, modifier, iconModifier, tint)
     }
 
     @Composable
@@ -185,6 +192,7 @@ object IconHelper {
         file: UniversalFile,
         fallbackIcon: ImageVector,
         modifier: Modifier,
+        iconModifier: Modifier,
         tint: Color
     ) {
         val context = LocalContext.current
@@ -198,22 +206,26 @@ object IconHelper {
             }
         }
 
-        ThumbnailImage(isReady, thumbFile, fallbackIcon, modifier, tint)
+        ThumbnailImage(isReady, thumbFile, fallbackIcon, modifier, iconModifier, tint)
     }
 
     @Composable
-    private fun ThumbnailImage(isReady: Boolean, thumbFile: File, fallbackIcon: ImageVector, modifier: Modifier, tint: Color) {
+    private fun ThumbnailImage(isReady: Boolean, thumbFile: File, fallbackIcon: ImageVector, modifier: Modifier, iconModifier: Modifier, tint: Color) {
         if (isReady) {
-            AsyncImage(
+            SubcomposeAsyncImage(
                 model = thumbFile,
                 contentDescription = null,
                 modifier = modifier,
                 contentScale = ContentScale.Fit,
-                placeholder = rememberVectorPainter(fallbackIcon),
-                error = rememberVectorPainter(fallbackIcon)
-            )
+            ) {
+                if (painter.state is AsyncImagePainter.State.Success) {
+                    SubcomposeAsyncImageContent()
+                } else {
+                    Icon(imageVector = fallbackIcon, contentDescription = null, modifier = iconModifier, tint = tint)
+                }
+            }
         } else {
-            Icon(imageVector = fallbackIcon, contentDescription = null, modifier = modifier, tint = tint)
+            Icon(imageVector = fallbackIcon, contentDescription = null, modifier = iconModifier, tint = tint)
         }
     }
 
