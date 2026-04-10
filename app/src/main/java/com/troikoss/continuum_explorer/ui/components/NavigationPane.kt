@@ -118,7 +118,8 @@ fun NavigationPane(
     appState: FileExplorerState,
     onItemSelected: (Int) -> Unit,
     onSafItemSelected: (Uri) -> Unit,
-    onAddStorageClick: () -> Unit
+    onAddStorageClick: () -> Unit,
+    onNavigate: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val resources = LocalResources.current
@@ -305,7 +306,7 @@ fun NavigationPane(
                         NavFavoriteItem(
                             label = file.name,
                             path = path,
-                            onClick = { appState.navigateTo(file, null) },
+                            onClick = { appState.navigateTo(file, null); onNavigate() },
                             onRemove = { appState.appConfigs.removeFavorite(path) },
                             appState = appState
                         )
@@ -444,7 +445,8 @@ fun NavigationPane(
                     onClick = { onItemSelected(volume.id) },
                     modifier = Modifier.fileDropTarget(appState, destPath = volume.path),
                     appState = appState,
-                    path = volume.path
+                    path = volume.path,
+                    onNavigate = onNavigate
                 )
             }
 
@@ -798,7 +800,8 @@ private fun NavStorageItem(
     onClick: () -> Unit,
     appState: FileExplorerState,
     path: File?,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onNavigate: () -> Unit = {}
 ) {
     val context = LocalContext.current
     var expandedMenu by remember { mutableStateOf(false) }
@@ -904,7 +907,8 @@ private fun NavStorageItem(
                 StorageFolderTreeItem(
                     folder = childFolder,
                     level = 1,
-                    appState = appState
+                    appState = appState,
+                    onNavigate = onNavigate
                 )
             }
         }
@@ -915,7 +919,8 @@ private fun NavStorageItem(
 private fun StorageFolderTreeItem(
     folder: File,
     level: Int,
-    appState: FileExplorerState
+    appState: FileExplorerState,
+    onNavigate: () -> Unit = {}
 ) {
     var expanded by remember { mutableStateOf(false) }
     var subDirs by remember { mutableStateOf<List<File>>(emptyList()) }
@@ -939,7 +944,7 @@ private fun StorageFolderTreeItem(
                 .fillMaxWidth()
                 .padding(start = (16 + level * 16).dp, end = 16.dp, top = 2.dp, bottom = 2.dp)
                 .clip(MaterialTheme.shapes.small)
-                .clickable { appState.navigateTo(folder, null) }
+                .clickable { appState.navigateTo(folder, null); onNavigate() }
                 .fileDropTarget(appState, destPath = folder),
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -973,7 +978,8 @@ private fun StorageFolderTreeItem(
                 StorageFolderTreeItem(
                     folder = childFolder,
                     level = level + 1,
-                    appState = appState
+                    appState = appState,
+                    onNavigate = onNavigate
                 )
             }
         }

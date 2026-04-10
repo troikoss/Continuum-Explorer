@@ -30,6 +30,8 @@
     <string name="prop_size_on_disk">Diskteki boyut:</string>
     <string name="prop_location">Konum:</string>
     <string name="prop_modified">Değiştirilme:</string>
+    <string name="prop_deleted">Silinme:</string>
+    <string name="prop_deleted_from">Silindiği Yer:</string>
     <string name="prop_resolution">Çözünürlük:</string>
     <string name="prop_duration">Süre:</string>
     <string name="prop_items">Öğeler:</string>
@@ -43,6 +45,8 @@
     <string name="details_item_count_singular">1 öğe</string>
     <string name="details_item_count_plural">%1$d öğe</string>
     <string name="details_date_modified">Değiştirilme Tarihi: %1$s</string>
+    <string name="details_date_deleted">Silinme Tarihi: %1$s</string>
+    <string name="details_deleted_from">Silindiği Yer: %1$s</string>
     <string name="details_size">Boyut: %1$s</string>
     <string name="details_resolution">Çözünürlük: %1$s</string>
     <string name="details_duration">Süre: %1$s</string>
@@ -177,6 +181,8 @@
     <string name="settings_internal_archive">Dahili Arşiv Görüntüleyicisini kullan</string>
     <string name="settings_internal_archive_desc">Harici uygulamalar yerine, arşiv dosyalarını doğrudan bu uygulamada aç.</string>
     <string name="settings_shortcuts_desc">Kullanılabilir klavye ve fare kısayollarını görüntüle</string>
+    <string name="settings_default_view_mode">Varsayılan Görünüm Modu</string>
+    <string name="settings_choose_default_view_mode">Varsayılan Görünüm Modunu Seç</string>
     <string name="settings_choose_del_behavior">Silme Davranışını Seç</string>
     <string name="settings_choose_theme">Tema Seç</string>
     <string name="settings_choose_details_mode">Ayrıntılar Modunu Seç</string>
@@ -216,6 +222,8 @@
     <string name="menu_by_name">Ada Göre</string>
     <string name="menu_by_date">Tarihe Göre</string>
     <string name="menu_by_size">Boyuta Göre</string>
+    <string name="menu_by_date_deleted">Silinme Tarihine Göre</string>
+    <string name="menu_by_location">Konuma Göre</string>
     <string name="menu_details">Ayrıntılı</string>
     <string name="menu_grid">Izgara</string>
     <string name="menu_content">İçindekiler</string>
@@ -309,6 +317,8 @@
     <string name="details_header_name">Ad</string>
     <string name="details_header_size">Boyut</string>
     <string name="details_header_date">Tarih</string>
+    <string name="details_header_date_deleted">Silinme tarihi</string>
+    <string name="details_header_deleted_from">Konum</string>
     <string name="msg_unknown_compression_error">Bilinmeyen sıkıştırma hatası</string>
     <string name="media_loop_on">Döngü: Açık</string>
     <string name="media_loop_off">Döngü: Kapalı</string>

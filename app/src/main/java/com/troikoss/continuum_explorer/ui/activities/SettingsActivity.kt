@@ -29,6 +29,7 @@ import com.troikoss.continuum_explorer.managers.FileOperationsManager
 import com.troikoss.continuum_explorer.managers.SettingsManager
 import com.troikoss.continuum_explorer.managers.ThemeMode
 import com.troikoss.continuum_explorer.managers.TouchDragBehavior
+import com.troikoss.continuum_explorer.model.ViewMode
 
 class SettingsActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -54,6 +55,7 @@ fun SettingsScreen(onBack: () -> Unit) {
     val isCommandBarVisible = SettingsManager.isCommandBarVisible.value
     val showHiddenFiles = SettingsManager.showHiddenFiles.value
     val iconTouchSelection = SettingsManager.iconTouchSelection.value
+    val defaultViewMode = SettingsManager.defaultViewMode.value
 
     var showDeleteDialog by remember { mutableStateOf(false) }
     var showTouchDragDialog by remember { mutableStateOf(false) }
@@ -61,6 +63,7 @@ fun SettingsScreen(onBack: () -> Unit) {
     var showLanguageDialog by remember { mutableStateOf(false) }
     var showShortcutsDialog by remember { mutableStateOf(false) }
     var showDetailsDialog by remember { mutableStateOf(false) }
+    var showDefaultViewModeDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -128,6 +131,19 @@ fun SettingsScreen(onBack: () -> Unit) {
                 },
                 modifier = Modifier.clickable { showDetailsDialog = true }
             )
+            ListItem(
+                headlineContent = { Text(stringResource(R.string.settings_default_view_mode)) },
+                supportingContent = {
+                    val text = when (defaultViewMode) {
+                        ViewMode.DETAILS -> stringResource(R.string.menu_details)
+                        ViewMode.CONTENT -> stringResource(R.string.menu_content)
+                        ViewMode.GRID -> stringResource(R.string.menu_grid)
+                    }
+                    Text(text)
+                },
+                modifier = Modifier.clickable { showDefaultViewModeDialog = true }
+            )
+
             ListItem(
                 headlineContent = { Text(stringResource(R.string.settings_show_command_bar)) },
                 supportingContent = { Text(stringResource(R.string.settings_show_command_bar_desc)) },
@@ -434,6 +450,46 @@ fun SettingsScreen(onBack: () -> Unit) {
                     },
                     confirmButton = {
                         TextButton(onClick = { showDetailsDialog = false }) {
+                            Text(stringResource(R.string.cancel))
+                        }
+                    }
+                )
+            }
+
+            if (showDefaultViewModeDialog) {
+                AlertDialog(
+                    onDismissRequest = { showDefaultViewModeDialog = false },
+                    title = { Text(stringResource(R.string.settings_choose_default_view_mode)) },
+                    text = {
+                        Column {
+                            OptionItem(
+                                label = stringResource(R.string.menu_details),
+                                selected = defaultViewMode == ViewMode.DETAILS,
+                                onClick = {
+                                    SettingsManager.setDefaultViewMode(context, ViewMode.DETAILS)
+                                    showDefaultViewModeDialog = false
+                                }
+                            )
+                            OptionItem(
+                                label = stringResource(R.string.menu_content),
+                                selected = defaultViewMode == ViewMode.CONTENT,
+                                onClick = {
+                                    SettingsManager.setDefaultViewMode(context, ViewMode.CONTENT)
+                                    showDefaultViewModeDialog = false
+                                }
+                            )
+                            OptionItem(
+                                label = stringResource(R.string.menu_grid),
+                                selected = defaultViewMode == ViewMode.GRID,
+                                onClick = {
+                                    SettingsManager.setDefaultViewMode(context, ViewMode.GRID)
+                                    showDefaultViewModeDialog = false
+                                }
+                            )
+                        }
+                    },
+                    confirmButton = {
+                        TextButton(onClick = { showDefaultViewModeDialog = false }) {
                             Text(stringResource(R.string.cancel))
                         }
                     }

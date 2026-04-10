@@ -42,6 +42,7 @@ import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
@@ -71,6 +72,7 @@ fun TopBar(
 ) {
 
     val context = LocalContext.current
+    val resources = LocalResources.current
 
     var optionsMenuExpanded by remember { mutableStateOf(false) }
     var addressBar by remember { mutableStateOf(false) }
@@ -181,7 +183,8 @@ fun TopBar(
             }
             
             // NAVIGATION GROUP (Back/Forward/History)
-            Row(verticalAlignment = CenterVertically) {
+            val isSmall = appState.getScreenSize() == ScreenSize.SMALL
+            if (!isSmall || !searchBar) Row(verticalAlignment = CenterVertically) {
                 IconButton(
                     onClick = { appState.goBack() },
                     enabled = appState.backStack.isNotEmpty()
@@ -650,17 +653,17 @@ fun TopBar(
                                                     addressBar = false
                                                     focusManager.clearFocus()
                                                 } else {
-                                                    Toast.makeText(context, context.getString(R.string.msg_not_dir_archive), Toast.LENGTH_SHORT).show()
+                                                    Toast.makeText(context, resources.getString(R.string.msg_not_dir_archive), Toast.LENGTH_SHORT).show()
                                                 }
                                             } else {
-                                                Toast.makeText(context, context.getString(R.string.msg_file_not_found), Toast.LENGTH_SHORT).show()
+                                                Toast.makeText(context, resources.getString(R.string.msg_file_not_found), Toast.LENGTH_SHORT).show()
                                             }
                                         } else {
                                             addressBar = false
                                             focusManager.clearFocus()
                                         }
                                     } else {
-                                        Toast.makeText(context, context.getString(R.string.msg_invalid_path), Toast.LENGTH_SHORT).show()
+                                        Toast.makeText(context, resources.getString(R.string.msg_invalid_path), Toast.LENGTH_SHORT).show()
                                         textPathValue = TextFieldValue(currentPathString)
                                     }
                                 }

@@ -5,6 +5,7 @@ import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.core.os.LocaleListCompat
+import com.troikoss.continuum_explorer.model.ViewMode
 import com.troikoss.continuum_explorer.utils.GlobalEvents
 
 enum class DetailsMode {
@@ -45,6 +46,7 @@ object SettingsManager {
     private const val KEY_COMMAND_BAR_VISIBLE = "command_bar_visible"
     private const val KEY_SHOW_HIDDEN_FILES = "show_hidden_files"
     private const val KEY_ICON_TOUCH_SELECTION = "icon_touch_selection"
+    private const val KEY_DEFAULT_VIEW_MODE = "default_view_mode"
 
     private val _deleteBehavior = mutableStateOf(DeleteBehavior.ASK)
     val deleteBehavior: State<DeleteBehavior> = _deleteBehavior
@@ -69,6 +71,9 @@ object SettingsManager {
 
     private val _iconTouchSelection = mutableStateOf(true)
     val iconTouchSelection: State<Boolean> = _iconTouchSelection
+
+    private val _defaultViewMode = mutableStateOf(ViewMode.DETAILS)
+    val defaultViewMode: State<ViewMode> = _defaultViewMode
 
     // Derived state: enabled if behavior is not PERMANENT
     private val _isRecycleBinEnabled = mutableStateOf(true)
@@ -120,6 +125,13 @@ object SettingsManager {
         _iconTouchSelection.value = prefs.getBoolean(KEY_ICON_TOUCH_SELECTION, true)
 
         _isDefaultArchiveViewerEnabled.value = prefs.getBoolean(KEY_DEFAULT_ARCHIVE_VIEWER, true)
+
+        val savedViewMode = prefs.getString(KEY_DEFAULT_VIEW_MODE, ViewMode.DETAILS.name)
+        _defaultViewMode.value = try {
+            ViewMode.valueOf(savedViewMode ?: ViewMode.DETAILS.name)
+        } catch (e: Exception) {
+            ViewMode.DETAILS
+        }
     }
 
     fun setLanguage(context: Context, languageTag: String) {
@@ -198,5 +210,11 @@ object SettingsManager {
         _isDefaultArchiveViewerEnabled.value = enabled
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         prefs.edit().putBoolean(KEY_DEFAULT_ARCHIVE_VIEWER, enabled).apply()
+    }
+
+    fun setDefaultViewMode(context: Context, mode: ViewMode) {
+        _defaultViewMode.value = mode
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putString(KEY_DEFAULT_VIEW_MODE, mode.name).apply()
     }
 }

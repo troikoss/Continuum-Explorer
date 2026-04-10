@@ -14,6 +14,8 @@ import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.awaitLongPressOrCancellation
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.requiredWidth
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.VerticalDivider
@@ -774,11 +776,11 @@ fun Modifier.fileDropTarget(
 @Composable
 fun VerticalResizeHandle(
     onResize: (Dp) -> Unit,
-    modifier: Modifier = Modifier,
-    contentAlignment: Alignment = Alignment.Center
+    modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
     val density = LocalDensity.current
+    val currentOnResize by rememberUpdatedState(onResize)
 
     val resizeIcon = remember(context) {
         androidx.compose.ui.input.pointer.PointerIcon(
@@ -786,32 +788,39 @@ fun VerticalResizeHandle(
         )
     }
 
+    // Outer Box takes only 1dp of layout space — no gap between panes.
     Box(
-        modifier = modifier
-            .width(16.dp)
-            .pointerHoverIcon(resizeIcon)
-            .pointerInput(onResize) {
-                awaitEachGesture {
-                    val down = awaitFirstDown()
-                    down.consume()
-                    while (true) {
-                        val event = awaitPointerEvent()
-                        val dragChange = event.changes.firstOrNull() ?: break
-                        if (!dragChange.pressed) break
-                        val deltaPx = dragChange.positionChange().x
-                        if (deltaPx != 1f) {
-                            val deltaDp = with(density) { deltaPx.toDp() }
-                            onResize(deltaDp)
-                            dragChange.consume()
+        modifier = modifier.width(1.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        // Visible divider line
+        VerticalDivider(
+            color = MaterialTheme.colorScheme.outlineVariant
+        )
+        // Invisible 32dp hitbox. requiredWidth ignores parent constraints, extending
+        // rightward into the adjacent pane. The outer Box doesn't clip, so pointer
+        // events reach this box even though it visually overflows the 1dp layout width.
+        Box(
+            modifier = Modifier
+                .fillMaxHeight()
+                .requiredWidth(24.dp)
+                .pointerHoverIcon(resizeIcon)
+                .pointerInput(Unit) {
+                    awaitEachGesture {
+                        val down = awaitFirstDown(requireUnconsumed = false)
+                        down.consume()
+                        while (true) {
+                            val event = awaitPointerEvent()
+                            val dragChange = event.changes.firstOrNull() ?: break
+                            if (!dragChange.pressed) break
+                            val deltaPx = dragChange.positionChange().x
+                            if (deltaPx != 0f) {
+                                currentOnResize(with(density) { deltaPx.toDp() })
+                                dragChange.consume()
+                            }
                         }
                     }
                 }
-            },
-        contentAlignment = contentAlignment
-    ) {
-        VerticalDivider(
-            modifier = Modifier.width(1.dp),
-            color = MaterialTheme.colorScheme.outlineVariant
         )
     }
 }

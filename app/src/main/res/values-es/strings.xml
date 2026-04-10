@@ -36,6 +36,8 @@
     <string name="prop_size_on_disk">Tamaño en disco:</string>
     <string name="prop_location">Ubicación:</string>
     <string name="prop_modified">Modificado:</string>
+    <string name="prop_deleted">Eliminado:</string>
+    <string name="prop_deleted_from">Eliminado de:</string>
     <string name="prop_resolution">Resolución:</string>
     <string name="prop_duration">Duración:</string>
     <string name="prop_items">Elementos:</string>
@@ -49,6 +51,8 @@
     <string name="details_item_count_singular">1 elemento</string>
     <string name="details_item_count_plural">%1$d elementos</string>
     <string name="details_date_modified">Fecha de modificación: %1$s</string>
+    <string name="details_date_deleted">Fecha de eliminación: %1$s</string>
+    <string name="details_deleted_from">Eliminado de: %1$s</string>
     <string name="details_size">Tamaño: %1$s</string>
     <string name="details_resolution">Resolución: %1$s</string>
     <string name="details_duration">Duración: %1$s</string>
@@ -193,6 +197,8 @@
     <string name="settings_internal_archive">Usar visor interno de archivos</string>
     <string name="settings_internal_archive_desc">Abrir archivos zip directamente en la aplicación en lugar de usar aplicaciones externas.</string>
     <string name="settings_shortcuts_desc">Ver atajos de teclado y ratón disponibles</string>
+    <string name="settings_default_view_mode">Modo de vista predeterminado</string>
+    <string name="settings_choose_default_view_mode">Elegir modo de vista predeterminado</string>
     <string name="settings_choose_del_behavior">Elegir comportamiento de eliminación</string>
     <string name="settings_choose_theme">Elegir tema</string>
     <string name="settings_choose_details_mode">Elegir modo de detalles</string>
@@ -234,6 +240,8 @@
     <string name="menu_by_name">Por nombre</string>
     <string name="menu_by_date">Por fecha</string>
     <string name="menu_by_size">Por tamaño</string>
+    <string name="menu_by_date_deleted">Por fecha de eliminación</string>
+    <string name="menu_by_location">Por ubicación</string>
     <string name="menu_details">Detalles</string>
     <string name="menu_grid">Cuadrícula</string>
     <string name="menu_content">Contenido</string>
@@ -357,6 +365,8 @@
     <string name="details_header_name">Nombre</string>
     <string name="details_header_size">Tamaño</string>
     <string name="details_header_date">Fecha</string>
+    <string name="details_header_date_deleted">Fecha de eliminación</string>
+    <string name="details_header_deleted_from">Ubicación</string>
     <string name="image">Imagen</string>
     <string name="video">Vídeo</string>
     <string name="audio">Audio</string>

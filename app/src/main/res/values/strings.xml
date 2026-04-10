@@ -38,6 +38,8 @@
     <string name="prop_size_on_disk">Size on disk:</string>
     <string name="prop_location">Location:</string>
     <string name="prop_modified">Modified:</string>
+    <string name="prop_deleted">Deleted:</string>
+    <string name="prop_deleted_from">Deleted From:</string>
     <string name="prop_resolution">Resolution:</string>
     <string name="prop_duration">Duration:</string>
     <string name="prop_items">Items:</string>
@@ -51,6 +53,8 @@
     <string name="details_item_count_singular">1 item</string>
     <string name="details_item_count_plural">%1$d items</string>
     <string name="details_date_modified">Date Modified: %1$s</string>
+    <string name="details_date_deleted">Date Deleted: %1$s</string>
+    <string name="details_deleted_from">Deleted From: %1$s</string>
     <string name="details_size">Size: %1$s</string>
     <string name="details_resolution">Resolution: %1$s</string>
     <string name="details_duration">Duration: %1$s</string>
@@ -196,6 +200,8 @@
     <string name="settings_internal_archive">Use Internal Archive Viewer</string>
     <string name="settings_internal_archive_desc">Open zip files directly inside the app instead of launching external apps.</string>
     <string name="settings_shortcuts_desc">View available keyboard and mouse shortcuts</string>
+    <string name="settings_default_view_mode">Default View Mode</string>
+    <string name="settings_choose_default_view_mode">Choose Default View Mode</string>
     <string name="settings_choose_del_behavior">Choose Deletion Behavior</string>
     <string name="settings_choose_theme">Choose Theme</string>
     <string name="settings_choose_details_mode">Choose Details Mode</string>
@@ -236,6 +242,8 @@
     <string name="menu_by_name">By Name</string>
     <string name="menu_by_date">By Date</string>
     <string name="menu_by_size">By Size</string>
+    <string name="menu_by_date_deleted">By Date Deleted</string>
+    <string name="menu_by_location">By Location</string>
     <string name="menu_details">Details</string>
     <string name="menu_grid">Grid</string>
     <string name="menu_content">Content</string>
@@ -370,6 +378,8 @@
     <string name="details_header_name">Name</string>
     <string name="details_header_size">Size</string>
     <string name="details_header_date">Date</string>
+    <string name="details_header_date_deleted">Date Deleted</string>
+    <string name="details_header_deleted_from">Location</string>
 
     <string name="menu_move">Move</string>
     <string name="move_or_copy_title">Move or Copy?</string>

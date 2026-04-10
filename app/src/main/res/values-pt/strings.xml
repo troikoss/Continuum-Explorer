@@ -36,6 +36,8 @@
     <string name="prop_size_on_disk">Tamanho em disco:</string>
     <string name="prop_location">Localização:</string>
     <string name="prop_modified">Modificado:</string>
+    <string name="prop_deleted">Excluído:</string>
+    <string name="prop_deleted_from">Excluído de:</string>
     <string name="prop_resolution">Resolução:</string>
     <string name="prop_duration">Duração:</string>
     <string name="prop_items">Itens:</string>
@@ -49,6 +51,8 @@
     <string name="details_item_count_singular">1 item</string>
     <string name="details_item_count_plural">%1$d itens</string>
     <string name="details_date_modified">Data de Modificação: %1$s</string>
+    <string name="details_date_deleted">Data de exclusão: %1$s</string>
+    <string name="details_deleted_from">Excluído de: %1$s</string>
     <string name="details_size">Tamanho: %1$s</string>
     <string name="details_resolution">Resolução: %1$s</string>
     <string name="details_duration">Duração: %1$s</string>
@@ -193,6 +197,8 @@
     <string name="settings_internal_archive">Usar Visualizador de Arquivos Interno</string>
     <string name="settings_internal_archive_desc">Abrir arquivos zip diretamente no app em vez de iniciar apps externos.</string>
     <string name="settings_shortcuts_desc">Ver atalhos de teclado e mouse disponíveis</string>
+    <string name="settings_default_view_mode">Modo de visualização padrão</string>
+    <string name="settings_choose_default_view_mode">Escolher Modo de Visualização Padrão</string>
     <string name="settings_choose_del_behavior">Escolher Comportamento de Exclusão</string>
     <string name="settings_choose_theme">Escolher Tema</string>
     <string name="settings_choose_details_mode">Escolher Modo de Detalhes</string>
@@ -234,6 +240,8 @@
     <string name="menu_by_name">Por Nome</string>
     <string name="menu_by_date">Por Data</string>
     <string name="menu_by_size">Por Tamanho</string>
+    <string name="menu_by_date_deleted">Por data de exclusão</string>
+    <string name="menu_by_location">Por localização</string>
     <string name="menu_details">Detalhes</string>
     <string name="menu_grid">Grade</string>
     <string name="menu_content">Conteúdo</string>
@@ -251,6 +259,7 @@
     <string name="menu_reset_zoom">Redefinir zoom</string>
     <string name="menu_copy_image">Copiar imagem</string>
     <string name="menu_set_wallpaper">Definir como Papel de Parede</string>
+    <string name="menu_set_wallpaper_failed">Falha ao definir papel de parede</string>
     <string name="menu_fullscreen">Tela Cheia</string>
     <string name="menu_undo">Desfazer</string>
     <string name="menu_redo">Refazer</string>
@@ -356,7 +365,6 @@
     <string name="media_volume">Volume</string>
     <string name="media_loop">Loop</string>
     <string name="media_viewed">Imagem visualizada</string>
-    <string name="menu_set_wallpaper_failed">Falha ao definir papel de parede</string>
     <string name="media_share_image_failed">Falha ao compartilhar imagem</string>
     <string name="media_thumbnail">Miniatura</string>
 
@@ -364,6 +372,8 @@
     <string name="details_header_name">Nome</string>
     <string name="details_header_size">Tamanho</string>
     <string name="details_header_date">Data</string>
+    <string name="details_header_date_deleted">Data de exclusão</string>
+    <string name="details_header_deleted_from">Localização</string>
     <string name="msg_unknown_compression_error">Erro de compactação desconhecido</string>
 
     <string name="menu_move">Mover</string>

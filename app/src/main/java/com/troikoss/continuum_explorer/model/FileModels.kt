@@ -14,7 +14,7 @@ enum class SortOrder { Ascending, Descending }
 /**
  * Available metadata columns and sorting modes.
  */
-enum class FileColumnType { NAME, DATE, SIZE }
+enum class FileColumnType { NAME, DATE, SIZE, DATE_DELETED, DELETED_FROM }
 
 /**
  * Represents the current sorting configuration.
@@ -64,4 +64,12 @@ data class UniversalFile(
     // Archive support
     val isArchiveEntry: Boolean = false,
     val archivePath: String? = null // Path inside the zip file
+)
+
+/**
+ * Recycle bin metadata for a file, stored separately from UniversalFile.
+ */
+data class RecycleBinMetadata(
+    val deletedAt: Long?,
+    val deletedFrom: String?
 )

@@ -22,6 +22,7 @@ import androidx.compose.material.icons.filled.DriveFileRenameOutline
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Restore
@@ -516,6 +517,26 @@ fun BackgroundContextMenu(
                         onDismiss()
                     }
                 )
+                if (isInRecycleBin) {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.menu_by_date_deleted)) },
+                        leadingIcon = { Icon(Icons.Default.DateRange, null) },
+                        trailingIcon = { appState.folderConfigs.SortArrow(FileColumnType.DATE_DELETED) },
+                        onClick = {
+                            appState.folderConfigs.toggleSort(FileColumnType.DATE_DELETED, appState.getCurrentStorageKey()) { appState.refresh() }
+                            onDismiss()
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.menu_by_location)) },
+                        leadingIcon = { Icon(Icons.Default.LocationOn, null) },
+                        trailingIcon = { appState.folderConfigs.SortArrow(FileColumnType.DELETED_FROM) },
+                        onClick = {
+                            appState.folderConfigs.toggleSort(FileColumnType.DELETED_FROM, appState.getCurrentStorageKey()) { appState.refresh() }
+                            onDismiss()
+                        }
+                    )
+                }
             }
 
             "VIEW" -> {
@@ -526,17 +547,15 @@ fun BackgroundContextMenu(
                 )
                 HorizontalDivider()
 
-                if (appState.getScreenSize() != ScreenSize.SMALL) {
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.menu_details)) },
-                        leadingIcon = { Icon(Icons.AutoMirrored.Filled.ListAlt, null) },
-                        trailingIcon = { if (appState.activeViewMode == ViewMode.DETAILS) { Icon(Icons.Default.Done, null) }},
-                        onClick = {
-                            appState.folderConfigs.updateViewMode(ViewMode.DETAILS, appState.getCurrentStorageKey())
-                            onDismiss()
-                        }
-                    )
-                }
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.menu_details)) },
+                    leadingIcon = { Icon(Icons.AutoMirrored.Filled.ListAlt, null) },
+                    trailingIcon = { if (appState.activeViewMode == ViewMode.DETAILS) { Icon(Icons.Default.Done, null) }},
+                    onClick = {
+                        appState.folderConfigs.updateViewMode(ViewMode.DETAILS, appState.getCurrentStorageKey())
+                        onDismiss()
+                    }
+                )
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.menu_grid)) },
                     leadingIcon = { Icon(Icons.Default.ViewModule, null) },

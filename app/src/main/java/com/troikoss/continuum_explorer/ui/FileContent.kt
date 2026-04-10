@@ -1,18 +1,29 @@
 package com.troikoss.continuum_explorer.ui
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.ScrollState
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -28,20 +39,32 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
+import com.troikoss.continuum_explorer.model.FileColumnType
 import com.troikoss.continuum_explorer.model.UniversalFile
 import com.troikoss.continuum_explorer.model.ViewMode
 import com.troikoss.continuum_explorer.ui.components.BackgroundContextMenu
 import com.troikoss.continuum_explorer.ui.components.DetailsHeader
 import com.troikoss.continuum_explorer.utils.*
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.isShiftPressed
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.unit.IntSize
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 /**
  * The primary view for displaying files.
@@ -293,13 +316,36 @@ private fun FileLayout(
     onGridPositioned: (Float, Float) -> Unit
 ) {
     val viewMode = appState.activeViewMode
+    val hScrollState = rememberScrollState()
+    val nameColumnWidth: Dp = if (viewMode == ViewMode.DETAILS)
+        appState.folderConfigs.columnWidths.getOrElse(FileColumnType.NAME) { 200.dp }
+    else 0.dp
 
-    Column {
+    val density = LocalDensity.current
+    val coroutineScope = rememberCoroutineScope()
+    val edgeThresholdPx = with(density) { 48.dp.toPx() }
+    var contentBoxSize by remember { mutableStateOf(IntSize.Zero) }
+    var contentLocalMousePos by remember { mutableStateOf<Offset?>(null) }
+
+    val showVertical by remember { derivedStateOf {
+        val pos = contentLocalMousePos ?: return@derivedStateOf false
+        pos.x > contentBoxSize.width - edgeThresholdPx
+    } }
+    val showHorizontal by remember { derivedStateOf {
+        val pos = contentLocalMousePos ?: return@derivedStateOf false
+        pos.y > contentBoxSize.height - edgeThresholdPx
+    } }
+    var isHScrollActive by remember { mutableStateOf(false) }
+
+    Column(modifier = Modifier.fillMaxSize()) {
         var headerHeightPx by remember { mutableFloatStateOf(0f) }
 
         if (viewMode == ViewMode.DETAILS) {
-            Box(modifier = Modifier.onGloballyPositioned { headerHeightPx = it.size.height.toFloat() }) {
-                DetailsHeader(appState = appState)
+            Box(modifier = Modifier
+                .padding(horizontal = 16.dp)
+                .onGloballyPositioned { headerHeightPx = it.size.height.toFloat() }
+            ) {
+                DetailsHeader(appState = appState, scrollState = hScrollState, nameColumnWidth = nameColumnWidth)
             }
         } else {
             headerHeightPx = 0f
@@ -309,8 +355,40 @@ private fun FileLayout(
             modifier = Modifier
                 .weight(1f)
                 .clipToBounds()
+                .onSizeChanged { contentBoxSize = it }
                 .onGloballyPositioned { coords ->
                     onGridPositioned(coords.positionInRoot().y, coords.size.height.toFloat())
+                }
+                .pointerInput(Unit) {
+                    awaitPointerEventScope {
+                        while (true) {
+                            val event = awaitPointerEvent(PointerEventPass.Initial)
+                            when (event.type) {
+                                PointerEventType.Move, PointerEventType.Enter ->
+                                    contentLocalMousePos = event.changes.firstOrNull()?.position
+                                PointerEventType.Exit -> contentLocalMousePos = null
+                                else -> {}
+                            }
+                        }
+                    }
+                }
+                .pointerInput(hScrollState, viewMode) {
+                    if (viewMode != ViewMode.DETAILS) return@pointerInput
+                    awaitPointerEventScope {
+                        while (true) {
+                            val event = awaitPointerEvent(PointerEventPass.Initial)
+                            if (event.type == PointerEventType.Scroll && event.keyboardModifiers.isShiftPressed) {
+                                val delta = event.changes.firstOrNull()?.scrollDelta?.y ?: 0f
+                                coroutineScope.launch { hScrollState.scrollBy(delta * 120f) }
+                                coroutineScope.launch {
+                                    isHScrollActive = true
+                                    delay(800)
+                                    isHScrollActive = false
+                                }
+                                event.changes.forEach { it.consume() }
+                            }
+                        }
+                    }
                 }
         ) {
             FileGrid(
@@ -320,13 +398,32 @@ private fun FileLayout(
                 containerCoordinates = containerCoordinates,
                 mousePosition = mousePosition,
                 focusRequester = focusRequester,
-                dragActive = dragStart != null
+                dragActive = dragStart != null,
+                hScrollState = hScrollState,
+                nameColumnWidth = nameColumnWidth
             )
 
             MarqueeRenderer(
                 dragStart = dragStart?.let { Offset(it.x, it.y - headerHeightPx) },
                 dragEnd = dragEnd?.let { Offset(it.x, it.y - headerHeightPx) }
             )
+
+            VerticalScrollbar(
+                gridState = gridState,
+                isNearEdge = showVertical,
+                modifier = Modifier.align(Alignment.CenterEnd).padding(end = 12.dp)
+            )
+
+            if (viewMode == ViewMode.DETAILS) {
+                HorizontalScrollbar(
+                    scrollState = hScrollState,
+                    isNearEdge = showHorizontal,
+                    isRecentlyScrolled = isHScrollActive,
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(horizontal = 16.dp, vertical = 12.dp)
+                )
+            }
         }
     }
 }
@@ -339,9 +436,30 @@ private fun FileGrid(
     containerCoordinates: LayoutCoordinates?,
     mousePosition: () -> Offset?,
     focusRequester: FocusRequester,
-    dragActive: Boolean
+    dragActive: Boolean,
+    hScrollState: ScrollState? = null,
+    nameColumnWidth: Dp = 0.dp
 ) {
     val viewMode = appState.activeViewMode
+    val density = LocalDensity.current
+
+    // Compute the intrinsic width of a details row (icon + spacer + name + columns + padding)
+    // so hover is only triggered when the mouse is over the actual content, not blank space to the right.
+    // Uses remember with no key so the State object is stable — all reads inside are state-tracked via
+    // mutableStateMapOf, so any column resize triggers an automatic recompute.
+    val detailsContentWidthPx = remember {
+        derivedStateOf {
+            if (appState.folderConfigs.viewMode != ViewMode.DETAILS) Float.MAX_VALUE
+            else with(density) {
+                val nameWidth = appState.folderConfigs.columnWidths.getOrElse(FileColumnType.NAME) { 200.dp }
+                val columnsWidth = appState.folderConfigs.visibleColumns.fold(0.dp) { acc, col ->
+                    val colWidth = appState.folderConfigs.columnWidths[col.type] ?: col.minWidth
+                    acc + 1.dp + colWidth
+                }
+                (52.dp + nameWidth + columnsWidth).toPx()  // 52 = 8(pad) + 24(icon) + 12(spacer) + 8(pad)
+            }
+        }
+    }
 
     LazyVerticalGrid(
         state = gridState,
@@ -349,10 +467,10 @@ private fun FileGrid(
             ViewMode.GRID -> GridCells.Adaptive(minSize = appState.folderConfigs.gridItemSize.dp)
             else -> GridCells.Fixed(1)
         },
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 32.dp),
-        contentPadding = PaddingValues(8.dp)
+        modifier = if (viewMode == ViewMode.DETAILS) Modifier.fillMaxSize().padding(horizontal = 16.dp)
+                   else Modifier.fillMaxSize().padding(horizontal = 32.dp),
+        contentPadding = if (viewMode == ViewMode.DETAILS) PaddingValues(0.dp)
+                         else PaddingValues(16.dp)
     ) {
         items(
             items = appState.files,
@@ -373,7 +491,9 @@ private fun FileGrid(
                     } else {
                         val currentRect = itemPositions[file]
                         val pos = mousePosition()
-                        pos != null && currentRect != null && currentRect.contains(pos)
+                        if (pos == null || currentRect == null || !currentRect.contains(pos)) false
+                        else if (viewMode == ViewMode.DETAILS) (pos.x - currentRect.left) < detailsContentWidthPx.value
+                        else true
                     }
                 }
             }
@@ -385,7 +505,201 @@ private fun FileGrid(
                 mousePosition = mousePosition,
                 appState = appState,
                 focusRequester = focusRequester,
-                isHovered = isHovered
+                isHovered = isHovered,
+                hScrollState = hScrollState,
+                nameColumnWidth = nameColumnWidth
+            )
+        }
+    }
+}
+
+@Composable
+private fun VerticalScrollbar(
+    gridState: LazyGridState,
+    isNearEdge: Boolean,
+    modifier: Modifier = Modifier
+) {
+    val coroutineScope = rememberCoroutineScope()
+
+    val isScrollable by remember(gridState) {
+        derivedStateOf {
+            val info = gridState.layoutInfo
+            val visibleItems = info.visibleItemsInfo
+            if (visibleItems.isEmpty() || info.totalItemsCount == 0) return@derivedStateOf false
+            val viewportHeight = (info.viewportEndOffset - info.viewportStartOffset).toFloat()
+            if (viewportHeight == 0f) return@derivedStateOf false
+            val avgItemHeight = visibleItems.sumOf { it.size.height }.toFloat() / visibleItems.size
+            val columnsCount = visibleItems.count { it.offset.y == visibleItems.first().offset.y }.coerceAtLeast(1)
+            val totalRows = (info.totalItemsCount + columnsCount - 1) / columnsCount
+            totalRows * avgItemHeight > viewportHeight + 1f
+        }
+    }
+
+    val isScrolling = gridState.isScrollInProgress
+    val alpha by animateFloatAsState(
+        targetValue = if ((isNearEdge || isScrolling) && isScrollable) 1f else 0f,
+        animationSpec = if ((isNearEdge || isScrolling) && isScrollable) tween(150) else tween(durationMillis = 300, delayMillis = 500),
+        label = "v_scrollbar_alpha"
+    )
+
+    val thumbColor = MaterialTheme.colorScheme.onSurface
+
+    Box(
+        modifier = modifier
+            .fillMaxHeight()
+            .width(16.dp)
+            .pointerInput(gridState) {
+                awaitEachGesture {
+                    // Consume the down immediately so containerGestures won't start a marquee
+                    val down = awaitFirstDown(requireUnconsumed = false)
+                    down.consume()
+                    var prevY = down.position.y
+                    while (true) {
+                        val event = awaitPointerEvent()
+                        val change = event.changes.firstOrNull { it.id == down.id } ?: break
+                        if (!change.pressed) break
+                        val dragDeltaY = change.position.y - prevY
+                        if (dragDeltaY != 0f) {
+                            change.consume()
+                            val info = gridState.layoutInfo
+                            val visibleItems = info.visibleItemsInfo
+                            if (visibleItems.isNotEmpty()) {
+                                val viewportHeight = (info.viewportEndOffset - info.viewportStartOffset).toFloat()
+                                val avgItemHeight = visibleItems.sumOf { it.size.height }.toFloat() / visibleItems.size
+                                val columnsCount = visibleItems.count { it.offset.y == visibleItems.first().offset.y }.coerceAtLeast(1)
+                                val totalRows = (info.totalItemsCount + columnsCount - 1) / columnsCount
+                                val estimatedContentHeight = totalRows * avgItemHeight
+                                val scrollRatio = if (size.height > 0f) estimatedContentHeight / size.height else 1f
+                                coroutineScope.launch { gridState.scrollBy(dragDeltaY * scrollRatio) }
+                            }
+                        }
+                        prevY = change.position.y
+                    }
+                }
+            }
+    ) {
+        Canvas(
+            modifier = Modifier
+                .fillMaxHeight()
+                .width(6.dp)
+                .padding(vertical = 4.dp)
+                .align(Alignment.CenterEnd)
+        ) {
+            if (alpha == 0f) return@Canvas
+
+            val info = gridState.layoutInfo
+            val visibleItems = info.visibleItemsInfo
+            if (visibleItems.isEmpty()) return@Canvas
+
+            val viewportHeight = (info.viewportEndOffset - info.viewportStartOffset).toFloat()
+            val avgItemHeight = visibleItems.sumOf { it.size.height }.toFloat() / visibleItems.size
+            val columnsCount = visibleItems.count { it.offset.y == visibleItems.first().offset.y }.coerceAtLeast(1)
+            val totalRows = (info.totalItemsCount + columnsCount - 1) / columnsCount
+            val estimatedContentHeight = totalRows * avgItemHeight
+
+            val thumbFraction = (viewportHeight / estimatedContentHeight).coerceIn(0.08f, 1f)
+            val thumbHeight = size.height * thumbFraction
+            val scrolledAmount = (gridState.firstVisibleItemIndex.toFloat() / columnsCount) * avgItemHeight +
+                    gridState.firstVisibleItemScrollOffset
+            val scrollFraction = (scrolledAmount / (estimatedContentHeight - viewportHeight)).coerceIn(0f, 1f)
+            val thumbTop = (size.height - thumbHeight) * scrollFraction
+
+            // Track
+            drawRoundRect(
+                color = thumbColor.copy(alpha = alpha * 0.15f),
+                topLeft = Offset(0f, 0f),
+                size = size,
+                cornerRadius = CornerRadius(size.width / 2f)
+            )
+            // Thumb
+            drawRoundRect(
+                color = thumbColor.copy(alpha = alpha * 0.55f),
+                topLeft = Offset(0f, thumbTop),
+                size = Size(size.width, thumbHeight),
+                cornerRadius = CornerRadius(size.width / 2f)
+            )
+        }
+    }
+}
+
+@Composable
+private fun HorizontalScrollbar(
+    scrollState: ScrollState,
+    isNearEdge: Boolean,
+    isRecentlyScrolled: Boolean = false,
+    modifier: Modifier = Modifier
+) {
+    val coroutineScope = rememberCoroutineScope()
+    val isScrollable by remember { derivedStateOf { scrollState.maxValue > 0 } }
+
+    val isScrolling = scrollState.isScrollInProgress
+    val alpha by animateFloatAsState(
+        targetValue = if ((isNearEdge || isScrolling || isRecentlyScrolled) && isScrollable) 1f else 0f,
+        animationSpec = if ((isNearEdge || isScrolling || isRecentlyScrolled) && isScrollable) tween(150) else tween(durationMillis = 300, delayMillis = 500),
+        label = "h_scrollbar_alpha"
+    )
+
+    val thumbColor = MaterialTheme.colorScheme.onSurface
+
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(16.dp)
+            .pointerInput(scrollState) {
+                awaitEachGesture {
+                    // Consume the down immediately so containerGestures won't start a marquee
+                    val down = awaitFirstDown(requireUnconsumed = false)
+                    down.consume()
+                    var prevX = down.position.x
+                    while (true) {
+                        val event = awaitPointerEvent()
+                        val change = event.changes.firstOrNull { it.id == down.id } ?: break
+                        if (!change.pressed) break
+                        val dragDeltaX = change.position.x - prevX
+                        if (dragDeltaX != 0f) {
+                            change.consume()
+                            val maxValue = scrollState.maxValue
+                            if (maxValue > 0 && size.width > 0) {
+                                val contentWidth = size.width + maxValue.toFloat()
+                                val scrollRatio = contentWidth / size.width
+                                coroutineScope.launch { scrollState.scrollBy(dragDeltaX * scrollRatio) }
+                            }
+                        }
+                        prevX = change.position.x
+                    }
+                }
+            }
+    ) {
+        Canvas(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(6.dp)
+                .padding(horizontal = 4.dp)
+                .align(Alignment.BottomCenter)
+        ) {
+            if (alpha == 0f) return@Canvas
+            val maxValue = scrollState.maxValue
+            if (maxValue <= 0) return@Canvas
+
+            val contentWidth = size.width + maxValue
+            val thumbFraction = (size.width / contentWidth).coerceIn(0.08f, 1f)
+            val thumbWidth = size.width * thumbFraction
+            val scrollFraction = (scrollState.value.toFloat() / maxValue).coerceIn(0f, 1f)
+            val thumbLeft = (size.width - thumbWidth) * scrollFraction
+
+            // Track
+            drawRoundRect(
+                color = thumbColor.copy(alpha = alpha * 0.15f),
+                topLeft = Offset(0f, 0f),
+                size = size,
+                cornerRadius = CornerRadius(size.height / 2f)
+            )
+            // Thumb
+            drawRoundRect(
+                color = thumbColor.copy(alpha = alpha * 0.55f),
+                topLeft = Offset(thumbLeft, 0f),
+                size = Size(thumbWidth, size.height),
+                cornerRadius = CornerRadius(size.height / 2f)
             )
         }
     }

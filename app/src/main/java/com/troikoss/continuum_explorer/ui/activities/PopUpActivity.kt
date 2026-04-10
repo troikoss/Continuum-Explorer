@@ -73,6 +73,8 @@ import com.troikoss.continuum_explorer.managers.MoveCopyResult
 import com.troikoss.continuum_explorer.utils.NotificationHelper
 import com.troikoss.continuum_explorer.managers.PopupType
 import com.troikoss.continuum_explorer.utils.calculateSizeRecursively
+import com.troikoss.continuum_explorer.utils.getDeletedAt
+import com.troikoss.continuum_explorer.utils.getDeletedFrom
 import com.troikoss.continuum_explorer.utils.getFileType
 import com.troikoss.continuum_explorer.utils.getImageResolution
 import com.troikoss.continuum_explorer.utils.getMediaDuration
@@ -175,7 +177,20 @@ fun PropertiesContent(onClose: () -> Unit) {
             var extraDur by remember { mutableStateOf<String?>(null) }
             var isLoadingExtra by remember { mutableStateOf(false) }
 
+            var deletedAt by remember { mutableStateOf<Long?>(null) }
+            var deletedFrom by remember { mutableStateOf<String?>(null) }
+
             LaunchedEffect(file) {
+                if (file.fileRef?.parentFile?.name == ".Trash") {
+                    withContext(Dispatchers.IO) {
+                        val at = getDeletedAt(file.name)
+                        val from = getDeletedFrom(file.name)
+                        withContext(Dispatchers.Main) {
+                            deletedAt = at
+                            deletedFrom = from
+                        }
+                    }
+                }
                 if (file.isDirectory) {
                     withContext(Dispatchers.IO) {
                         val size = calculateSizeRecursively(context, file)
@@ -246,6 +261,12 @@ fun PropertiesContent(onClose: () -> Unit) {
             
             PropertyRow(stringResource(R.string.prop_location), file.absolutePath)
             PropertyRow(stringResource(R.string.prop_modified), formattedDate)
+            if (deletedAt != null) {
+                PropertyRow(stringResource(R.string.prop_deleted), formatter.format(deletedAt))
+            }
+            if (deletedFrom != null) {
+                PropertyRow(stringResource(R.string.prop_deleted_from), deletedFrom!!)
+            }
 
             if (isLoadingExtra) {
                 Spacer(modifier = Modifier.height(8.dp))

@@ -1,5 +1,9 @@
 package com.troikoss.continuum_explorer.ui
 
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.LocalOverscrollConfiguration
+import androidx.compose.foundation.ScrollState
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -15,6 +19,7 @@ import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import com.troikoss.continuum_explorer.managers.SettingsManager
@@ -36,7 +41,9 @@ fun FileView(
     mousePosition: () -> Offset?,
     appState: FileExplorerState,
     focusRequester: FocusRequester,
-    isHovered: Boolean
+    isHovered: Boolean,
+    hScrollState: ScrollState? = null,
+    nameColumnWidth: Dp = 0.dp
 ) {
     // Selection
     val selectionManager = appState.selectionManager
@@ -92,7 +99,7 @@ fun FileView(
                 color = Color.Transparent,
                 shape = shape,
                 modifier = Modifier
-                    .fillMaxWidth()
+                    .then(if (viewMode != ViewMode.DETAILS) Modifier.fillMaxWidth() else Modifier)
                     .fileDragSource(
                         file = file,
                         selectionManager = selectionManager,
@@ -131,12 +138,15 @@ fun FileView(
                     }
             ) {
                 Box(
-                    modifier = Modifier.selectionBackground(isSelected, isHovered, isLead, shape)
+                    modifier = if (viewMode != ViewMode.DETAILS)
+                        Modifier.selectionBackground(isSelected, isHovered, isLead, shape)
+                    else
+                        Modifier
                 ) {
                     when (viewMode) {
                         ViewMode.GRID -> FileGridView(file, isSelected, appState) { isOverflowing = it }
                         ViewMode.CONTENT -> FileContentView(file, isSelected, appState) { isOverflowing = it }
-                        ViewMode.DETAILS -> FileDetailsView(file, isSelected, appState) { isOverflowing = it }
+                        ViewMode.DETAILS -> FileDetailsView(file, isSelected, isHovered, isLead, appState, hScrollState, nameColumnWidth) { isOverflowing = it }
                     }
                 }
             }
@@ -170,7 +180,9 @@ private fun FileGridView(
             FileThumbnail(
                 file = file,
                 modifier = Modifier.size((appState.folderConfigs.gridItemSize * 0.6f).dp),
-                tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary
+                tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary,
+                iconModifier = Modifier.size((appState.folderConfigs.gridItemSize * 0.6f).dp)
+
             )
         }
         Text(
@@ -226,54 +238,70 @@ private fun FileContentView(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun FileDetailsView(
     file: UniversalFile,
     isSelected: Boolean,
+    isHovered: Boolean,
+    isLead: Boolean,
     appState: FileExplorerState,
+    hScrollState: ScrollState?,
+    nameColumnWidth: Dp,
     onOverflowChange: (Boolean) -> Unit
 ) {
     val iconSelectionEnabled = SettingsManager.iconTouchSelection.value
 
-    Column {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(8.dp),
-            verticalAlignment = Alignment.CenterVertically
+    CompositionLocalProvider(LocalOverscrollConfiguration provides null) {
+        Column(
+            modifier = Modifier
+                .then(if (hScrollState != null) Modifier.horizontalScroll(hScrollState) else Modifier)
         ) {
-            FileThumbnail(
-                file = file,
+            Row(
                 modifier = Modifier
-                    .size(24.dp)
-                    .then(if (iconSelectionEnabled) Modifier.iconTouchToggle(file, appState.selectionManager) else Modifier),
-                tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary
-            )
-            Spacer(Modifier.width(12.dp))
-            Text(
-                text = file.name,
-                modifier = Modifier.weight(1f),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                onTextLayout = { textLayoutResult ->
-                    onOverflowChange(textLayoutResult.hasVisualOverflow)
-                }
-            )
-
-            appState.folderConfigs.extraColumns.forEach { column ->
-                val width = appState.folderConfigs.columnWidths[column.type] ?: column.minWidth
-                val text = when (column.type) {
-                    FileColumnType.DATE -> remember(file) { appState.formatDate(file.lastModified) }
-                    FileColumnType.SIZE -> if (file.isDirectory) "--" else remember(file) { appState.formatSize(file.length) }
-                    else -> ""
-                }
-
-                Text(
-                    text = text,
-                    modifier = Modifier.width(width).padding(start = 32.dp),
-                    style = MaterialTheme.typography.bodySmall,
-                    maxLines = 1
+                    .selectionBackground(isSelected, isHovered, isLead)
+                    .padding(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                FileThumbnail(
+                    file = file,
+                    modifier = Modifier
+                        .size(24.dp)
+                        .then(if (iconSelectionEnabled) Modifier.iconTouchToggle(file, appState.selectionManager) else Modifier),
+                    tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary
                 )
+                Spacer(Modifier.width(12.dp))
+                Text(
+                    text = file.name,
+                    modifier = Modifier.width(nameColumnWidth),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    onTextLayout = { textLayoutResult ->
+                        onOverflowChange(textLayoutResult.hasVisualOverflow)
+                    }
+                )
+
+                appState.folderConfigs.visibleColumns.forEach { column ->
+                    val width = appState.folderConfigs.columnWidths[column.type] ?: column.minWidth
+                    val meta = appState.recycleBinMetadata[file.name]
+                    val text = when (column.type) {
+                        FileColumnType.DATE -> remember(file) { appState.formatDate(file.lastModified) }
+                        FileColumnType.SIZE -> if (file.isDirectory) "--" else remember(file) { appState.formatSize(file.length) }
+                        FileColumnType.DATE_DELETED -> meta?.deletedAt?.let { appState.formatDate(it) } ?: "--"
+                        FileColumnType.DELETED_FROM -> meta?.deletedFrom ?: "--"
+                        else -> ""
+                    }
+
+                    Spacer(Modifier.width(1.dp))
+                    Text(
+                        text = text,
+                        modifier = Modifier.width(width).padding(start = 8.dp),
+                        style = MaterialTheme.typography.bodySmall,
+                        maxLines = 1
+                    )
+                }
             }
+            HorizontalDivider()
         }
-        HorizontalDivider()
     }
 }

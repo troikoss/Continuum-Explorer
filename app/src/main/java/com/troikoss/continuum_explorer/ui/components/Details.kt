@@ -126,6 +126,19 @@ fun DetailsPane(
                         text = stringResource(R.string.details_date_modified, appState.formatDate(file.lastModified)),
                         fontSize = 14.sp
                     )
+                    val meta = appState.recycleBinMetadata[file.name]
+                    if (meta?.deletedAt != null) {
+                        Text(
+                            text = stringResource(R.string.details_date_deleted, appState.formatDate(meta.deletedAt)),
+                            fontSize = 14.sp
+                        )
+                    }
+                    if (meta?.deletedFrom != null) {
+                        Text(
+                            text = stringResource(R.string.details_deleted_from, meta.deletedFrom),
+                            fontSize = 14.sp
+                        )
+                    }
                     if (!file.isDirectory) {
                         Text(
                             text = stringResource(R.string.details_size, appState.formatSize(file.length)),
@@ -227,6 +240,21 @@ fun DetailsBar(
                     fontSize = 14.sp,
                     modifier = Modifier.weight(1f)
                 )
+                val meta = appState.recycleBinMetadata[file.name]
+                if (meta?.deletedAt != null) {
+                    Text(
+                        text = stringResource(R.string.details_date_deleted, appState.formatDate(meta.deletedAt)),
+                        fontSize = 14.sp,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+                if (meta?.deletedFrom != null) {
+                    Text(
+                        text = stringResource(R.string.details_deleted_from, meta.deletedFrom),
+                        fontSize = 14.sp,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
                 if (!file.isDirectory) {
                     Text(
                         text = stringResource(R.string.details_size, appState.formatSize(file.length)),

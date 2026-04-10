@@ -34,6 +34,7 @@ import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.Restore
 import androidx.compose.material.icons.filled.SelectAll
@@ -167,7 +168,10 @@ fun CommandBar(
                     val sortIcon = when (appState.folderConfigs.sortParams.columnType) {
                         FileColumnType.NAME -> Icons.Default.TextFormat
                         FileColumnType.DATE -> Icons.Default.DateRange
+                        FileColumnType.DATE_DELETED -> Icons.Default.DateRange
+                        FileColumnType.DELETED_FROM -> Icons.Default.LocationOn
                         FileColumnType.SIZE -> Icons.AutoMirrored.Filled.List
+
                     }
 
                     CommandDropDown(text = stringResource(R.string.menu_sort), icon = sortIcon) { onDismiss ->
@@ -189,6 +193,18 @@ fun CommandBar(
                             trailingIcon = { appState.folderConfigs.SortArrow(FileColumnType.SIZE) },
                             onClick = { appState.folderConfigs.toggleSort(FileColumnType.SIZE, appState.getCurrentStorageKey()) { appState.refresh() }; onDismiss() }
                         )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.menu_by_date_deleted)) },
+                            leadingIcon = { Icon(Icons.Default.DateRange, null) },
+                            trailingIcon = { appState.folderConfigs.SortArrow(FileColumnType.DATE_DELETED) },
+                            onClick = { appState.folderConfigs.toggleSort(FileColumnType.DATE_DELETED, appState.getCurrentStorageKey()) { appState.refresh() }; onDismiss() }
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.menu_by_location)) },
+                            leadingIcon = { Icon(Icons.Default.LocationOn, null) },
+                            trailingIcon = { appState.folderConfigs.SortArrow(FileColumnType.DELETED_FROM) },
+                            onClick = { appState.folderConfigs.toggleSort(FileColumnType.DELETED_FROM, appState.getCurrentStorageKey()) { appState.refresh() }; onDismiss() }
+                        )
                     }
 
                     // View Menu
@@ -199,14 +215,12 @@ fun CommandBar(
                     }
 
                     CommandDropDown(text = stringResource(R.string.menu_view), icon = viewIcon) { onDismiss ->
-                        if (appState.getScreenSize() != ScreenSize.SMALL) {
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.menu_details)) },
-                                leadingIcon = { Icon(Icons.AutoMirrored.Filled.ListAlt, null) },
-                                trailingIcon = { if (appState.activeViewMode == ViewMode.DETAILS) { Icon(Icons.Default.Done, null) }},
-                                onClick = { appState.folderConfigs.updateViewMode(ViewMode.DETAILS, appState.getCurrentStorageKey()); onDismiss() }
-                            )
-                        }
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.menu_details)) },
+                            leadingIcon = { Icon(Icons.AutoMirrored.Filled.ListAlt, null) },
+                            trailingIcon = { if (appState.activeViewMode == ViewMode.DETAILS) { Icon(Icons.Default.Done, null) }},
+                            onClick = { appState.folderConfigs.updateViewMode(ViewMode.DETAILS, appState.getCurrentStorageKey()); onDismiss() }
+                        )
                         DropdownMenuItem(
                             text = { Text(stringResource(R.string.menu_content)) },
                             leadingIcon = { Icon(Icons.AutoMirrored.Filled.List, null) },
@@ -264,6 +278,8 @@ fun CommandBar(
                     val sortIcon = when (appState.folderConfigs.sortParams.columnType) {
                         FileColumnType.NAME -> Icons.Default.TextFormat
                         FileColumnType.DATE -> Icons.Default.DateRange
+                        FileColumnType.DATE_DELETED -> Icons.Default.DateRange
+                        FileColumnType.DELETED_FROM -> Icons.Default.LocationOn
                         FileColumnType.SIZE -> Icons.AutoMirrored.Filled.List
                     }
 
@@ -296,18 +312,16 @@ fun CommandBar(
                     }
 
                     CommandDropDown(text = stringResource(R.string.menu_view), icon = viewIcon) { onDismiss ->
-                        if (appState.getScreenSize() != ScreenSize.SMALL) {
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.menu_details)) },
-                                leadingIcon = { Icon(Icons.AutoMirrored.Filled.ListAlt, null) },
-                                trailingIcon = {
-                                    if (appState.activeViewMode == ViewMode.DETAILS) {
-                                        Icon(Icons.Default.Done, null)
-                                    }
-                                },
-                                onClick = { appState.folderConfigs.updateViewMode(ViewMode.DETAILS, appState.getCurrentStorageKey()); onDismiss() }
-                            )
-                        }
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.menu_details)) },
+                            leadingIcon = { Icon(Icons.AutoMirrored.Filled.ListAlt, null) },
+                            trailingIcon = {
+                                if (appState.activeViewMode == ViewMode.DETAILS) {
+                                    Icon(Icons.Default.Done, null)
+                                }
+                            },
+                            onClick = { appState.folderConfigs.updateViewMode(ViewMode.DETAILS, appState.getCurrentStorageKey()); onDismiss() }
+                        )
                         DropdownMenuItem(
                             text = { Text(stringResource(R.string.menu_content)) },
                             leadingIcon = { Icon(Icons.AutoMirrored.Filled.List, null) },

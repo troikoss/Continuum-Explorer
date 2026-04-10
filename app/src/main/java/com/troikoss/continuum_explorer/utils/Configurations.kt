@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.troikoss.continuum_explorer.R
+import com.troikoss.continuum_explorer.managers.SettingsManager
 import com.troikoss.continuum_explorer.model.*
 
 /**
@@ -27,12 +28,78 @@ class FolderConfigurations(private val context: Context) {
     var gridItemSize by mutableIntStateOf(100)
 
     val extraColumns = listOf(
-        FileColumnDefinition(FileColumnType.DATE, context.getString(R.string.details_header_date), initialWidth = 110.dp),
-        FileColumnDefinition(FileColumnType.SIZE, context.getString(R.string.details_header_size), initialWidth = 80.dp)
+        FileColumnDefinition(FileColumnType.DATE, context.getString(R.string.details_header_date), initialWidth = 135.dp),
+        FileColumnDefinition(FileColumnType.DATE_DELETED, context.getString(R.string.details_header_date_deleted), initialWidth = 135.dp),
+        FileColumnDefinition(FileColumnType.DELETED_FROM, context.getString(R.string.details_header_deleted_from), initialWidth = 160.dp),
+        FileColumnDefinition(FileColumnType.SIZE, context.getString(R.string.details_header_size), initialWidth = 90.dp)
     )
-    
+
+    val hiddenColumns = mutableStateSetOf<FileColumnType>()
+
+    val visibleColumns: List<FileColumnDefinition>
+        get() = extraColumns.filter { it.type !in hiddenColumns }
+
+    fun toggleColumnVisibility(type: FileColumnType, key: String?) {
+        if (type in hiddenColumns) hiddenColumns.remove(type) else hiddenColumns.add(type)
+        saveColumnVisibility(key)
+    }
+
+    fun resolveColumnVisibility(key: String?, isInRecycleBin: Boolean) {
+        val prefs = context.getSharedPreferences("column_visibility", Context.MODE_PRIVATE)
+        val savedHidden = prefs.getStringSet(key ?: "default", null)
+        hiddenColumns.clear()
+        if (savedHidden != null) {
+            savedHidden.forEach { typeName ->
+                try { hiddenColumns.add(FileColumnType.valueOf(typeName)) } catch (_: Exception) {}
+            }
+        } else {
+            // Apply defaults: recycle bin shows DATE_DELETED/DELETED_FROM and hides DATE; elsewhere the reverse
+            if (isInRecycleBin) {
+                hiddenColumns.add(FileColumnType.DATE)
+            } else {
+                hiddenColumns.add(FileColumnType.DATE_DELETED)
+                hiddenColumns.add(FileColumnType.DELETED_FROM)
+            }
+        }
+    }
+
+    private fun saveColumnVisibility(key: String?) {
+        val prefs = context.getSharedPreferences("column_visibility", Context.MODE_PRIVATE)
+        prefs.edit().putStringSet(key ?: "default", hiddenColumns.map { it.name }.toSet()).apply()
+    }
+
     val columnWidths = mutableStateMapOf<FileColumnType, Dp>().apply {
+        put(FileColumnType.NAME, 300.dp)
         extraColumns.forEach { put(it.type, it.initialWidth) }
+    }
+
+    fun saveColumnWidths(key: String?) {
+        val prefs = context.getSharedPreferences("column_widths", Context.MODE_PRIVATE)
+        val editor = prefs.edit()
+        val prefKey = key ?: "default"
+        columnWidths.forEach { (type, width) ->
+            editor.putFloat("${prefKey}:${type.name}", width.value)
+        }
+        editor.apply()
+    }
+
+    fun resolveColumnWidths(key: String?) {
+        val prefs = context.getSharedPreferences("column_widths", Context.MODE_PRIVATE)
+        val prefKey = key ?: "default"
+        // Always reset to defaults first so widths don't bleed from a previous folder
+        columnWidths[FileColumnType.NAME] = 300.dp
+        extraColumns.forEach { col -> columnWidths[col.type] = col.initialWidth }
+        // Then overlay any saved values for this folder
+        val nameKey = "${prefKey}:${FileColumnType.NAME.name}"
+        if (prefs.contains(nameKey)) {
+            columnWidths[FileColumnType.NAME] = prefs.getFloat(nameKey, 300f).dp
+            extraColumns.forEach { col ->
+                val k = "${prefKey}:${col.type.name}"
+                if (prefs.contains(k)) {
+                    columnWidths[col.type] = prefs.getFloat(k, col.initialWidth.value).dp
+                }
+            }
+        }
     }
 
     fun updateViewMode(mode: ViewMode, key: String?) {
@@ -60,7 +127,7 @@ class FolderConfigurations(private val context: Context) {
                 } catch (_: Exception) {}
             }
         }
-        updateViewMode(ViewMode.DETAILS, null)
+        updateViewMode(SettingsManager.defaultViewMode.value, null)
     }
 
     fun toggleSort(columnType: FileColumnType, key: String?, onSortChanged: () -> Unit) {

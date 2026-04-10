@@ -39,8 +39,19 @@ fun saveTrashMetadata(recycledName: String, originalPath: String, parentUri: Str
         if (metadataFile.exists()) { metadataFile.inputStream().use { props.load(it) } }
         val entryValue = if (parentUri != null) "$originalPath|$parentUri" else originalPath
         props.setProperty(recycledName, entryValue)
+        props.setProperty("$recycledName.deletedAt", System.currentTimeMillis().toString())
         metadataFile.outputStream().use { props.store(it, null) }
     } catch (e: Exception) { e.printStackTrace() }
+}
+
+fun getDeletedAt(recycledName: String): Long? {
+    return try {
+        val metadataFile = getTrashMetadataFile()
+        if (!metadataFile.exists()) return null
+        val props = Properties()
+        metadataFile.inputStream().use { props.load(it) }
+        props.getProperty("$recycledName.deletedAt")?.toLongOrNull()
+    } catch (_: Exception) { null }
 }
 
 fun getOriginalPath(recycledName: String): String? {
@@ -53,6 +64,17 @@ fun getOriginalPath(recycledName: String): String? {
     } catch (_: Exception) { null }
 }
 
+fun getDeletedFrom(recycledName: String): String? {
+    val rawMetadata = getOriginalPath(recycledName) ?: return null
+    val parts = rawMetadata.split("|", limit = 2)
+    val originalPath = parts[0]
+    return if (originalPath.startsWith("content://")) {
+        parts.getOrNull(1) ?: originalPath
+    } else {
+        File(originalPath).parent
+    }
+}
+
 fun removeTrashMetadata(recycledName: String) {
     try {
         val metadataFile = getTrashMetadataFile()
@@ -60,6 +82,7 @@ fun removeTrashMetadata(recycledName: String) {
         val props = Properties()
         metadataFile.inputStream().use { props.load(it) }
         props.remove(recycledName)
+        props.remove("$recycledName.deletedAt")
         metadataFile.outputStream().use { props.store(it, null) }
     } catch (e: Exception) { e.printStackTrace() }
 }

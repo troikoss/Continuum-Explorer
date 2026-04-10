@@ -212,7 +212,8 @@ private fun NavigationContent(
             appState.navigateTo(null, uri)
             onCloseDrawer()
         },
-        onAddStorageClick = onAddStorage
+        onAddStorageClick = onAddStorage,
+        onNavigate = onCloseDrawer
     )
 }
 
@@ -282,8 +283,7 @@ private fun ExplorerBody(
                     onResize = { delta ->
                         appState.appConfigs.navPaneWidth = (appState.appConfigs.navPaneWidth + delta).coerceIn(200.dp, 300.dp)
                         appState.appConfigs.savePaneWidths()
-                    },
-                    contentAlignment = Alignment.CenterStart
+                    }
                 )
             }
 
@@ -298,8 +298,7 @@ private fun ExplorerBody(
                     onResize = { delta ->
                         appState.appConfigs.detailsPaneWidth = (appState.appConfigs.detailsPaneWidth - delta).coerceIn(200.dp, 300.dp)
                         appState.appConfigs.savePaneWidths()
-                    },
-                    contentAlignment = Alignment.CenterEnd
+                    }
                 )
 
                 DetailsPane(

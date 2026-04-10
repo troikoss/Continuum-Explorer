@@ -61,6 +61,9 @@ class FileExplorerState(
     // The processed and sorted list of files to display
     var files by mutableStateOf(emptyList<UniversalFile>())
 
+    // Recycle bin metadata keyed by file name, populated only when in the recycle bin
+    var recycleBinMetadata by mutableStateOf(emptyMap<String, RecycleBinMetadata>())
+
     // Loading state
     var isLoading by mutableStateOf(false)
     private var loadingJob: Job? = null
@@ -86,7 +89,7 @@ class FileExplorerState(
     val selectionManager = SelectionManager()
 
     // Date formatter for consistent date display
-    private val dateFormatter = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
+    private val dateFormatter = SimpleDateFormat("MMM dd, yyyy h:mm a", Locale.getDefault())
 
     // Stack to track navigation hierarchy for SAF (Storage Access Framework)
     val safStack = mutableStateListOf<Uri>()
@@ -106,13 +109,7 @@ class FileExplorerState(
     val activeViewMode: ViewMode
         @Composable
         get() {
-            val isSmallScreen = getScreenSize() == ScreenSize.SMALL
-
-            return if (isSmallScreen && folderConfigs.viewMode == ViewMode.DETAILS) {
-                ViewMode.CONTENT // Disable Details on small screens
-            } else {
-                folderConfigs.viewMode // Otherwise, use the saved mode
-            }
+            return folderConfigs.viewMode
         }
 
     init {
@@ -122,6 +119,8 @@ class FileExplorerState(
                 folderConfigs.resolveViewMode(key)
                 folderConfigs.resolveSortParams(key)
                 folderConfigs.resolveGridSize(key)
+                folderConfigs.resolveColumnVisibility(key, isInRecycleBin)
+                folderConfigs.resolveColumnWidths(key)
             }
         }
         // Listen for global refresh events from other windows
@@ -366,12 +365,17 @@ class FileExplorerState(
             archiveCache = null
         }
 
-        // Capture sort params and settings on the calling thread (usually Main)
+        // Resolve sort params early so files are sorted correctly during IO work.
+        // ViewMode/gridSize/columnVisibility are resolved together with the file list
+        // assignment so they never change before the new list is visible.
+        val key = getCurrentStorageKey()
+        folderConfigs.resolveSortParams(key)
+
         val sortParams = folderConfigs.sortParams
         val showHidden = SettingsManager.showHiddenFiles.value
 
         try {
-            val sortedList: List<UniversalFile> = withContext(Dispatchers.IO) {
+            val (sortedList, newMeta) = withContext(Dispatchers.IO) {
                 val universalList = if (isRecentMode) {
                     RecentFilesManager.getRecentFiles(context)
                 } else if (currentArchiveFile != null || currentArchiveUri != null) {
@@ -391,17 +395,26 @@ class FileExplorerState(
                     emptyList()
                 }
 
+                val meta: Map<String, RecycleBinMetadata> = if (isInRecycleBin) {
+                    universalList.associate { file ->
+                        file.name to RecycleBinMetadata(
+                            deletedAt = getDeletedAt(file.name),
+                            deletedFrom = getDeletedFrom(file.name)
+                        )
+                    }
+                } else emptyMap()
+
                 val filteredList = if (showHidden) universalList else universalList.filter { !it.name.startsWith(".") }
 
-                if (isRecentMode) filteredList else sortFiles(filteredList, sortParams)
+                Pair(if (isRecentMode) filteredList else sortFiles(filteredList, sortParams, meta), meta)
             }
 
             withContext(Dispatchers.Main) {
-                val key = getCurrentStorageKey()
                 folderConfigs.resolveViewMode(key)
-                folderConfigs.resolveSortParams(key)
                 folderConfigs.resolveGridSize(key)
-
+                folderConfigs.resolveColumnVisibility(key, isInRecycleBin)
+                folderConfigs.resolveColumnWidths(key)
+                recycleBinMetadata = newMeta
                 files = sortedList
 
                 if (pendingFocusPath != null || pendingFocusUri != null) {
@@ -424,7 +437,7 @@ class FileExplorerState(
                     pendingFocusUri = null
                 }
 
-                loadedPathKey = getCurrentStorageKey() ?: if (isRecentMode) "recent" else "root"
+                loadedPathKey = key ?: if (isRecentMode) "recent" else "root"
                 selectionManager.allFiles = files
                 isLoading = false
             }
@@ -435,7 +448,11 @@ class FileExplorerState(
         }
     }
 
-    private fun sortFiles(rawList: List<UniversalFile>, params: SortParams): List<UniversalFile> {
+    private fun sortFiles(
+        rawList: List<UniversalFile>,
+        params: SortParams,
+        meta: Map<String, RecycleBinMetadata> = emptyMap()
+    ): List<UniversalFile> {
         return rawList.sortedWith { f1, f2 ->
             if (f1.isDirectory && !f2.isDirectory) return@sortedWith -1
             if (!f1.isDirectory && f2.isDirectory) return@sortedWith 1
@@ -444,6 +461,8 @@ class FileExplorerState(
                 FileColumnType.NAME -> f1.name.lowercase().compareTo(f2.name.lowercase())
                 FileColumnType.DATE -> f1.lastModified.compareTo(f2.lastModified)
                 FileColumnType.SIZE -> f1.length.compareTo(f2.length)
+                FileColumnType.DATE_DELETED -> (meta[f1.name]?.deletedAt ?: 0L).compareTo(meta[f2.name]?.deletedAt ?: 0L)
+                FileColumnType.DELETED_FROM -> (meta[f1.name]?.deletedFrom ?: "").compareTo(meta[f2.name]?.deletedFrom ?: "")
             }
             if (params.order == SortOrder.Ascending) result else -result
         }
