@@ -21,7 +21,12 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpOffset
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntRect
+import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.PopupPositionProvider
 import com.troikoss.continuum_explorer.managers.SettingsManager
 import com.troikoss.continuum_explorer.managers.selectionBackground
 import com.troikoss.continuum_explorer.model.*
@@ -66,17 +71,17 @@ fun FileView(
     var isOverflowing by remember { mutableStateOf(false) }
 
     val mouseTooltipProvider = remember {
-        object : androidx.compose.ui.window.PopupPositionProvider {
+        object : PopupPositionProvider {
             override fun calculatePosition(
-                anchorBounds: androidx.compose.ui.unit.IntRect,
-                windowSize: androidx.compose.ui.unit.IntSize,
-                layoutDirection: androidx.compose.ui.unit.LayoutDirection,
-                popupContentSize: androidx.compose.ui.unit.IntSize
-            ): androidx.compose.ui.unit.IntOffset {
+                anchorBounds: IntRect,
+                windowSize: IntSize,
+                layoutDirection: LayoutDirection,
+                popupContentSize: IntSize
+            ): IntOffset {
                 val pos = mousePosition()
                 val itemRect = itemPositions[file]
                 val relativeOffset = if (pos != null && itemRect != null) pos - itemRect.topLeft else Offset.Zero
-                return androidx.compose.ui.unit.IntOffset(
+                return IntOffset(
                     x = anchorBounds.left + relativeOffset.x.toInt(),
                     y = anchorBounds.top + relativeOffset.y.toInt() + 40
                 )
@@ -206,7 +211,7 @@ private fun FileContentView(
     onOverflowChange: (Boolean) -> Unit
 ) {
     val formattedSize = remember(file) { appState.formatSize(file.length) }
-    val formattedDate = remember(file)  { appState.formatDate(file.lastModified) }
+    val formattedDate = remember(file) { appState.formatDate(file.lastModified) }
     val iconSelectionEnabled = SettingsManager.iconTouchSelection.value
 
     Column {

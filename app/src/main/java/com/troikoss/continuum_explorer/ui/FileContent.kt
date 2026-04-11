@@ -34,6 +34,7 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -43,12 +44,18 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.isShiftPressed
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpOffset
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.troikoss.continuum_explorer.model.FileColumnType
 import com.troikoss.continuum_explorer.model.UniversalFile
@@ -56,13 +63,6 @@ import com.troikoss.continuum_explorer.model.ViewMode
 import com.troikoss.continuum_explorer.ui.components.BackgroundContextMenu
 import com.troikoss.continuum_explorer.ui.components.DetailsHeader
 import com.troikoss.continuum_explorer.utils.*
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.ui.input.pointer.PointerEventPass
-import androidx.compose.ui.input.pointer.PointerEventType
-import androidx.compose.ui.input.pointer.isShiftPressed
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.onSizeChanged
-import androidx.compose.ui.unit.IntSize
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -177,7 +177,7 @@ fun FileContent(appState: FileExplorerState) {
     }
 
     // System drag auto-scroll
-    LaunchedEffect(appState.activeDragY.value) {
+    LaunchedEffect(appState.activeDragY.value != null) {
         if (appState.activeDragY.value == null) return@LaunchedEffect
         val threshold = 120f
         val maxSpeed = 60f
