@@ -14,6 +14,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import coil.ImageLoader
 import coil.decode.VideoFrameDecoder
+import com.troikoss.continuum_explorer.model.SpecialMode
 import com.troikoss.continuum_explorer.ui.FileExplorer
 import com.troikoss.continuum_explorer.ui.theme.FileExplorerTheme
 import com.troikoss.continuum_explorer.managers.SettingsManager
@@ -84,6 +85,11 @@ class MainActivity : AppCompatActivity() {
             val path = intent.getStringExtra("archivePath")
             if (path != null) File(path) else null
         }
+        val initialSpecialMode = when {
+            intent.getBooleanExtra("isRecent", false) -> SpecialMode.Recent
+            intent.getBooleanExtra("isGallery", false) -> SpecialMode.Gallery
+            else -> SpecialMode.None
+        }
 
         // Build ImageLoader asynchronously to prevent main thread lag on startup
         lifecycleScope.launch(Dispatchers.IO) {
@@ -100,7 +106,7 @@ class MainActivity : AppCompatActivity() {
 
         setContent {
             FileExplorerTheme {
-                FileExplorer(initialPath = initialPath, initialUri = initialUri, initialArchive = initialArchive)
+                FileExplorer(initialPath = initialPath, initialUri = initialUri, initialArchive = initialArchive, initialSpecialMode = initialSpecialMode)
             }
         }
     }

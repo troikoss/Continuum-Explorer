@@ -44,7 +44,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.troikoss.continuum_explorer.managers.DetailsMode
 import com.troikoss.continuum_explorer.managers.SettingsManager
+import com.troikoss.continuum_explorer.model.NavSection
 import com.troikoss.continuum_explorer.model.ScreenSize
+import com.troikoss.continuum_explorer.model.SpecialMode
 import com.troikoss.continuum_explorer.ui.components.*
 import com.troikoss.continuum_explorer.utils.*
 import kotlinx.coroutines.CoroutineScope
@@ -60,7 +62,8 @@ fun FileExplorer(
     initialPath: String? = null,
     initialUri: String? = null,
     initialArchive: File? = null,
-    initialArchiveUri: Uri? = null
+    initialArchiveUri: Uri? = null,
+    initialSpecialMode: SpecialMode = SpecialMode.None
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -73,18 +76,18 @@ fun FileExplorer(
         return FileExplorerState(ctx, scp).apply {
             onOpenInNewTab = { item ->
                 val newState = createNewTabState(ctx, scp)
-                if (ZipUtils.isArchive(item) && item.fileRef != null && SettingsManager.isDefaultArchiveViewerEnabled.value) {
-                    newState.navigateTo(
+                when {
+                    item.absolutePath == "recent://" -> newState.navigateTo(null, null, addToHistory = false, specialMode = SpecialMode.Recent)
+                    item.absolutePath == "gallery://" -> newState.navigateTo(null, null, addToHistory = false, specialMode = SpecialMode.Gallery)
+                    ZipUtils.isArchive(item) && item.fileRef != null && SettingsManager.isDefaultArchiveViewerEnabled.value -> newState.navigateTo(
                         newPath = null,
                         newUri = null,
                         addToHistory = false,
                         archiveFile = item.fileRef,
                         archivePath = ""
                     )
-                } else if (item.fileRef != null) {
-                    newState.navigateTo(item.fileRef, null, addToHistory = false)
-                } else if (item.documentFileRef != null) {
-                    newState.navigateTo(null, item.documentFileRef.uri, addToHistory = false)
+                    item.fileRef != null -> newState.navigateTo(item.fileRef, null, addToHistory = false)
+                    item.documentFileRef != null -> newState.navigateTo(null, item.documentFileRef.uri, addToHistory = false)
                 }
                 tabs.add(newState)
                 selectedTabIndex = tabs.size - 1
@@ -99,6 +102,7 @@ fun FileExplorer(
             when {
                 initialArchive != null -> firstState.navigateTo(null, null, addToHistory = false, archiveFile = initialArchive, archivePath = "")
                 initialArchiveUri != null -> firstState.navigateTo(null, null, addToHistory = false, archiveUri = initialArchiveUri, archivePath = "")
+                initialSpecialMode != SpecialMode.None -> firstState.navigateTo(null, null, addToHistory = false, specialMode = initialSpecialMode)
                 initialPath != null -> firstState.navigateTo(File(initialPath), null, addToHistory = false)
                 initialUri != null -> firstState.navigateTo(null, Uri.parse(initialUri), addToHistory = false)
             }
@@ -120,8 +124,8 @@ fun FileExplorer(
     }
 
     // --- Side Effects ---
-    LaunchedEffect(appState, appState.currentPath, appState.currentSafUri, appState.folderConfigs.sortParams, 
-                   appState.currentArchiveFile, appState.currentArchiveUri, appState.currentArchivePath, appState.isRecentMode) {
+    LaunchedEffect(appState, appState.currentPath, appState.currentSafUri, appState.folderConfigs.sortParams,
+                   appState.currentArchiveFile, appState.currentArchiveUri, appState.currentArchivePath, appState.specialMode) {
         appState.triggerLoad()
     }
 
@@ -204,8 +208,8 @@ private fun NavigationContent(
     val context = LocalContext.current
     NavigationPane(
         appState = appState,
-        onItemSelected = { sectionIndex ->
-            navigateToSection(appState, context, sectionIndex)
+        onItemSelected = { section ->
+            navigateToSection(appState, context, section)
             onCloseDrawer()
         },
         onSafItemSelected = { uri ->
@@ -273,7 +277,7 @@ private fun ExplorerBody(
                 ) {
                     NavigationPane(
                         appState = appState,
-                        onItemSelected = { navigateToSection(appState, context, it) },
+                        onItemSelected = { section -> navigateToSection(appState, context, section) },
                         onSafItemSelected = { appState.navigateTo(null, it) },
                         onAddStorageClick = onAddStorage
                     )
@@ -316,20 +320,21 @@ private fun ExplorerBody(
     }
 }
 
-private fun navigateToSection(appState: FileExplorerState, context: Context, index: Int) {
+private fun navigateToSection(appState: FileExplorerState, context: Context, section: NavSection) {
     val internalRoot = Environment.getExternalStorageDirectory()
-    when {
-        index == 6 -> appState.navigateTo(internalRoot, null, newRoot = internalRoot)
-        index == 7 -> {
+    when (section) {
+        is NavSection.InternalStorage -> appState.navigateTo(internalRoot, null, newRoot = internalRoot)
+        is NavSection.RecycleBin -> {
             val trashDir = File(internalRoot, ".Trash")
             if (!trashDir.exists()) trashDir.mkdirs()
             appState.navigateTo(trashDir, null, newRoot = internalRoot)
         }
-        index == 8 -> appState.navigateTo(null, null, isRecent = true)
-        index >= 100 -> {
+        is NavSection.Recent -> appState.navigateTo(null, null, specialMode = SpecialMode.Recent)
+        is NavSection.Gallery -> appState.navigateTo(null, null, specialMode = SpecialMode.Gallery)
+        is NavSection.RemovableVolume -> {
             val storageManager = context.getSystemService(Context.STORAGE_SERVICE) as StorageManager
             val volumes = storageManager.storageVolumes
-            val volumeIndex = index - 100
+            val volumeIndex = section.volumeIndex
 
             if (volumeIndex < volumes.size) {
                 val volume = volumes[volumeIndex]

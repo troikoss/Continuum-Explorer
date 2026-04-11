@@ -227,8 +227,10 @@ class FolderConfigurations(private val context: Context) {
 class AppConfigurations(private val context: Context) {
     val addedSafUris = mutableStateListOf<Uri>()
     val favoritePaths = mutableStateListOf<String>()
-    val libraryOrder = mutableStateListOf("recent", "trash")
+    val libraryOrder = mutableStateListOf("gallery", "recent", "trash")
     var isRecentVisible by mutableStateOf(true)
+    var isGalleryVisible by mutableStateOf(true)
+    var isGalleryAlbumsEnabled by mutableStateOf(false)
 
     var navPaneWidth by mutableStateOf(240.dp)
     var detailsPaneWidth by mutableStateOf(240.dp)
@@ -297,22 +299,43 @@ class AppConfigurations(private val context: Context) {
 
     private fun loadLibrarySettings() {
         val prefs = context.getSharedPreferences("library", Context.MODE_PRIVATE)
-        val order = prefs.getString("order", "recent|trash") ?: "recent|trash"
+        val order = prefs.getString("order", "gallery|recent|trash") ?: "gallery|recent|trash"
         libraryOrder.clear()
-        libraryOrder.addAll(order.split("|"))
+        val loaded = order.split("|")
+        libraryOrder.addAll(loaded)
+        // Migrate: add gallery if not present in saved order
+        if (!libraryOrder.contains("gallery")) {
+            libraryOrder.add(0, "gallery")
+        }
         isRecentVisible = prefs.getBoolean("is_recent_visible", true)
+        isGalleryVisible = prefs.getBoolean("is_gallery_visible", true)
+        isGalleryAlbumsEnabled = prefs.getBoolean("is_gallery_albums_enabled", false)
     }
-    
+
     fun saveLibrarySettings() {
         val prefs = context.getSharedPreferences("library", Context.MODE_PRIVATE)
         prefs.edit().apply {
             putString("order", libraryOrder.joinToString("|"))
             putBoolean("is_recent_visible", isRecentVisible)
+            putBoolean("is_gallery_visible", isGalleryVisible)
+            putBoolean("is_gallery_albums_enabled", isGalleryAlbumsEnabled)
         }.apply()
     }
 
     fun toggleRecentVisibility() {
         isRecentVisible = !isRecentVisible
+        saveLibrarySettings()
+        GlobalEvents.triggerConfigUpdate()
+    }
+
+    fun toggleGalleryVisibility() {
+        isGalleryVisible = !isGalleryVisible
+        saveLibrarySettings()
+        GlobalEvents.triggerConfigUpdate()
+    }
+
+    fun toggleGalleryAlbums() {
+        isGalleryAlbumsEnabled = !isGalleryAlbumsEnabled
         saveLibrarySettings()
         GlobalEvents.triggerConfigUpdate()
     }

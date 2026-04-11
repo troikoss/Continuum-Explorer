@@ -1,7 +1,9 @@
 package com.troikoss.continuum_explorer.ui.components
 
 import android.content.Context
+import android.content.Intent
 import android.net.Uri
+import com.troikoss.continuum_explorer.ui.activities.MainActivity
 import android.os.Build
 import android.os.Environment
 import android.os.storage.StorageManager
@@ -37,6 +39,7 @@ import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.FolderSpecial
 import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.SdCard
@@ -82,6 +85,8 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import androidx.documentfile.provider.DocumentFile
 import com.troikoss.continuum_explorer.R
+import com.troikoss.continuum_explorer.model.NavSection
+import com.troikoss.continuum_explorer.model.SpecialMode
 import com.troikoss.continuum_explorer.model.UniversalFile
 import com.troikoss.continuum_explorer.utils.FileExplorerState
 import com.troikoss.continuum_explorer.managers.SettingsManager
@@ -107,7 +112,7 @@ private data class StorageVolumeInfo(
     val totalSpace: Long,
     val freeSpace: Long,
     val icon: ImageVector,
-    val id: Int
+    val section: NavSection
 )
 
 /**
@@ -116,7 +121,7 @@ private data class StorageVolumeInfo(
 @Composable
 fun NavigationPane(
     appState: FileExplorerState,
-    onItemSelected: (Int) -> Unit,
+    onItemSelected: (NavSection) -> Unit,
     onSafItemSelected: (Uri) -> Unit,
     onAddStorageClick: () -> Unit,
     onNavigate: () -> Unit = {}
@@ -131,7 +136,7 @@ fun NavigationPane(
     val storageVolumes = remember(context) {
         val volumes = mutableListOf<StorageVolumeInfo>()
 
-        // Add Internal Storage (ID 6)
+        // Add Internal Storage
         val internalRoot = Environment.getExternalStorageDirectory()
         volumes.add(
             StorageVolumeInfo(
@@ -141,7 +146,7 @@ fun NavigationPane(
                 totalSpace = internalRoot.totalSpace,
                 freeSpace = internalRoot.usableSpace,
                 icon = Icons.Default.Storage,
-                id = 6
+                section = NavSection.InternalStorage
             )
         )
 
@@ -162,7 +167,7 @@ fun NavigationPane(
                                 totalSpace = directory.totalSpace,
                                 freeSpace = directory.usableSpace,
                                 icon = if (isSdCard) Icons.Default.SdCard else Icons.Default.Usb,
-                                id = 100 + index
+                                section = NavSection.RemovableVolume(index)
                             )
                         )
                     }
@@ -190,6 +195,7 @@ fun NavigationPane(
         when (id) {
             "trash" -> isRecycleBinEnabled
             "recent" -> appState.appConfigs.isRecentVisible
+            "gallery" -> appState.appConfigs.isGalleryVisible
             else -> true
         }
     }
@@ -404,23 +410,31 @@ fun NavigationPane(
                                 }
                             }
                     ) {
-                        if (id == "recent") {
+                        if (id == "gallery") {
+                            NavItem(
+                                label = stringResource(R.string.nav_gallery),
+                                icon = Icons.Default.Image,
+                                onClick = { onItemSelected(NavSection.Gallery) },
+                                appState = appState,
+                                section = NavSection.Gallery
+                            )
+                        } else if (id == "recent") {
                             NavItem(
                                 label = stringResource(R.string.nav_recent),
                                 icon = Icons.Default.History,
-                                onClick = { onItemSelected(8) },
+                                onClick = { onItemSelected(NavSection.Recent) },
                                 appState = appState,
-                                isRecent = true
+                                section = NavSection.Recent
                             )
                         } else if (id == "trash") {
                             val trashDir = File(Environment.getExternalStorageDirectory(), ".Trash")
                             NavItem(
                                 label = stringResource(R.string.nav_trash),
                                 icon = Icons.Default.Delete,
-                                onClick = { onItemSelected(7) },
+                                onClick = { onItemSelected(NavSection.RecycleBin) },
                                 modifier = Modifier.fileDropTarget(appState, destPath = trashDir),
                                 appState = appState,
-                                isRecycleBin = true
+                                section = NavSection.RecycleBin
                             )
                         }
                     }
@@ -442,7 +456,7 @@ fun NavigationPane(
                     icon = volume.icon,
                     totalSpace = volume.totalSpace,
                     freeSpace = volume.freeSpace,
-                    onClick = { onItemSelected(volume.id) },
+                    onClick = { onItemSelected(volume.section) },
                     modifier = Modifier.fileDropTarget(appState, destPath = volume.path),
                     appState = appState,
                     path = volume.path,
@@ -528,6 +542,17 @@ private fun NavBackgroundContextMenu(
                 HorizontalDivider()
 
                 DropdownMenuItem(
+                    text = { Text(stringResource(R.string.nav_gallery)) },
+                    leadingIcon = { Icon(Icons.Default.Image, null) },
+                    trailingIcon = { if (appState.appConfigs.isGalleryVisible) Icon(Icons.Default.Check, null) },
+                    onClick = {
+                        appState.appConfigs.toggleGalleryVisibility()
+                        onDismissRequest()
+                        currentScreen = "MAIN"
+                    }
+                )
+
+                DropdownMenuItem(
                     text = { Text(stringResource(R.string.nav_recent)) },
                     leadingIcon = { Icon(Icons.Default.History, null) },
                     trailingIcon = { if (appState.appConfigs.isRecentVisible) Icon(Icons.Default.Check, null) },
@@ -562,8 +587,7 @@ private fun NavContextMenu(
     label: String,
     path: String? = null,
     uri: Uri? = null,
-    isRecycleBin: Boolean = false,
-    isRecent: Boolean = false,
+    section: NavSection? = null,
     onRemove: (() -> Unit)? = null
 ) {
     DropdownMenu(expanded = expanded, onDismissRequest = onDismissRequest) {
@@ -571,24 +595,22 @@ private fun NavContextMenu(
             text = { Text(stringResource(R.string.menu_open_new_tab)) },
             onClick = {
                 onDismissRequest()
-                if (isRecycleBin) {
-                    val trashDir = File(Environment.getExternalStorageDirectory(), ".Trash")
-                    appState.onOpenInNewTab?.invoke(trashDir.toUniversal())
-                } else if (isRecent) {
-                    appState.onOpenInNewTab?.invoke(
-                        UniversalFile(
-                            name = "Recent",
-                            isDirectory = true,
-                            lastModified = 0,
-                            length = 0,
-                            absolutePath = "recent://"
-                        )
+                when (section) {
+                    is NavSection.RecycleBin -> appState.onOpenInNewTab?.invoke(
+                        File(Environment.getExternalStorageDirectory(), ".Trash").toUniversal()
                     )
-                } else if (path != null) {
-                    appState.onOpenInNewTab?.invoke(File(path).toUniversal())
-                } else if (uri != null) {
-                    val doc = DocumentFile.fromTreeUri(appState.context, uri)
-                    if (doc != null) appState.onOpenInNewTab?.invoke(doc.toUniversal())
+                    is NavSection.Recent -> appState.onOpenInNewTab?.invoke(
+                        UniversalFile(name = "Recent", isDirectory = true, lastModified = 0, length = 0, absolutePath = "recent://")
+                    )
+                    is NavSection.Gallery -> appState.onOpenInNewTab?.invoke(
+                        UniversalFile(name = "Gallery", isDirectory = true, lastModified = 0, length = 0, absolutePath = "gallery://")
+                    )
+                    else -> if (path != null) {
+                        appState.onOpenInNewTab?.invoke(File(path).toUniversal())
+                    } else if (uri != null) {
+                        val doc = DocumentFile.fromTreeUri(appState.context, uri)
+                        if (doc != null) appState.onOpenInNewTab?.invoke(doc.toUniversal())
+                    }
                 }
             },
             leadingIcon = { Icon(Icons.Default.Tab, null) }
@@ -597,22 +619,31 @@ private fun NavContextMenu(
             text = { Text(stringResource(R.string.menu_open_new_window)) },
             onClick = {
                 onDismissRequest()
-                val universalList = when {
-                    isRecycleBin -> listOf(File(Environment.getExternalStorageDirectory(), ".Trash").toUniversal())
-                    isRecent -> emptyList() // Not supported directly yet
-                    path != null -> listOf(File(path).toUniversal())
-                    uri != null -> DocumentFile.fromTreeUri(appState.context, uri)?.let { listOf(it.toUniversal()) } ?: emptyList()
-                    else -> emptyList()
-                }
-                if (isRecent) {
-                    // Logic to open Recent in new window if needed
-                } else {
-                    appState.openInNewWindow(universalList)
+                when (section) {
+                    is NavSection.Recent, is NavSection.Gallery -> {
+                        val intent = Intent(appState.context, MainActivity::class.java).apply {
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            addFlags(Intent.FLAG_ACTIVITY_MULTIPLE_TASK)
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_DOCUMENT)
+                            if (section is NavSection.Recent) putExtra("isRecent", true)
+                            if (section is NavSection.Gallery) putExtra("isGallery", true)
+                        }
+                        appState.context.startActivity(intent)
+                    }
+                    is NavSection.RecycleBin -> appState.openInNewWindow(listOf(File(Environment.getExternalStorageDirectory(), ".Trash").toUniversal()))
+                    else -> when {
+                        path != null -> appState.openInNewWindow(listOf(File(path).toUniversal()))
+                        uri != null -> {
+                            val doc = DocumentFile.fromTreeUri(appState.context, uri)
+                            if (doc != null) appState.openInNewWindow(listOf(doc.toUniversal()))
+                        }
+                        else -> appState.openInNewWindow(emptyList())
+                    }
                 }
             },
             leadingIcon = { Icon(Icons.Default.Splitscreen, null) }
         )
-        if (isRecycleBin) {
+        if (section is NavSection.RecycleBin) {
             DropdownMenuItem(
                 text = { Text(stringResource(R.string.menu_empty_recycle_bin)) },
                 onClick = {
@@ -633,20 +664,37 @@ private fun NavContextMenu(
                 leadingIcon = { Icon(Icons.Default.Delete, null, modifier = Modifier.size(18.dp)) }
             )
         }
-        if (!isRecent) {
+        if (section is NavSection.Gallery) {
+            HorizontalDivider()
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.menu_gallery_albums)) },
+                onClick = {
+                    onDismissRequest()
+                    appState.appConfigs.toggleGalleryAlbums()
+                    if (appState.specialMode == SpecialMode.Gallery) {
+                        appState.triggerLoad(forceRefresh = true)
+                    }
+                },
+                leadingIcon = { if (appState.appConfigs.isGalleryAlbumsEnabled) Icon(Icons.Default.Check, null) }
+            )
+        }
+        if (section !is NavSection.Recent && section !is NavSection.Gallery) {
             HorizontalDivider()
             DropdownMenuItem(
                 text = { Text(stringResource(R.string.menu_properties)) },
                 onClick = {
                     onDismissRequest()
-                    if (isRecycleBin) {
-                        val trashDir = File(Environment.getExternalStorageDirectory(), ".Trash")
-                        appState.showProperties(listOf(trashDir.toUniversal()))
-                    } else if (path != null) {
-                        appState.showProperties(listOf(File(path).toUniversal()))
-                    } else if (uri != null) {
-                        val doc = DocumentFile.fromTreeUri(appState.context, uri)
-                        if (doc != null) appState.showProperties(listOf(doc.toUniversal()))
+                    when (section) {
+                        is NavSection.RecycleBin -> {
+                            val trashDir = File(Environment.getExternalStorageDirectory(), ".Trash")
+                            appState.showProperties(listOf(trashDir.toUniversal()))
+                        }
+                        else -> if (path != null) {
+                            appState.showProperties(listOf(File(path).toUniversal()))
+                        } else if (uri != null) {
+                            val doc = DocumentFile.fromTreeUri(appState.context, uri)
+                            if (doc != null) appState.showProperties(listOf(doc.toUniversal()))
+                        }
                     }
                 },
                 leadingIcon = { Icon(Icons.Default.Info, null) }
@@ -662,8 +710,7 @@ private fun NavItem(
     onClick: () -> Unit,
     appState: FileExplorerState,
     modifier: Modifier = Modifier,
-    isRecycleBin: Boolean = false,
-    isRecent: Boolean = false
+    section: NavSection? = null
 ) {
     var expanded by remember { mutableStateOf(false) }
     var menuOffset by remember { mutableStateOf(DpOffset.Zero)}
@@ -690,8 +737,7 @@ private fun NavItem(
                 onDismissRequest = { expanded = false },
                 appState = appState,
                 label = label,
-                isRecycleBin = isRecycleBin,
-                isRecent = isRecent
+                section = section
             )
         }
     }

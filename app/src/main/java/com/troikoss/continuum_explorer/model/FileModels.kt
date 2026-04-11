@@ -7,6 +7,22 @@ import androidx.documentfile.provider.DocumentFile
 import java.io.File
 
 /**
+ * Represents a virtual/special view mode for the file list.
+ */
+enum class SpecialMode { None, Recent, Gallery }
+
+/**
+ * Represents a navigation destination in the side pane.
+ */
+sealed class NavSection {
+    object InternalStorage : NavSection()
+    object RecycleBin : NavSection()
+    object Recent : NavSection()
+    object Gallery : NavSection()
+    data class RemovableVolume(val volumeIndex: Int) : NavSection()
+}
+
+/**
  * Defines the sorting order for the file list.
  */
 enum class SortOrder { Ascending, Descending }
@@ -30,12 +46,13 @@ enum class ScreenSize { SMALL, MEDIUM, LARGE}
 
 
 data class NavLocation(
-    val path: File?, 
+    val path: File?,
     val uri: Uri?,
     val archiveFile: File? = null,
     val archiveUri: Uri? = null,
     val archivePath: String? = null,
-    val safStack: List<Uri>? = null
+    val safStack: List<Uri>? = null,
+    val specialMode: SpecialMode = SpecialMode.None
 )
 
 /**

@@ -484,6 +484,7 @@ private fun FileGrid(
                 }
             }
         ) { file ->
+
             val isHovered by remember(file, dragActive) {
                 derivedStateOf {
                     // Suppress hover during any drag operation

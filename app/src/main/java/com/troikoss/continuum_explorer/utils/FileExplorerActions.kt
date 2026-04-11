@@ -12,6 +12,7 @@ import com.troikoss.continuum_explorer.managers.SettingsManager
 import com.troikoss.continuum_explorer.managers.UndoManager
 import com.troikoss.continuum_explorer.ui.activities.MainActivity
 import com.troikoss.continuum_explorer.ui.activities.PopUpActivity
+import com.troikoss.continuum_explorer.model.SpecialMode
 import com.troikoss.continuum_explorer.model.UniversalFile
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -65,10 +66,11 @@ fun FileExplorerState.openInNewWindow(items: List<UniversalFile>) {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             addFlags(Intent.FLAG_ACTIVITY_MULTIPLE_TASK)
             addFlags(Intent.FLAG_ACTIVITY_NEW_DOCUMENT)
-            if (currentPath != null) {
-                putExtra("path", currentPath?.absolutePath)
-            } else if (currentSafUri != null) {
-                putExtra("uri", currentSafUri.toString())
+            when {
+                specialMode == SpecialMode.Recent -> putExtra("isRecent", true)
+                specialMode == SpecialMode.Gallery -> putExtra("isGallery", true)
+                currentPath != null -> putExtra("path", currentPath?.absolutePath)
+                currentSafUri != null -> putExtra("uri", currentSafUri.toString())
             }
         }
         context.startActivity(intent)

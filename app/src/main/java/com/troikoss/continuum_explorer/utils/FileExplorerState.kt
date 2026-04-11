@@ -14,6 +14,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.documentfile.provider.DocumentFile
 import com.troikoss.continuum_explorer.R
+import com.troikoss.continuum_explorer.managers.GalleryManager
 import com.troikoss.continuum_explorer.managers.RecentFilesManager
 import com.troikoss.continuum_explorer.managers.SearchManager
 import com.troikoss.continuum_explorer.managers.SelectionManager
@@ -48,7 +49,7 @@ class FileExplorerState(
     var currentSafUri by mutableStateOf<Uri?>(null)
 
     // Flag for special virtual locations
-    var isRecentMode by mutableStateOf(false)
+    var specialMode by mutableStateOf(SpecialMode.None)
 
     // Archive Navigation State
     var currentArchiveFile by mutableStateOf<File?>(null)
@@ -181,8 +182,10 @@ class FileExplorerState(
         get() {
             return if (isInRecycleBin) {
                 context.getString(R.string.nav_recycle_bin)
-            } else if (isRecentMode) {
+            } else if (specialMode == SpecialMode.Recent) {
                 context.getString(R.string.nav_recent)
+            } else if (specialMode == SpecialMode.Gallery) {
+                context.getString(R.string.nav_gallery)
             } else if (currentArchiveFile != null) {
                 currentArchiveFile?.name ?: context.getString(R.string.archive)
             } else if (currentArchiveUri != null) {
@@ -220,12 +223,12 @@ class FileExplorerState(
         }
 
     val isInRecycleBin: Boolean
-        get() = !isRecentMode && currentPath?.absolutePath == File(Environment.getExternalStorageDirectory(), ".Trash").absolutePath
+        get() = specialMode == SpecialMode.None && currentPath?.absolutePath == File(Environment.getExternalStorageDirectory(), ".Trash").absolutePath
 
     val canGoUp: Boolean
         get() = if (currentArchiveFile != null || currentArchiveUri != null) {
             true
-        } else if (isRecentMode) {
+        } else if (specialMode != SpecialMode.None) {
             false
         } else if (currentPath != null) {
             currentPath?.absolutePath != storageRoot.absolutePath
@@ -376,23 +379,26 @@ class FileExplorerState(
 
         try {
             val (sortedList, newMeta) = withContext(Dispatchers.IO) {
-                val universalList = if (isRecentMode) {
-                    RecentFilesManager.getRecentFiles(context)
-                } else if (currentArchiveFile != null || currentArchiveUri != null) {
-                    if (archiveCache == null) {
-                        val source: Any = currentArchiveFile ?: currentArchiveUri!!
-                        archiveCache = ZipUtils.parseArchive(context, source)
+                val universalList = when (specialMode) {
+                    SpecialMode.Recent -> RecentFilesManager.getRecentFiles(context)
+                    SpecialMode.Gallery -> if (appConfigs.isGalleryAlbumsEnabled) GalleryManager.getGalleryAlbums(context)
+                        else GalleryManager.getGalleryFiles(context)
+                    SpecialMode.None -> if (currentArchiveFile != null || currentArchiveUri != null) {
+                        if (archiveCache == null) {
+                            val source: Any = currentArchiveFile ?: currentArchiveUri!!
+                            archiveCache = ZipUtils.parseArchive(context, source)
+                        }
+                        archiveCache?.get(currentArchivePath) ?: emptyList()
+                    } else if (currentPath != null) {
+                        val rawFiles = currentPath!!.listFiles()?.toList() ?: emptyList()
+                        rawFiles.filter { it.name != ".metadata" }.map { it.toUniversal() }
+                    } else if (currentSafUri != null) {
+                        val docFile = DocumentFile.fromTreeUri(context, currentSafUri!!)
+                        val rawDocs = docFile?.listFiles()?.toList() ?: emptyList()
+                        rawDocs.map { it.toUniversal() }
+                    } else {
+                        emptyList()
                     }
-                    archiveCache?.get(currentArchivePath) ?: emptyList()
-                } else if (currentPath != null) {
-                    val rawFiles = currentPath!!.listFiles()?.toList() ?: emptyList()
-                    rawFiles.filter { it.name != ".metadata" }.map { it.toUniversal() }
-                } else if (currentSafUri != null) {
-                    val docFile = DocumentFile.fromTreeUri(context, currentSafUri!!)
-                    val rawDocs = docFile?.listFiles()?.toList() ?: emptyList()
-                    rawDocs.map { it.toUniversal() }
-                } else {
-                    emptyList()
                 }
 
                 val meta: Map<String, RecycleBinMetadata> = if (isInRecycleBin) {
@@ -406,7 +412,8 @@ class FileExplorerState(
 
                 val filteredList = if (showHidden) universalList else universalList.filter { !it.name.startsWith(".") }
 
-                Pair(if (isRecentMode) filteredList else sortFiles(filteredList, sortParams, meta), meta)
+                val skipSort = specialMode == SpecialMode.Recent || (specialMode == SpecialMode.Gallery && !appConfigs.isGalleryAlbumsEnabled)
+                Pair(if (skipSort) filteredList else sortFiles(filteredList, sortParams, meta), meta)
             }
 
             withContext(Dispatchers.Main) {
@@ -437,7 +444,11 @@ class FileExplorerState(
                     pendingFocusUri = null
                 }
 
-                loadedPathKey = key ?: if (isRecentMode) "recent" else "root"
+                loadedPathKey = key ?: when (specialMode) {
+                    SpecialMode.Recent -> "recent"
+                    SpecialMode.Gallery -> "gallery"
+                    SpecialMode.None -> "root"
+                }
                 selectionManager.allFiles = files
                 isLoading = false
             }
