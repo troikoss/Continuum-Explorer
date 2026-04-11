@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyGridLayoutInfo
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -513,6 +514,29 @@ private fun FileGrid(
     }
 }
 
+private data class GridScrollMetrics(
+    val viewportHeight: Float,
+    val estimatedContentHeight: Float,
+    val columnsCount: Int,
+    val avgItemHeight: Float
+)
+
+private fun LazyGridLayoutInfo.computeScrollMetrics(): GridScrollMetrics? {
+    val visibleItems = visibleItemsInfo
+    if (visibleItems.isEmpty() || totalItemsCount == 0) return null
+    val viewportHeight = (viewportEndOffset - viewportStartOffset).toFloat()
+    if (viewportHeight == 0f) return null
+    val avgItemHeight = visibleItems.sumOf { it.size.height }.toFloat() / visibleItems.size
+    val columnsCount = visibleItems.count { it.offset.y == visibleItems.first().offset.y }.coerceAtLeast(1)
+    val totalRows = (totalItemsCount + columnsCount - 1) / columnsCount
+    return GridScrollMetrics(
+        viewportHeight = viewportHeight,
+        estimatedContentHeight = totalRows * avgItemHeight,
+        columnsCount = columnsCount,
+        avgItemHeight = avgItemHeight
+    )
+}
+
 @Composable
 private fun VerticalScrollbar(
     gridState: LazyGridState,
@@ -523,15 +547,8 @@ private fun VerticalScrollbar(
 
     val isScrollable by remember(gridState) {
         derivedStateOf {
-            val info = gridState.layoutInfo
-            val visibleItems = info.visibleItemsInfo
-            if (visibleItems.isEmpty() || info.totalItemsCount == 0) return@derivedStateOf false
-            val viewportHeight = (info.viewportEndOffset - info.viewportStartOffset).toFloat()
-            if (viewportHeight == 0f) return@derivedStateOf false
-            val avgItemHeight = visibleItems.sumOf { it.size.height }.toFloat() / visibleItems.size
-            val columnsCount = visibleItems.count { it.offset.y == visibleItems.first().offset.y }.coerceAtLeast(1)
-            val totalRows = (info.totalItemsCount + columnsCount - 1) / columnsCount
-            totalRows * avgItemHeight > viewportHeight + 1f
+            val m = gridState.layoutInfo.computeScrollMetrics() ?: return@derivedStateOf false
+            m.estimatedContentHeight > m.viewportHeight + 1f
         }
     }
 
@@ -561,16 +578,9 @@ private fun VerticalScrollbar(
                         val dragDeltaY = change.position.y - prevY
                         if (dragDeltaY != 0f) {
                             change.consume()
-                            val info = gridState.layoutInfo
-                            val visibleItems = info.visibleItemsInfo
-                            if (visibleItems.isNotEmpty()) {
-                                val viewportHeight = (info.viewportEndOffset - info.viewportStartOffset).toFloat()
-                                val avgItemHeight = visibleItems.sumOf { it.size.height }.toFloat() / visibleItems.size
-                                val columnsCount = visibleItems.count { it.offset.y == visibleItems.first().offset.y }.coerceAtLeast(1)
-                                val totalRows = (info.totalItemsCount + columnsCount - 1) / columnsCount
-                                val estimatedContentHeight = totalRows * avgItemHeight
-                                val scrollRatio = if (size.height > 0f) estimatedContentHeight / size.height else 1f
-                                coroutineScope.launch { gridState.scrollBy(dragDeltaY * scrollRatio) }
+                            val m = gridState.layoutInfo.computeScrollMetrics()
+                            if (m != null && size.height > 0f) {
+                                coroutineScope.launch { gridState.scrollBy(dragDeltaY * (m.estimatedContentHeight / size.height)) }
                             }
                         }
                         prevY = change.position.y
@@ -586,22 +596,13 @@ private fun VerticalScrollbar(
                 .align(Alignment.CenterEnd)
         ) {
             if (alpha == 0f) return@Canvas
+            val m = gridState.layoutInfo.computeScrollMetrics() ?: return@Canvas
 
-            val info = gridState.layoutInfo
-            val visibleItems = info.visibleItemsInfo
-            if (visibleItems.isEmpty()) return@Canvas
-
-            val viewportHeight = (info.viewportEndOffset - info.viewportStartOffset).toFloat()
-            val avgItemHeight = visibleItems.sumOf { it.size.height }.toFloat() / visibleItems.size
-            val columnsCount = visibleItems.count { it.offset.y == visibleItems.first().offset.y }.coerceAtLeast(1)
-            val totalRows = (info.totalItemsCount + columnsCount - 1) / columnsCount
-            val estimatedContentHeight = totalRows * avgItemHeight
-
-            val thumbFraction = (viewportHeight / estimatedContentHeight).coerceIn(0.08f, 1f)
+            val thumbFraction = (m.viewportHeight / m.estimatedContentHeight).coerceIn(0.08f, 1f)
             val thumbHeight = size.height * thumbFraction
-            val scrolledAmount = (gridState.firstVisibleItemIndex.toFloat() / columnsCount) * avgItemHeight +
+            val scrolledAmount = (gridState.firstVisibleItemIndex.toFloat() / m.columnsCount) * m.avgItemHeight +
                     gridState.firstVisibleItemScrollOffset
-            val scrollFraction = (scrolledAmount / (estimatedContentHeight - viewportHeight)).coerceIn(0f, 1f)
+            val scrollFraction = (scrolledAmount / (m.estimatedContentHeight - m.viewportHeight)).coerceIn(0f, 1f)
             val thumbTop = (size.height - thumbHeight) * scrollFraction
 
             // Track
