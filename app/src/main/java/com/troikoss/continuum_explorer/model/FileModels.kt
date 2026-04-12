@@ -9,7 +9,7 @@ import java.io.File
 /**
  * Represents a virtual/special view mode for the file list.
  */
-enum class SpecialMode { None, Recent, Gallery }
+enum class LibraryItem { None, Recent, Gallery, RecycleBin }
 
 /**
  * Represents a navigation destination in the side pane.
@@ -52,7 +52,7 @@ data class NavLocation(
     val archiveUri: Uri? = null,
     val archivePath: String? = null,
     val safStack: List<Uri>? = null,
-    val specialMode: SpecialMode = SpecialMode.None
+    val libraryItem: LibraryItem = LibraryItem.None
 )
 
 /**

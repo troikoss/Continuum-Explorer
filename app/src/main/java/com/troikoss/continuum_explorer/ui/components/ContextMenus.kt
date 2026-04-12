@@ -23,6 +23,7 @@ import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Restore
@@ -33,7 +34,6 @@ import androidx.compose.material.icons.filled.StarOutline
 import androidx.compose.material.icons.filled.Tab
 import androidx.compose.material.icons.filled.TextFormat
 import androidx.compose.material.icons.filled.Unarchive
-import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.ViewModule
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -55,10 +55,27 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.troikoss.continuum_explorer.R
 import com.troikoss.continuum_explorer.model.FileColumnType
+import com.troikoss.continuum_explorer.model.LibraryItem
 import com.troikoss.continuum_explorer.model.ScreenSize
 import com.troikoss.continuum_explorer.model.ViewMode
 import com.troikoss.continuum_explorer.utils.*
 
+
+@Composable
+private fun CtrlShortcut(key: String) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Icon(
+            painter = painterResource(id = R.drawable.ic_control),
+            contentDescription = null,
+            modifier = Modifier.size(12.dp)
+        )
+        Text(
+            text = "+ $key",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
 
 /**
  * Context menu shown when right-clicking or long-pressing a specific file or folder.
@@ -71,30 +88,43 @@ fun ItemContextMenu(
 ) {
     val context = LocalContext.current
     val selectionManager = appState.selectionManager
-    val isInRecycleBin = appState.isInRecycleBin
+    val isInRecycleBin = appState.libraryItem == LibraryItem.RecycleBin
 
     DropdownMenu(
         expanded = expanded,
         onDismissRequest = onDismiss
     ) {
-        if (isInRecycleBin) {
-            DropdownMenuItem(
-                text = { Text(stringResource(R.string.menu_restore)) },
-                onClick = {
-                    appState.restoreSelection()
-                    onDismiss()
-                },
-                leadingIcon = { Icon(Icons.Default.Restore, null) }
-            )
+        if (appState.libraryItem in setOf(LibraryItem.Gallery, LibraryItem.Recent, LibraryItem.RecycleBin)) {
 
             DropdownMenuItem(
-                text = { Text(stringResource(R.string.menu_delete_permanently)) },
+                text = { Text(stringResource(R.string.menu_copy)) },
+                leadingIcon = { Icon(Icons.Default.CopyAll, null) },
                 onClick = {
-                    appState.deleteSelection(forcePermanent = true)
+                    appState.copySelection()
                     onDismiss()
                 },
-                leadingIcon = { Icon(Icons.Default.Delete, null) }
+                trailingIcon = { CtrlShortcut("C") }
             )
+
+            if (isInRecycleBin) {
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.menu_restore)) },
+                    onClick = {
+                        appState.restoreSelection()
+                        onDismiss()
+                    },
+                    leadingIcon = { Icon(Icons.Default.Restore, null) }
+                )
+
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.menu_delete_permanently)) },
+                    onClick = {
+                        appState.deleteSelection(forcePermanent = true)
+                        onDismiss()
+                    },
+                    leadingIcon = { Icon(Icons.Default.Delete, null) }
+                )
+            }
 
             DropdownMenuItem(
                 text = { Text(stringResource(R.string.menu_properties)) },
@@ -119,11 +149,11 @@ fun ItemContextMenu(
                         appState.open(item)
                     },
                     leadingIcon = { Icon(IconHelper.getIconForItem(item), null) },
-                    trailingIcon = { Icon(
-                        Icons.AutoMirrored.Filled.KeyboardReturn,
-                        contentDescription = null,
-                        modifier = Modifier
-                            .size(12.dp)
+                    trailingIcon = {
+                        Icon(
+                            Icons.AutoMirrored.Filled.KeyboardReturn,
+                            contentDescription = null,
+                            modifier = Modifier.size(12.dp)
                         )
                     }
                 )
@@ -138,7 +168,7 @@ fun ItemContextMenu(
                         leadingIcon = { Icon(Icons.Default.FolderOpen, null) }
                     )
                 }
-                
+
                 HorizontalDivider()
             }
 
@@ -183,11 +213,11 @@ fun ItemContextMenu(
                 )
                 HorizontalDivider()
             }
-            
+
             if (onlyOneSelected && selectedItems.first().isDirectory && selectedItems.first().fileRef != null) {
                 val path = selectedItems.first().fileRef!!.absolutePath
                 val isFav = appState.appConfigs.isFavorite(path)
-                
+
                 DropdownMenuItem(
                     text = { Text(if (isFav) stringResource(R.string.menu_remove_favorites) else stringResource(R.string.menu_add_favorites)) },
                     onClick = {
@@ -240,20 +270,7 @@ fun ItemContextMenu(
                     onDismiss()
                 },
                 leadingIcon = { Icon(Icons.Default.ContentCut, null) },
-                trailingIcon = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.ic_control),
-                            contentDescription = null,
-                            modifier = Modifier.size(12.dp)
-                        )
-                        Text(
-                            text = "+ X",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
+                trailingIcon = { CtrlShortcut("X") }
             )
 
             DropdownMenuItem(
@@ -263,20 +280,7 @@ fun ItemContextMenu(
                     onDismiss()
                 },
                 leadingIcon = { Icon(Icons.Default.CopyAll, null) },
-                trailingIcon = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.ic_control),
-                            contentDescription = null,
-                            modifier = Modifier.size(12.dp)
-                        )
-                        Text(
-                            text = "+ C",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
+                trailingIcon = { CtrlShortcut("C") }
             )
 
             DropdownMenuItem(
@@ -286,20 +290,7 @@ fun ItemContextMenu(
                     onDismiss()
                 },
                 leadingIcon = { Icon(Icons.Default.ContentPaste, null) },
-                trailingIcon = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.ic_control),
-                            contentDescription = null,
-                            modifier = Modifier.size(12.dp)
-                        )
-                        Text(
-                            text = "+ V",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
+                trailingIcon = { CtrlShortcut("V") }
             )
 
             HorizontalDivider()
@@ -319,7 +310,7 @@ fun ItemContextMenu(
                     )
                 }
             )
-            if ( !hasDirectories ) {
+            if (!hasDirectories) {
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.menu_share)) },
                     onClick = {
@@ -368,7 +359,7 @@ fun BackgroundContextMenu(
     appState: FileExplorerState
 ) {
     var currentScreen by remember { mutableStateOf("MAIN") }
-    val isInRecycleBin = appState.isInRecycleBin
+    val isInRecycleBin = appState.libraryItem == LibraryItem.RecycleBin
 
     LaunchedEffect(expanded) {
         if (!expanded) {
@@ -439,20 +430,7 @@ fun BackgroundContextMenu(
                             appState.paste()
                             onDismiss()
                         },
-                        trailingIcon = {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    painter = painterResource(id = R.drawable.ic_control),
-                                    contentDescription = null,
-                                    modifier = Modifier.size(12.dp)
-                                )
-                                Text(
-                                    text = "+ V",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
+                        trailingIcon = { CtrlShortcut("V") }
                     )
                 }
             }
@@ -551,7 +529,7 @@ fun BackgroundContextMenu(
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.menu_details)) },
                     leadingIcon = { Icon(Icons.AutoMirrored.Filled.ListAlt, null) },
-                    trailingIcon = { if (appState.activeViewMode == ViewMode.DETAILS) { Icon(Icons.Default.Done, null) }},
+                    trailingIcon = { if (appState.activeViewMode == ViewMode.DETAILS) { Icon(Icons.Default.Done, null) } },
                     onClick = {
                         appState.folderConfigs.updateViewMode(ViewMode.DETAILS, appState.getCurrentStorageKey())
                         onDismiss()
@@ -560,7 +538,7 @@ fun BackgroundContextMenu(
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.menu_grid)) },
                     leadingIcon = { Icon(Icons.Default.ViewModule, null) },
-                    trailingIcon = { if (appState.activeViewMode == ViewMode.GRID) { Icon(Icons.Default.Done, null) }},
+                    trailingIcon = { if (appState.activeViewMode == ViewMode.GRID) { Icon(Icons.Default.Done, null) } },
                     onClick = {
                         appState.folderConfigs.updateViewMode(ViewMode.GRID, appState.getCurrentStorageKey())
                         onDismiss()
@@ -569,7 +547,7 @@ fun BackgroundContextMenu(
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.menu_gallery)) },
                     leadingIcon = { Icon(Icons.Default.PhotoLibrary, null) },
-                    trailingIcon = { if (appState.activeViewMode == ViewMode.GALLERY) { Icon(Icons.Default.Done, null) }},
+                    trailingIcon = { if (appState.activeViewMode == ViewMode.GALLERY) { Icon(Icons.Default.Done, null) } },
                     onClick = {
                         appState.folderConfigs.updateViewMode(ViewMode.GALLERY, appState.getCurrentStorageKey())
                         onDismiss()
@@ -578,7 +556,7 @@ fun BackgroundContextMenu(
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.menu_content)) },
                     leadingIcon = { Icon(Icons.AutoMirrored.Filled.List, null) },
-                    trailingIcon = { if (appState.activeViewMode == ViewMode.CONTENT) { Icon(Icons.Default.Done, null) }},
+                    trailingIcon = { if (appState.activeViewMode == ViewMode.CONTENT) { Icon(Icons.Default.Done, null) } },
                     onClick = {
                         appState.folderConfigs.updateViewMode(ViewMode.CONTENT, appState.getCurrentStorageKey())
                         onDismiss()

@@ -55,7 +55,7 @@ import com.troikoss.continuum_explorer.R
 import com.troikoss.continuum_explorer.ui.activities.SettingsActivity
 import com.troikoss.continuum_explorer.model.NavLocation
 import com.troikoss.continuum_explorer.model.ScreenSize
-import com.troikoss.continuum_explorer.model.SpecialMode
+import com.troikoss.continuum_explorer.model.LibraryItem
 import com.troikoss.continuum_explorer.utils.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -509,17 +509,17 @@ fun TopBar(
                             .horizontalScroll(breadcrumbScrollState),
                         verticalAlignment = CenterVertically
                     ) {
-                        if (appState.specialMode == SpecialMode.Gallery && appState.currentPath != null) {
+                        if (appState.libraryItem == LibraryItem.Gallery && appState.currentPath != null) {
                             // Gallery album breadcrumb: "Gallery > AlbumName"
                             TextButton(
-                                onClick = { appState.navigateTo(null, null, specialMode = SpecialMode.Gallery) },
+                                onClick = { appState.navigateTo(null, null, libraryItem = LibraryItem.Gallery) },
                                 contentPadding = PaddingValues(horizontal = 12.dp)
                             ) {
                                 Text(text = stringResource(R.string.nav_gallery), style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp), color = MaterialTheme.colorScheme.onSurface)
                             }
                             Icon(Icons.Default.ChevronRight, null, modifier = Modifier.size(16.dp))
                             Text(text = appState.currentPath!!.name, modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp), style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp, lineHeight = 20.sp), color = MaterialTheme.colorScheme.onSurface)
-                        } else if (appState.isInRecycleBin) {
+                        } else if (appState.libraryItem == LibraryItem.RecycleBin) {
                             Text(
                                 text = stringResource(R.string.nav_recycle_bin),
                                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
@@ -626,14 +626,14 @@ fun TopBar(
                                     Icon(Icons.Default.ChevronRight, null, modifier = Modifier.size(16.dp))
                                 }
                             }
-                        } else if (appState.specialMode == SpecialMode.Gallery) {
+                        } else if (appState.libraryItem == LibraryItem.Gallery) {
                             Text(
                                 text = stringResource(R.string.nav_gallery),
                                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
                                 style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp, lineHeight = 20.sp),
                                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                             )
-                        } else if (appState.specialMode == SpecialMode.Recent) {
+                        } else if (appState.libraryItem == LibraryItem.Recent) {
                             Text(
                                 text = stringResource(R.string.nav_recent),
                                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),

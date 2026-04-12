@@ -34,6 +34,7 @@ import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import com.troikoss.continuum_explorer.R
 import com.troikoss.continuum_explorer.model.FileColumnType
+import com.troikoss.continuum_explorer.model.LibraryItem
 import com.troikoss.continuum_explorer.model.SortOrder
 import com.troikoss.continuum_explorer.utils.FileExplorerState
 import com.troikoss.continuum_explorer.utils.VerticalResizeHandle
@@ -107,7 +108,7 @@ fun DetailsHeader(appState: FileExplorerState, scrollState: ScrollState, nameCol
         ) {
             appState.folderConfigs.extraColumns.forEach { column ->
                 val isVisible = column.type !in appState.folderConfigs.hiddenColumns
-                val isDisabled = (column.type == FileColumnType.DATE_DELETED || column.type == FileColumnType.DELETED_FROM) && !appState.isInRecycleBin
+                val isDisabled = (column.type == FileColumnType.DATE_DELETED || column.type == FileColumnType.DELETED_FROM) && appState.libraryItem != LibraryItem.RecycleBin
                 DropdownMenuItem(
                     text = {
                         Text(

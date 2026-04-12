@@ -7,14 +7,13 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Environment
 import android.provider.Settings
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import coil.ImageLoader
 import coil.decode.VideoFrameDecoder
-import com.troikoss.continuum_explorer.model.SpecialMode
+import com.troikoss.continuum_explorer.model.LibraryItem
 import com.troikoss.continuum_explorer.ui.FileExplorer
 import com.troikoss.continuum_explorer.ui.theme.FileExplorerTheme
 import com.troikoss.continuum_explorer.managers.SettingsManager
@@ -85,10 +84,11 @@ class MainActivity : AppCompatActivity() {
             val path = intent.getStringExtra("archivePath")
             if (path != null) File(path) else null
         }
-        val initialSpecialMode = when {
-            intent.getBooleanExtra("isRecent", false) -> SpecialMode.Recent
-            intent.getBooleanExtra("isGallery", false) -> SpecialMode.Gallery
-            else -> SpecialMode.None
+        val initialLibraryItem = when {
+            intent.getBooleanExtra("isRecent", false) -> LibraryItem.Recent
+            intent.getBooleanExtra("isGallery", false) -> LibraryItem.Gallery
+            intent.getBooleanExtra("isRecycleBin", false) -> LibraryItem.RecycleBin
+            else -> LibraryItem.None
         }
 
         // Build ImageLoader asynchronously to prevent main thread lag on startup
@@ -106,7 +106,7 @@ class MainActivity : AppCompatActivity() {
 
         setContent {
             FileExplorerTheme {
-                FileExplorer(initialPath = initialPath, initialUri = initialUri, initialArchive = initialArchive, initialSpecialMode = initialSpecialMode)
+                FileExplorer(initialPath = initialPath, initialUri = initialUri, initialArchive = initialArchive, initialLibraryItem = initialLibraryItem)
             }
         }
     }

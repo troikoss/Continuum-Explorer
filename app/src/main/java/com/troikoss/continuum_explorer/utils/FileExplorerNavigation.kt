@@ -6,7 +6,7 @@ import android.widget.Toast
 import androidx.documentfile.provider.DocumentFile
 import com.troikoss.continuum_explorer.R
 import com.troikoss.continuum_explorer.model.NavLocation
-import com.troikoss.continuum_explorer.model.SpecialMode
+import com.troikoss.continuum_explorer.model.LibraryItem
 import java.io.File
 
 fun FileExplorerState.navigateTo(
@@ -17,7 +17,7 @@ fun FileExplorerState.navigateTo(
     archiveFile: File? = null,
     archiveUri: Uri? = null,
     archivePath: String? = null,
-    specialMode: SpecialMode = SpecialMode.None
+    libraryItem: LibraryItem = LibraryItem.None
 ) {
     val targetArchivePath = archivePath ?: ""
 
@@ -26,7 +26,7 @@ fun FileExplorerState.navigateTo(
         archiveFile == currentArchiveFile &&
         archiveUri == currentArchiveUri &&
         targetArchivePath == currentArchivePath &&
-        specialMode == this.specialMode) {
+        libraryItem == this.libraryItem) {
 
         if (newRoot != null && newRoot != storageRoot) {
             storageRoot = newRoot
@@ -35,7 +35,7 @@ fun FileExplorerState.navigateTo(
     }
 
     if (addToHistory) {
-        backStack.add(NavLocation(currentPath, currentSafUri, currentArchiveFile, currentArchiveUri, currentArchivePath, ArrayList(safStack), this.specialMode))
+        backStack.add(NavLocation(currentPath, currentSafUri, currentArchiveFile, currentArchiveUri, currentArchivePath, ArrayList(safStack), this.libraryItem))
         forwardStack.clear()
     }
 
@@ -53,7 +53,7 @@ fun FileExplorerState.navigateTo(
     currentArchiveFile = archiveFile
     currentArchiveUri = archiveUri
     currentArchivePath = targetArchivePath
-    this.specialMode = specialMode
+    this.libraryItem = libraryItem
     isSearchMode = false
 
     scrollToItemIndex = null
@@ -67,7 +67,7 @@ fun FileExplorerState.goBack() {
         val leavingUri = currentSafUri
 
         val lastLocation = backStack.removeAt(backStack.size - 1)
-        forwardStack.add(NavLocation(currentPath, currentSafUri, currentArchiveFile, currentArchiveUri, currentArchivePath, ArrayList(safStack), this.specialMode))
+        forwardStack.add(NavLocation(currentPath, currentSafUri, currentArchiveFile, currentArchiveUri, currentArchivePath, ArrayList(safStack), this.libraryItem))
 
         navigateTo(
             newPath = lastLocation.path,
@@ -76,7 +76,7 @@ fun FileExplorerState.goBack() {
             archiveFile = lastLocation.archiveFile,
             archiveUri = lastLocation.archiveUri,
             archivePath = lastLocation.archivePath,
-            specialMode = lastLocation.specialMode
+            libraryItem = lastLocation.libraryItem
         )
 
         if (lastLocation.safStack != null) {
@@ -91,7 +91,7 @@ fun FileExplorerState.goBack() {
 fun FileExplorerState.goForward() {
     if (forwardStack.isNotEmpty()) {
         val nextLocation = forwardStack.removeAt(forwardStack.size - 1)
-        backStack.add(NavLocation(currentPath, currentSafUri, currentArchiveFile, currentArchiveUri, currentArchivePath, ArrayList(safStack), this.specialMode))
+        backStack.add(NavLocation(currentPath, currentSafUri, currentArchiveFile, currentArchiveUri, currentArchivePath, ArrayList(safStack), this.libraryItem))
 
         navigateTo(
             newPath = nextLocation.path,
@@ -100,7 +100,7 @@ fun FileExplorerState.goForward() {
             archiveFile = nextLocation.archiveFile,
             archiveUri = nextLocation.archiveUri,
             archivePath = nextLocation.archivePath,
-            specialMode = nextLocation.specialMode
+            libraryItem = nextLocation.libraryItem
         )
 
         if (nextLocation.safStack != null) {
@@ -111,9 +111,11 @@ fun FileExplorerState.goForward() {
 }
 
 fun FileExplorerState.getLocationName(location: NavLocation): String {
-    return if (location.specialMode == SpecialMode.Recent) {
+    return if (location.libraryItem == LibraryItem.RecycleBin) {
+        context.getString(R.string.nav_recycle_bin)
+    } else if (location.libraryItem == LibraryItem.Recent) {
         context.getString(R.string.nav_recent)
-    } else if (location.specialMode == SpecialMode.Gallery) {
+    } else if (location.libraryItem == LibraryItem.Gallery) {
         if (location.path != null) location.path.name
         else context.getString(R.string.nav_gallery)
     } else if (location.archiveFile != null) {
@@ -145,7 +147,7 @@ fun FileExplorerState.getLocationName(location: NavLocation): String {
 
 fun FileExplorerState.jumpToHistory(index: Int) {
     val allLocations = backStack.toList() +
-            listOf(NavLocation(currentPath, currentSafUri, currentArchiveFile, currentArchiveUri, currentArchivePath, ArrayList(safStack), this.specialMode)) +
+            listOf(NavLocation(currentPath, currentSafUri, currentArchiveFile, currentArchiveUri, currentArchivePath, ArrayList(safStack), this.libraryItem)) +
             forwardStack.asReversed()
 
     if (index < 0 || index >= allLocations.size) return
@@ -176,7 +178,7 @@ fun FileExplorerState.jumpToHistory(index: Int) {
         archiveFile = target.archiveFile,
         archiveUri = target.archiveUri,
         archivePath = target.archivePath,
-        specialMode = target.specialMode
+        libraryItem = target.libraryItem
     )
 
     if (target.safStack != null) {
@@ -186,11 +188,11 @@ fun FileExplorerState.jumpToHistory(index: Int) {
 }
 
 fun FileExplorerState.goUp() {
-    if (specialMode == SpecialMode.Gallery && currentPath != null) {
+    if (libraryItem == LibraryItem.Gallery && currentPath != null) {
         val leavingPath = currentPath
         val parentDir = currentPath?.parentFile
         val targetPath = if (parentDir == null || parentDir.absolutePath == storageRoot.absolutePath || !parentDir.exists()) null else parentDir
-        navigateTo(newPath = targetPath, newUri = null, specialMode = SpecialMode.Gallery)
+        navigateTo(newPath = targetPath, newUri = null, libraryItem = LibraryItem.Gallery)
         if (targetPath != null) focusItemInList(leavingPath, null)
         return
     }

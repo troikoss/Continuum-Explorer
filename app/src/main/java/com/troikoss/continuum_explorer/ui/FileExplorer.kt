@@ -34,7 +34,6 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerType
@@ -46,7 +45,7 @@ import com.troikoss.continuum_explorer.managers.DetailsMode
 import com.troikoss.continuum_explorer.managers.SettingsManager
 import com.troikoss.continuum_explorer.model.NavSection
 import com.troikoss.continuum_explorer.model.ScreenSize
-import com.troikoss.continuum_explorer.model.SpecialMode
+import com.troikoss.continuum_explorer.model.LibraryItem
 import com.troikoss.continuum_explorer.ui.components.*
 import com.troikoss.continuum_explorer.utils.*
 import kotlinx.coroutines.CoroutineScope
@@ -63,7 +62,7 @@ fun FileExplorer(
     initialUri: String? = null,
     initialArchive: File? = null,
     initialArchiveUri: Uri? = null,
-    initialSpecialMode: SpecialMode = SpecialMode.None
+    initialLibraryItem: LibraryItem = LibraryItem.None
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -77,8 +76,13 @@ fun FileExplorer(
             onOpenInNewTab = { item ->
                 val newState = createNewTabState(ctx, scp)
                 when {
-                    item.absolutePath == "recent://" -> newState.navigateTo(null, null, addToHistory = false, specialMode = SpecialMode.Recent)
-                    item.absolutePath == "gallery://" -> newState.navigateTo(null, null, addToHistory = false, specialMode = SpecialMode.Gallery)
+                    item.absolutePath == "recent://" -> newState.navigateTo(null, null, addToHistory = false, libraryItem = LibraryItem.Recent)
+                    item.absolutePath == "gallery://" -> newState.navigateTo(null, null, addToHistory = false, libraryItem = LibraryItem.Gallery)
+                    item.absolutePath == "trash://" -> {
+                        val trashDir = File(Environment.getExternalStorageDirectory(), ".Trash")
+                        if (!trashDir.exists()) trashDir.mkdirs()
+                        newState.navigateTo(trashDir, null, addToHistory = false, libraryItem = LibraryItem.RecycleBin)
+                    }
                     ZipUtils.isArchive(item) && item.fileRef != null && SettingsManager.isDefaultArchiveViewerEnabled.value -> newState.navigateTo(
                         newPath = null,
                         newUri = null,
@@ -102,7 +106,12 @@ fun FileExplorer(
             when {
                 initialArchive != null -> firstState.navigateTo(null, null, addToHistory = false, archiveFile = initialArchive, archivePath = "")
                 initialArchiveUri != null -> firstState.navigateTo(null, null, addToHistory = false, archiveUri = initialArchiveUri, archivePath = "")
-                initialSpecialMode != SpecialMode.None -> firstState.navigateTo(null, null, addToHistory = false, specialMode = initialSpecialMode)
+                initialLibraryItem == LibraryItem.RecycleBin -> {
+                    val trashDir = File(Environment.getExternalStorageDirectory(), ".Trash")
+                    if (!trashDir.exists()) trashDir.mkdirs()
+                    firstState.navigateTo(trashDir, null, addToHistory = false, libraryItem = LibraryItem.RecycleBin)
+                }
+                initialLibraryItem != LibraryItem.None -> firstState.navigateTo(null, null, addToHistory = false, libraryItem = initialLibraryItem)
                 initialPath != null -> firstState.navigateTo(File(initialPath), null, addToHistory = false)
                 initialUri != null -> firstState.navigateTo(null, Uri.parse(initialUri), addToHistory = false)
             }
@@ -125,7 +134,7 @@ fun FileExplorer(
 
     // --- Side Effects ---
     LaunchedEffect(appState, appState.currentPath, appState.currentSafUri, appState.folderConfigs.sortParams,
-                   appState.currentArchiveFile, appState.currentArchiveUri, appState.currentArchivePath, appState.specialMode) {
+                   appState.currentArchiveFile, appState.currentArchiveUri, appState.currentArchivePath, appState.libraryItem) {
         appState.triggerLoad()
     }
 
@@ -327,10 +336,10 @@ private fun navigateToSection(appState: FileExplorerState, context: Context, sec
         is NavSection.RecycleBin -> {
             val trashDir = File(internalRoot, ".Trash")
             if (!trashDir.exists()) trashDir.mkdirs()
-            appState.navigateTo(trashDir, null, newRoot = internalRoot)
+            appState.navigateTo(trashDir, null, newRoot = internalRoot, libraryItem = LibraryItem.RecycleBin)
         }
-        is NavSection.Recent -> appState.navigateTo(null, null, specialMode = SpecialMode.Recent)
-        is NavSection.Gallery -> appState.navigateTo(null, null, specialMode = SpecialMode.Gallery)
+        is NavSection.Recent -> appState.navigateTo(null, null, libraryItem = LibraryItem.Recent)
+        is NavSection.Gallery -> appState.navigateTo(null, null, libraryItem = LibraryItem.Gallery)
         is NavSection.RemovableVolume -> {
             val storageManager = context.getSystemService(Context.STORAGE_SERVICE) as StorageManager
             val volumes = storageManager.storageVolumes

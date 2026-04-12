@@ -49,7 +49,7 @@ class FileExplorerState(
     var currentSafUri by mutableStateOf<Uri?>(null)
 
     // Flag for special virtual locations
-    var specialMode by mutableStateOf(SpecialMode.None)
+    var libraryItem by mutableStateOf(LibraryItem.None)
 
     // Archive Navigation State
     var currentArchiveFile by mutableStateOf<File?>(null)
@@ -120,7 +120,7 @@ class FileExplorerState(
                 folderConfigs.resolveViewMode(key)
                 folderConfigs.resolveSortParams(key)
                 folderConfigs.resolveGridSize(key)
-                folderConfigs.resolveColumnVisibility(key, isInRecycleBin)
+                folderConfigs.resolveColumnVisibility(key, libraryItem == LibraryItem.RecycleBin)
                 folderConfigs.resolveColumnWidths(key)
             }
         }
@@ -180,11 +180,11 @@ class FileExplorerState(
 
     val currentName: String
         get() {
-            return if (isInRecycleBin) {
+            return if (libraryItem == LibraryItem.RecycleBin) {
                 context.getString(R.string.nav_recycle_bin)
-            } else if (specialMode == SpecialMode.Recent) {
+            } else if (libraryItem == LibraryItem.Recent) {
                 context.getString(R.string.nav_recent)
-            } else if (specialMode == SpecialMode.Gallery) {
+            } else if (libraryItem == LibraryItem.Gallery) {
                 if (currentPath != null) currentPath!!.name
                 else context.getString(R.string.nav_gallery)
             } else if (currentArchiveFile != null) {
@@ -220,7 +220,7 @@ class FileExplorerState(
 
             currentPath != null -> currentPath?.toUniversal()
 
-            specialMode == SpecialMode.Gallery -> UniversalFile(
+            libraryItem == LibraryItem.Gallery -> UniversalFile(
                 name = if (currentPath != null) currentPath!!.name else context.getString(R.string.nav_gallery),
                 isDirectory = true,
                 lastModified = 0L,
@@ -228,7 +228,7 @@ class FileExplorerState(
                 absolutePath = currentPath?.absolutePath ?: "virtual://gallery"
             )
 
-            specialMode == SpecialMode.Recent -> UniversalFile(
+            libraryItem == LibraryItem.Recent -> UniversalFile(
                 name = context.getString(R.string.nav_recent),
                 isDirectory = true,
                 lastModified = 0L,
@@ -239,14 +239,11 @@ class FileExplorerState(
             else -> null
         }
 
-    val isInRecycleBin: Boolean
-        get() = specialMode == SpecialMode.None && currentPath?.absolutePath == File(Environment.getExternalStorageDirectory(), ".Trash").absolutePath
-
     val canGoUp: Boolean
         get() = if (currentArchiveFile != null || currentArchiveUri != null) {
             true
-        } else if (specialMode != SpecialMode.None) {
-            specialMode == SpecialMode.Gallery && currentPath != null
+        } else if (libraryItem != LibraryItem.None) {
+            libraryItem == LibraryItem.Gallery && currentPath != null
         } else if (currentPath != null) {
             currentPath?.absolutePath != storageRoot.absolutePath
         } else if (currentSafUri != null) {
@@ -396,14 +393,18 @@ class FileExplorerState(
 
         try {
             val (sortedList, newMeta) = withContext(Dispatchers.IO) {
-                val universalList = when (specialMode) {
-                    SpecialMode.Recent -> RecentFilesManager.getRecentFiles(context)
-                    SpecialMode.Gallery -> when {
+                val universalList = when (libraryItem) {
+                    LibraryItem.Recent -> RecentFilesManager.getRecentFiles(context)
+                    LibraryItem.Gallery -> when {
                         currentPath != null -> GalleryManager.getAlbumContents(context, currentPath!!.absolutePath)
                         appConfigs.isGalleryAlbumsEnabled -> GalleryManager.getGalleryAlbums(context)
                         else -> GalleryManager.getGalleryFiles(context)
                     }
-                    SpecialMode.None -> if (currentArchiveFile != null || currentArchiveUri != null) {
+                    LibraryItem.RecycleBin -> if (currentPath != null) {
+                        val rawFiles = currentPath!!.listFiles()?.toList() ?: emptyList()
+                        rawFiles.filter { it.name != ".metadata" }.map { it.toUniversal() }
+                    } else emptyList()
+                    LibraryItem.None -> if (currentArchiveFile != null || currentArchiveUri != null) {
                         if (archiveCache == null) {
                             val source: Any = currentArchiveFile ?: currentArchiveUri!!
                             archiveCache = ZipUtils.parseArchive(context, source)
@@ -421,7 +422,7 @@ class FileExplorerState(
                     }
                 }
 
-                val meta: Map<String, RecycleBinMetadata> = if (isInRecycleBin) {
+                val meta: Map<String, RecycleBinMetadata> = if (libraryItem == LibraryItem.RecycleBin) {
                     universalList.associate { file ->
                         file.name to RecycleBinMetadata(
                             deletedAt = getDeletedAt(file.name),
@@ -432,14 +433,14 @@ class FileExplorerState(
 
                 val filteredList = if (showHidden) universalList else universalList.filter { !it.name.startsWith(".") }
 
-                val skipSort = specialMode == SpecialMode.Recent || (specialMode == SpecialMode.Gallery && !appConfigs.isGalleryAlbumsEnabled)
+                val skipSort = libraryItem == LibraryItem.Recent || (libraryItem == LibraryItem.Gallery && !appConfigs.isGalleryAlbumsEnabled)
                 Pair(if (skipSort) filteredList else sortFiles(filteredList, sortParams, meta), meta)
             }
 
             withContext(Dispatchers.Main) {
                 folderConfigs.resolveViewMode(key)
                 folderConfigs.resolveGridSize(key)
-                folderConfigs.resolveColumnVisibility(key, isInRecycleBin)
+                folderConfigs.resolveColumnVisibility(key, libraryItem == LibraryItem.RecycleBin)
                 folderConfigs.resolveColumnWidths(key)
                 recycleBinMetadata = newMeta
                 files = sortedList
@@ -464,10 +465,11 @@ class FileExplorerState(
                     pendingFocusUri = null
                 }
 
-                loadedPathKey = key ?: when (specialMode) {
-                    SpecialMode.Recent -> "recent"
-                    SpecialMode.Gallery -> "gallery"
-                    SpecialMode.None -> "root"
+                loadedPathKey = key ?: when (libraryItem) {
+                    LibraryItem.Recent -> "recent"
+                    LibraryItem.Gallery -> "gallery"
+                    LibraryItem.None -> "root"
+                    LibraryItem.RecycleBin -> "trash"
                 }
                 selectionManager.allFiles = files
                 isLoading = false
@@ -507,12 +509,12 @@ class FileExplorerState(
         return if (currentArchiveFile != null || currentArchiveUri != null) {
             val base = currentArchiveFile?.absolutePath ?: currentArchiveUri.toString()
             "archive:$base:${currentArchivePath.removeSuffix("/")}"
-        } else if (specialMode == SpecialMode.Gallery) {
+        } else if (libraryItem == LibraryItem.Gallery) {
             if (currentPath != null) "virtual://gallery_album:${currentPath!!.absolutePath}"
             else "virtual://gallery"
-        } else if (specialMode == SpecialMode.Recent) {
+        } else if (libraryItem == LibraryItem.Recent) {
             "virtual://recent"
-        } else if (isInRecycleBin) {
+        } else if (libraryItem == LibraryItem.RecycleBin) {
             "virtual://recycle_bin"
         } else if (currentPath != null) {
             currentPath?.absolutePath

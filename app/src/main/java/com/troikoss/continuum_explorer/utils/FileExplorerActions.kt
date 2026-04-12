@@ -12,7 +12,7 @@ import com.troikoss.continuum_explorer.managers.SettingsManager
 import com.troikoss.continuum_explorer.managers.UndoManager
 import com.troikoss.continuum_explorer.ui.activities.MainActivity
 import com.troikoss.continuum_explorer.ui.activities.PopUpActivity
-import com.troikoss.continuum_explorer.model.SpecialMode
+import com.troikoss.continuum_explorer.model.LibraryItem
 import com.troikoss.continuum_explorer.model.UniversalFile
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -31,8 +31,8 @@ fun FileExplorerState.open(item: UniversalFile) {
                 archivePath = item.archivePath
             )
         } else if (item.fileRef != null) {
-            if (specialMode == SpecialMode.Gallery) {
-                navigateTo(item.fileRef, null, specialMode = SpecialMode.Gallery)
+            if (libraryItem == LibraryItem.Gallery) {
+                navigateTo(item.fileRef, null, libraryItem = LibraryItem.Gallery)
             } else {
                 safStack.clear()
                 navigateTo(item.fileRef, null)
@@ -71,8 +71,9 @@ fun FileExplorerState.openInNewWindow(items: List<UniversalFile>) {
             addFlags(Intent.FLAG_ACTIVITY_MULTIPLE_TASK)
             addFlags(Intent.FLAG_ACTIVITY_NEW_DOCUMENT)
             when {
-                specialMode == SpecialMode.Recent -> putExtra("isRecent", true)
-                specialMode == SpecialMode.Gallery -> putExtra("isGallery", true)
+                libraryItem == LibraryItem.Recent -> putExtra("isRecent", true)
+                libraryItem == LibraryItem.Gallery -> putExtra("isGallery", true)
+                libraryItem == LibraryItem.RecycleBin -> putExtra("isRecycleBin", true)
                 currentPath != null -> putExtra("path", currentPath?.absolutePath)
                 currentSafUri != null -> putExtra("uri", currentSafUri.toString())
             }

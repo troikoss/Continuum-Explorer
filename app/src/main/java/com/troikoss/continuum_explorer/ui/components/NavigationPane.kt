@@ -86,7 +86,7 @@ import androidx.compose.ui.zIndex
 import androidx.documentfile.provider.DocumentFile
 import com.troikoss.continuum_explorer.R
 import com.troikoss.continuum_explorer.model.NavSection
-import com.troikoss.continuum_explorer.model.SpecialMode
+import com.troikoss.continuum_explorer.model.LibraryItem
 import com.troikoss.continuum_explorer.model.UniversalFile
 import com.troikoss.continuum_explorer.utils.FileExplorerState
 import com.troikoss.continuum_explorer.managers.SettingsManager
@@ -597,7 +597,7 @@ private fun NavContextMenu(
                 onDismissRequest()
                 when (section) {
                     is NavSection.RecycleBin -> appState.onOpenInNewTab?.invoke(
-                        File(Environment.getExternalStorageDirectory(), ".Trash").toUniversal()
+                        UniversalFile(name = ".Trash", isDirectory = true, lastModified = 0, length = 0, absolutePath = "trash://")
                     )
                     is NavSection.Recent -> appState.onOpenInNewTab?.invoke(
                         UniversalFile(name = "Recent", isDirectory = true, lastModified = 0, length = 0, absolutePath = "recent://")
@@ -620,17 +620,17 @@ private fun NavContextMenu(
             onClick = {
                 onDismissRequest()
                 when (section) {
-                    is NavSection.Recent, is NavSection.Gallery -> {
+                    is NavSection.Recent, is NavSection.Gallery, is NavSection.RecycleBin -> {
                         val intent = Intent(appState.context, MainActivity::class.java).apply {
                             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                             addFlags(Intent.FLAG_ACTIVITY_MULTIPLE_TASK)
                             addFlags(Intent.FLAG_ACTIVITY_NEW_DOCUMENT)
                             if (section is NavSection.Recent) putExtra("isRecent", true)
                             if (section is NavSection.Gallery) putExtra("isGallery", true)
+                            if (section is NavSection.RecycleBin) putExtra("isRecycleBin", true)
                         }
                         appState.context.startActivity(intent)
                     }
-                    is NavSection.RecycleBin -> appState.openInNewWindow(listOf(File(Environment.getExternalStorageDirectory(), ".Trash").toUniversal()))
                     else -> when {
                         path != null -> appState.openInNewWindow(listOf(File(path).toUniversal()))
                         uri != null -> {
@@ -671,7 +671,7 @@ private fun NavContextMenu(
                 onClick = {
                     onDismissRequest()
                     appState.appConfigs.toggleGalleryAlbums()
-                    if (appState.specialMode == SpecialMode.Gallery) {
+                    if (appState.libraryItem == LibraryItem.Gallery) {
                         appState.triggerLoad(forceRefresh = true)
                     }
                 },
