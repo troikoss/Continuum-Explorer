@@ -31,8 +31,12 @@ fun FileExplorerState.open(item: UniversalFile) {
                 archivePath = item.archivePath
             )
         } else if (item.fileRef != null) {
-            safStack.clear()
-            navigateTo(item.fileRef, null)
+            if (specialMode == SpecialMode.Gallery) {
+                navigateTo(item.fileRef, null, specialMode = SpecialMode.Gallery)
+            } else {
+                safStack.clear()
+                navigateTo(item.fileRef, null)
+            }
         } else if (item.documentFileRef != null) {
             val oldUri = currentSafUri
             navigateTo(null, item.documentFileRef.uri)

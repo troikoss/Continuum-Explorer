@@ -138,6 +138,7 @@ fun SettingsScreen(onBack: () -> Unit) {
                         ViewMode.DETAILS -> stringResource(R.string.menu_details)
                         ViewMode.CONTENT -> stringResource(R.string.menu_content)
                         ViewMode.GRID -> stringResource(R.string.menu_grid)
+                        ViewMode.GALLERY -> stringResource(R.string.menu_gallery)
                     }
                     Text(text)
                 },
@@ -483,6 +484,14 @@ fun SettingsScreen(onBack: () -> Unit) {
                                 selected = defaultViewMode == ViewMode.GRID,
                                 onClick = {
                                     SettingsManager.setDefaultViewMode(context, ViewMode.GRID)
+                                    showDefaultViewModeDialog = false
+                                }
+                            )
+                            OptionItem(
+                                label = stringResource(R.string.menu_gallery),
+                                selected = defaultViewMode == ViewMode.GALLERY,
+                                onClick = {
+                                    SettingsManager.setDefaultViewMode(context, ViewMode.GALLERY)
                                     showDefaultViewModeDialog = false
                                 }
                             )

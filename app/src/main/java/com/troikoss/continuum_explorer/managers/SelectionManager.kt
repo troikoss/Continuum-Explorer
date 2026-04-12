@@ -44,7 +44,7 @@ class SelectionManager {
     /**
      * Handles mouse/click-based selection logic.
      */
-    fun handleRowClick(item: UniversalFile, isShiftPressed: Boolean, isCtrlPressed: Boolean) {
+    fun handleRowClick(item: UniversalFile, isShiftPressed: Boolean, isCtrlPressed: Boolean, isTouch: Boolean = false) {
         if (isShiftPressed && anchorItem != null) {
             // SHIFT: Select range between anchor and clicked item
             val start = allFiles.indexOf(anchorItem)
@@ -57,7 +57,7 @@ class SelectionManager {
                     allFiles.subList(end, start + 1)
                 }
                 selectedItems = range.toSet()
-                leadItem = item
+                if (!isTouch) leadItem = item
             }
         } else if (isCtrlPressed) {
             // CTRL: Add/Remove single item without clearing others
@@ -124,7 +124,6 @@ class SelectionManager {
         } else {
             selectedItems = selectedItems + item
             if (anchorItem == null) anchorItem = item
-            leadItem = item
         }
     }
 
@@ -229,12 +228,13 @@ fun Modifier.selectionBackground(
     isSelected: Boolean,
     isHovered: Boolean,
     isLead: Boolean,
+    hoverAlpha: Boolean = true,
     shape: Shape = RectangleShape
 ): Modifier = composed {
 
     val baseSelectedColor = MaterialTheme.colorScheme.primaryContainer
     val darkenedSelectedColor = lerp(baseSelectedColor, Color.Black, 0.1f)
-    val hoverColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
+    val hoverColor = if (hoverAlpha) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f) else MaterialTheme.colorScheme.onSurface
 
     val backgroundColor = when {
         isSelected && (isHovered || isLead) -> darkenedSelectedColor

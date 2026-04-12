@@ -127,7 +127,8 @@ class FolderConfigurations(private val context: Context) {
                 } catch (_: Exception) {}
             }
         }
-        updateViewMode(SettingsManager.defaultViewMode.value, null)
+        val fallback = if (key == "virtual://gallery" || key?.startsWith("virtual://gallery_album:") == true) ViewMode.GALLERY else SettingsManager.defaultViewMode.value
+        updateViewMode(fallback, null)
     }
 
     fun toggleSort(columnType: FileColumnType, key: String?, onSortChanged: () -> Unit) {
@@ -175,7 +176,12 @@ class FolderConfigurations(private val context: Context) {
                 }
             }
         }
-        updateSortParams(SortParams(FileColumnType.NAME, SortOrder.Ascending), null)
+        val default = when (key) {
+            "virtual://recent" -> SortParams(FileColumnType.DATE, SortOrder.Descending)
+            "virtual://recycle_bin" -> SortParams(FileColumnType.DATE_DELETED, SortOrder.Descending)
+            else -> SortParams(FileColumnType.NAME, SortOrder.Ascending)
+        }
+        updateSortParams(default, null)
     }
 
     @Composable

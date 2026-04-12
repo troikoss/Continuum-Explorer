@@ -40,7 +40,7 @@ data class SortParams(val columnType: FileColumnType, val order: SortOrder)
 /**
  * Defines the different UI layouts for displaying files.
  */
-enum class ViewMode { CONTENT, GRID, DETAILS }
+enum class ViewMode { CONTENT, GRID, GALLERY, DETAILS }
 
 enum class ScreenSize { SMALL, MEDIUM, LARGE}
 

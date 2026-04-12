@@ -243,6 +243,7 @@
     <string name="menu_by_location">Par emplacement</string>
     <string name="menu_details">Détails</string>
     <string name="menu_grid">Grille</string>
+    <string name="menu_gallery">Galerie</string>
     <string name="menu_content">Contenu</string>
     <string name="menu_subtitles">Sous-titres</string>
     <string name="menu_audio_track">Piste audio</string>

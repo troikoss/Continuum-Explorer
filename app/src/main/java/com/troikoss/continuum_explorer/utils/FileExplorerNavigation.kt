@@ -114,7 +114,8 @@ fun FileExplorerState.getLocationName(location: NavLocation): String {
     return if (location.specialMode == SpecialMode.Recent) {
         context.getString(R.string.nav_recent)
     } else if (location.specialMode == SpecialMode.Gallery) {
-        context.getString(R.string.nav_gallery)
+        if (location.path != null) location.path.name
+        else context.getString(R.string.nav_gallery)
     } else if (location.archiveFile != null) {
         val base = location.archiveFile.name
         val inner = location.archivePath ?: ""
@@ -185,6 +186,15 @@ fun FileExplorerState.jumpToHistory(index: Int) {
 }
 
 fun FileExplorerState.goUp() {
+    if (specialMode == SpecialMode.Gallery && currentPath != null) {
+        val leavingPath = currentPath
+        val parentDir = currentPath?.parentFile
+        val targetPath = if (parentDir == null || parentDir.absolutePath == storageRoot.absolutePath || !parentDir.exists()) null else parentDir
+        navigateTo(newPath = targetPath, newUri = null, specialMode = SpecialMode.Gallery)
+        if (targetPath != null) focusItemInList(leavingPath, null)
+        return
+    }
+
     var destinationPath: File? = null
     var destinationUri: Uri? = null
     var leavingPath: File? = null

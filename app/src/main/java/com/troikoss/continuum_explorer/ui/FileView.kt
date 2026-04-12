@@ -3,6 +3,7 @@ package com.troikoss.continuum_explorer.ui
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.LocalOverscrollConfiguration
 import androidx.compose.foundation.ScrollState
+import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -10,11 +11,13 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextAlign
@@ -33,6 +36,7 @@ import com.troikoss.continuum_explorer.model.*
 import com.troikoss.continuum_explorer.ui.components.ItemContextMenu
 import com.troikoss.continuum_explorer.utils.*
 import com.troikoss.continuum_explorer.utils.IconHelper.FileThumbnail
+import com.troikoss.continuum_explorer.utils.IconHelper.isMimeTypePreviewable
 
 /**
  * Renders a single file or folder item, switching layout based on the current ViewMode.
@@ -142,17 +146,11 @@ fun FileView(
                         showMenu = true
                     }
             ) {
-                Box(
-                    modifier = if (viewMode != ViewMode.DETAILS)
-                        Modifier.selectionBackground(isSelected, isHovered, isLead, shape)
-                    else
-                        Modifier
-                ) {
-                    when (viewMode) {
-                        ViewMode.GRID -> FileGridView(file, isSelected, appState) { isOverflowing = it }
-                        ViewMode.CONTENT -> FileContentView(file, isSelected, appState) { isOverflowing = it }
-                        ViewMode.DETAILS -> FileDetailsView(file, isSelected, isHovered, isLead, appState, hScrollState, nameColumnWidth) { isOverflowing = it }
-                    }
+                when (viewMode) {
+                    ViewMode.GRID -> FileGridView(file, isSelected, isHovered, isLead, appState) { isOverflowing = it }
+                    ViewMode.GALLERY -> FileGalleryView(file, isSelected, isHovered, isLead, appState) { isOverflowing = it }
+                    ViewMode.CONTENT -> FileContentView(file, isSelected, isHovered, isLead, appState) { isOverflowing = it }
+                    ViewMode.DETAILS -> FileDetailsView(file, isSelected, isHovered, isLead, appState, hScrollState, nameColumnWidth) { isOverflowing = it }
                 }
             }
         }
@@ -171,14 +169,70 @@ fun FileView(
 // --- Specific View Components ---
 
 @Composable
+private fun FileGalleryView(
+    file: UniversalFile,
+    isSelected: Boolean,
+    isHovered: Boolean,
+    isLead: Boolean,
+    appState: FileExplorerState,
+    onOverflowChange: (Boolean) -> Unit
+) {
+    Box(
+        modifier = Modifier.padding(2.dp).fillMaxWidth().aspectRatio(1f),
+        contentAlignment = Alignment.Center
+    ) {
+
+        FileThumbnail(
+            file = file,
+            modifier = Modifier.fillMaxSize(),
+            tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary,
+            iconModifier = Modifier.size((appState.folderConfigs.gridItemSize * 0.7f).dp),
+            contentScale = ContentScale.Crop
+        )
+
+        if (!isMimeTypePreviewable(file) || file.isDirectory) {
+            Box (
+                modifier = Modifier
+                    .fillMaxSize(),
+                contentAlignment = Alignment.BottomCenter
+            ) {
+                Text(
+                    text = file.name,
+                    modifier = Modifier.background(Color.Black.copy(alpha = 0.5f)),
+                    textAlign = TextAlign.Center,
+                    style = MaterialTheme.typography.bodyMedium,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    onTextLayout = { textLayoutResult ->
+                        onOverflowChange(textLayoutResult.hasVisualOverflow)
+                    }
+                )
+            }
+        } else onOverflowChange(true)
+
+        Box (
+            modifier = Modifier
+                .fillMaxSize()
+                .alpha(0.5f)
+                .selectionBackground(isSelected, isHovered, isLead, hoverAlpha = false),
+            contentAlignment = Alignment.Center
+        ) {}
+    }
+}
+
+@Composable
 private fun FileGridView(
     file: UniversalFile,
     isSelected: Boolean,
+    isHovered: Boolean,
+    isLead: Boolean,
     appState: FileExplorerState,
     onOverflowChange: (Boolean) -> Unit
 ) {
     Column(
-        modifier = Modifier.padding(8.dp).fillMaxWidth(),
+        modifier = Modifier
+            .padding(8.dp).fillMaxWidth()
+            .selectionBackground(isSelected, isHovered, isLead),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Box(contentAlignment = Alignment.BottomEnd) {
@@ -207,6 +261,8 @@ private fun FileGridView(
 private fun FileContentView(
     file: UniversalFile,
     isSelected: Boolean,
+    isHovered: Boolean,
+    isLead: Boolean,
     appState: FileExplorerState,
     onOverflowChange: (Boolean) -> Unit
 ) {
@@ -214,7 +270,7 @@ private fun FileContentView(
     val formattedDate = remember(file) { appState.formatDate(file.lastModified) }
     val iconSelectionEnabled = SettingsManager.iconTouchSelection.value
 
-    Column {
+    Column (modifier = Modifier.selectionBackground(isSelected, isHovered, isLead)) {
         ListItem(
             headlineContent = {
                 Text(

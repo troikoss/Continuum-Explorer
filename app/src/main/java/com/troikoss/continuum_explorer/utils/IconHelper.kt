@@ -71,7 +71,8 @@ object IconHelper {
         modifier: Modifier = Modifier,
         iconModifier: Modifier = Modifier,
         tint: Color = MaterialTheme.colorScheme.secondary,
-        isDetailView: Boolean = false
+        isDetailView: Boolean = false,
+        contentScale: ContentScale = ContentScale.Fit
     ) {
         val fallbackIcon = getIconForItem(file)
 
@@ -86,7 +87,7 @@ object IconHelper {
                         model = file.documentFileRef?.uri ?: file.fileRef?.absolutePath,
                         contentDescription = null,
                         modifier = modifier,
-                        contentScale = ContentScale.Fit,
+                        contentScale = contentScale,
                     ) {
                         if (painter.state is AsyncImagePainter.State.Success) {
                             SubcomposeAsyncImageContent()

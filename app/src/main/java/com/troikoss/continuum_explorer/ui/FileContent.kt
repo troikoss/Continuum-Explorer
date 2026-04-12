@@ -104,7 +104,7 @@ fun FileContent(appState: FileExplorerState) {
         density
     ) {
         val width = containerCoordinates?.size?.width ?: 0
-        if (viewMode == ViewMode.GRID && width > 0) {
+        if ((viewMode == ViewMode.GRID || viewMode == ViewMode.GALLERY) && width > 0) {
             val totalPaddingPx = with(density) { 80.dp.toPx() }
             val gridItemSizePx = with(density) { appState.folderConfigs.gridItemSize.dp.toPx() }
             val availableGridWidthPx = (width - totalPaddingPx).coerceAtLeast(0f)
@@ -465,7 +465,7 @@ private fun FileGrid(
     LazyVerticalGrid(
         state = gridState,
         columns = when (viewMode) {
-            ViewMode.GRID -> GridCells.Adaptive(minSize = appState.folderConfigs.gridItemSize.dp)
+            ViewMode.GRID, ViewMode.GALLERY -> GridCells.Adaptive(minSize = appState.folderConfigs.gridItemSize.dp)
             else -> GridCells.Fixed(1)
         },
         modifier = if (viewMode == ViewMode.DETAILS) Modifier.fillMaxSize().padding(horizontal = 16.dp)

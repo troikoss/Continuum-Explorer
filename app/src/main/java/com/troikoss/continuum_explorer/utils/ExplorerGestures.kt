@@ -12,7 +12,6 @@ import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.awaitLongPressOrCancellation
-import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.requiredWidth
@@ -186,11 +185,12 @@ fun Modifier.containerGestures(
         .pointerInput(onZoom) {
             awaitPointerEventScope {
                 while (true) {
-                    val event = awaitPointerEvent()
+                    val event = awaitPointerEvent(pass = PointerEventPass.Initial)
                     if (event.type == PointerEventType.Scroll && event.keyboardModifiers.isCtrlPressed) {
                         val delta = event.changes.first().scrollDelta.y
                         val zoomFactor = if (delta < 0) 1.1f else 0.9f
                         onZoom(zoomFactor)
+                        event.changes.forEach { it.consume() }
                     }
                 }
             }
@@ -211,15 +211,43 @@ fun Modifier.containerGestures(
             }
         }
         .pointerInput(onZoom) {
-            var zoomAccumulator = 1f
-            detectTransformGestures { _, _, zoom, _ ->
-                zoomAccumulator *= zoom
-                if (zoomAccumulator > 1.1f) {
-                    onZoom(1.1f)
-                    zoomAccumulator = 1f
-                } else if (zoomAccumulator < 0.9f) {
-                    onZoom(0.9f)
-                    zoomAccumulator = 1f
+            // Custom pinch handler using Initial pass so it intercepts before file item
+            // gesture handlers (which consume events in Main pass and break detectTransformGestures).
+            awaitEachGesture {
+                val firstDown = awaitFirstDown(requireUnconsumed = false)
+                if (firstDown.type != PointerType.Touch && firstDown.type != PointerType.Stylus) return@awaitEachGesture
+
+                var prevDistance = -1f
+                var zoomAccumulator = 1f
+
+                while (true) {
+                    val event = awaitPointerEvent(pass = PointerEventPass.Initial)
+                    val pressed = event.changes.filter { it.pressed }
+
+                    if (pressed.size < 2) {
+                        if (pressed.isEmpty()) break
+                        // Back to one finger — reset, wait for second finger again
+                        prevDistance = -1f
+                        zoomAccumulator = 1f
+                        continue
+                    }
+
+                    // Two or more fingers: pinch is active
+                    val distance = (pressed[0].position - pressed[1].position).getDistance()
+                    if (prevDistance > 0f && distance > 0f) {
+                        zoomAccumulator *= distance / prevDistance
+                        if (zoomAccumulator > 1.1f) {
+                            onZoom(1.1f)
+                            zoomAccumulator = 1f
+                        } else if (zoomAccumulator < 0.9f) {
+                            onZoom(0.9f)
+                            zoomAccumulator = 1f
+                        }
+                    }
+                    prevDistance = distance
+
+                    // Consume to prevent LazyGrid from scrolling during pinch
+                    event.changes.forEach { it.consume() }
                 }
             }
         }
@@ -239,13 +267,13 @@ fun Modifier.containerGestures(
 
 
                     Key.DirectionLeft -> {
-                        if (viewMode == ViewMode.GRID) {
+                        if (viewMode == ViewMode.GRID || viewMode == ViewMode.GALLERY) {
                             selectionManager.moveSelection(-1, shift, ctrl, clamp = false); true
                         } else false
                     }
 
                     Key.DirectionRight -> {
-                        if (viewMode == ViewMode.GRID) {
+                        if (viewMode == ViewMode.GRID || viewMode == ViewMode.GALLERY) {
                             selectionManager.moveSelection(1, shift, ctrl, clamp = false); true
                         } else false
                     }
@@ -432,13 +460,21 @@ fun Modifier.itemGestures(
                     val pointerId = event.changes[0].id
                     val longPress = awaitLongPressOrCancellation(pointerId)
                     if (longPress != null) {
-                        if (selectionManager.isInSelectionMode()) {
-                            // Range select from anchor to this item
-                            selectionManager.handleRowClick(file, isShiftPressed = true, isCtrlPressed = false)
-                        } else {
-                            selectionManager.touchToggle(file)
+                        when {
+                            selectionManager.isInSelectionMode() && selectionManager.isSelected(file) -> {
+                                // File is already selected — fileDragSource handles this
+                                // as context menu / drag; don't also range-select here.
+                            }
+                            selectionManager.isInSelectionMode() -> {
+                                // Range select from anchor to this item
+                                selectionManager.handleRowClick(file, isShiftPressed = true, isCtrlPressed = false, isTouch = true)
+                                longPress.consume()
+                            }
+                            else -> {
+                                selectionManager.touchToggle(file)
+                                longPress.consume()
+                            }
                         }
-                        longPress.consume()
                     } else {
                         val up = currentEvent.changes.find { it.id == pointerId }
                         if (up != null && !up.pressed && !up.isConsumed) {

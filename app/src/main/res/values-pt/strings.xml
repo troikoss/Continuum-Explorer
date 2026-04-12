@@ -244,6 +244,7 @@
     <string name="menu_by_location">Por localização</string>
     <string name="menu_details">Detalhes</string>
     <string name="menu_grid">Grade</string>
+    <string name="menu_gallery">Galeria</string>
     <string name="menu_content">Conteúdo</string>
     <string name="menu_subtitles">Legendas</string>
     <string name="menu_audio_track">Faixa de Áudio</string>

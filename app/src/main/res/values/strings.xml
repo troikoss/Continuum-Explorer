@@ -246,6 +246,7 @@
     <string name="menu_by_location">By Location</string>
     <string name="menu_details">Details</string>
     <string name="menu_grid">Grid</string>
+    <string name="menu_gallery">Gallery</string>
     <string name="menu_content">Content</string>
     <string name="menu_subtitles">Subtitles</string>
     <string name="menu_audio_track">Audio Track</string>

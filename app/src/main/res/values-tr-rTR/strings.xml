@@ -226,6 +226,7 @@
     <string name="menu_by_location">Konuma Göre</string>
     <string name="menu_details">Ayrıntılı</string>
     <string name="menu_grid">Izgara</string>
+    <string name="menu_gallery">Galeri</string>
     <string name="menu_content">İçindekiler</string>
     <string name="menu_subtitles">Altyazı</string>
     <string name="menu_audio_track">Ses Parçası</string>

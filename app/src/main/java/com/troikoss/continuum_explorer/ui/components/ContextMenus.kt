@@ -33,6 +33,7 @@ import androidx.compose.material.icons.filled.StarOutline
 import androidx.compose.material.icons.filled.Tab
 import androidx.compose.material.icons.filled.TextFormat
 import androidx.compose.material.icons.filled.Unarchive
+import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.ViewModule
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -562,6 +563,15 @@ fun BackgroundContextMenu(
                     trailingIcon = { if (appState.activeViewMode == ViewMode.GRID) { Icon(Icons.Default.Done, null) }},
                     onClick = {
                         appState.folderConfigs.updateViewMode(ViewMode.GRID, appState.getCurrentStorageKey())
+                        onDismiss()
+                    }
+                )
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.menu_gallery)) },
+                    leadingIcon = { Icon(Icons.Default.PhotoLibrary, null) },
+                    trailingIcon = { if (appState.activeViewMode == ViewMode.GALLERY) { Icon(Icons.Default.Done, null) }},
+                    onClick = {
+                        appState.folderConfigs.updateViewMode(ViewMode.GALLERY, appState.getCurrentStorageKey())
                         onDismiss()
                     }
                 )

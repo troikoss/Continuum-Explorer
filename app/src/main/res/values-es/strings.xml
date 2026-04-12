@@ -244,6 +244,7 @@
     <string name="menu_by_location">Por ubicación</string>
     <string name="menu_details">Detalles</string>
     <string name="menu_grid">Cuadrícula</string>
+    <string name="menu_gallery">Galería</string>
     <string name="menu_content">Contenido</string>
     <string name="menu_subtitles">Subtítulos</string>
     <string name="menu_audio_track">Pista de audio</string>

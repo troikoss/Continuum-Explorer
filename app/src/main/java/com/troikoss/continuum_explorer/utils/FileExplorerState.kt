@@ -185,7 +185,8 @@ class FileExplorerState(
             } else if (specialMode == SpecialMode.Recent) {
                 context.getString(R.string.nav_recent)
             } else if (specialMode == SpecialMode.Gallery) {
-                context.getString(R.string.nav_gallery)
+                if (currentPath != null) currentPath!!.name
+                else context.getString(R.string.nav_gallery)
             } else if (currentArchiveFile != null) {
                 currentArchiveFile?.name ?: context.getString(R.string.archive)
             } else if (currentArchiveUri != null) {
@@ -219,6 +220,22 @@ class FileExplorerState(
 
             currentPath != null -> currentPath?.toUniversal()
 
+            specialMode == SpecialMode.Gallery -> UniversalFile(
+                name = if (currentPath != null) currentPath!!.name else context.getString(R.string.nav_gallery),
+                isDirectory = true,
+                lastModified = 0L,
+                length = 0L,
+                absolutePath = currentPath?.absolutePath ?: "virtual://gallery"
+            )
+
+            specialMode == SpecialMode.Recent -> UniversalFile(
+                name = context.getString(R.string.nav_recent),
+                isDirectory = true,
+                lastModified = 0L,
+                length = 0L,
+                absolutePath = "virtual://recent"
+            )
+
             else -> null
         }
 
@@ -229,7 +246,7 @@ class FileExplorerState(
         get() = if (currentArchiveFile != null || currentArchiveUri != null) {
             true
         } else if (specialMode != SpecialMode.None) {
-            false
+            specialMode == SpecialMode.Gallery && currentPath != null
         } else if (currentPath != null) {
             currentPath?.absolutePath != storageRoot.absolutePath
         } else if (currentSafUri != null) {
@@ -381,8 +398,11 @@ class FileExplorerState(
             val (sortedList, newMeta) = withContext(Dispatchers.IO) {
                 val universalList = when (specialMode) {
                     SpecialMode.Recent -> RecentFilesManager.getRecentFiles(context)
-                    SpecialMode.Gallery -> if (appConfigs.isGalleryAlbumsEnabled) GalleryManager.getGalleryAlbums(context)
-                        else GalleryManager.getGalleryFiles(context)
+                    SpecialMode.Gallery -> when {
+                        currentPath != null -> GalleryManager.getAlbumContents(context, currentPath!!.absolutePath)
+                        appConfigs.isGalleryAlbumsEnabled -> GalleryManager.getGalleryAlbums(context)
+                        else -> GalleryManager.getGalleryFiles(context)
+                    }
                     SpecialMode.None -> if (currentArchiveFile != null || currentArchiveUri != null) {
                         if (archiveCache == null) {
                             val source: Any = currentArchiveFile ?: currentArchiveUri!!
@@ -487,6 +507,13 @@ class FileExplorerState(
         return if (currentArchiveFile != null || currentArchiveUri != null) {
             val base = currentArchiveFile?.absolutePath ?: currentArchiveUri.toString()
             "archive:$base:${currentArchivePath.removeSuffix("/")}"
+        } else if (specialMode == SpecialMode.Gallery) {
+            if (currentPath != null) "virtual://gallery_album:${currentPath!!.absolutePath}"
+            else "virtual://gallery"
+        } else if (specialMode == SpecialMode.Recent) {
+            "virtual://recent"
+        } else if (isInRecycleBin) {
+            "virtual://recycle_bin"
         } else if (currentPath != null) {
             currentPath?.absolutePath
         } else if (currentSafUri != null) {
