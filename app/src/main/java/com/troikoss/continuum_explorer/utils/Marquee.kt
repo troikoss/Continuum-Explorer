@@ -27,23 +27,17 @@ import androidx.compose.ui.graphics.drawscope.Stroke
  * State holder for 2D Marquee selections.
  */
 class Marquee {
-    var startRow by mutableIntStateOf(-1)
+    var debugMarqueeRect: Rect? = null
         private set
-    var startCol by mutableIntStateOf(-1)
-        private set
-    var currentRow by mutableIntStateOf(-1)
-        private set
-    var currentCol by mutableIntStateOf(-1)
+    var debugIntersectedRects: List<Rect> = emptyList()
         private set
 
     /**
      * Resets the logical grid boundaries when a new drag starts.
      */
     fun reset() {
-        startRow = -1
-        startCol = -1
-        currentRow = -1
-        currentCol = -1
+        debugMarqueeRect = null
+        debugIntersectedRects = emptyList()
     }
 
     /**
@@ -52,83 +46,122 @@ class Marquee {
     fun updateSelection(
         start: Offset?,
         end: Offset?,
-        itemPositions: Map<UniversalFile, Rect>,
+        gridState: LazyGridState,
         allFiles: List<UniversalFile>,
         columnCount: Int,
+        xOffset: Float,
+        yOffset: Float,
         onSelectionChange: (Set<UniversalFile>) -> Unit
     ) {
         if (start == null || end == null) return
 
-        // 1. Create the physical bounding box
-        val left = minOf(start.x, end.x)
-        val right = maxOf(start.x, end.x)
-        val top = minOf(start.y, end.y)
-        val bottom = maxOf(start.y, end.y)
+        // 1. Shift drag coords into inner box coords to match the layout
+        val adjStartX = start.x
+        val adjStartY = start.y - yOffset
+        val adjEndX = end.x
+        val adjEndY = end.y - yOffset
+
+        val left = minOf(adjStartX, adjEndX) - 1f
+        val right = maxOf(adjStartX, adjEndX) + 1f
+        val top = minOf(adjStartY, adjEndY) - 1f
+        val bottom = maxOf(adjStartY, adjEndY) + 1f
         val marqueeRect = Rect(left, top, right, bottom)
+        debugMarqueeRect = marqueeRect
 
-        // 2. Lock the start anchor safely (bypasses padding issues)
-        if (startRow == -1) {
-            val startItem = itemPositions.minByOrNull { (_, rect) ->
-                val dx = rect.center.x - start.x
-                val dy = rect.center.y - start.y
-                (dx * dx) + (dy * dy)
-            }?.key
+        val selectedFiles = mutableSetOf<UniversalFile>()
+        val intersectedRects = mutableListOf<Rect>()
 
-            val startIndex = if (startItem != null) allFiles.indexOf(startItem) else -1
-
-            if (startIndex != -1) {
-                startRow = startIndex / columnCount
-                startCol = startIndex % columnCount
-            }
+        val visibleItems = gridState.layoutInfo.visibleItemsInfo
+        if (visibleItems.isEmpty()) {
+            debugIntersectedRects = intersectedRects
+            onSelectionChange(selectedFiles)
+            return
         }
 
-        // 3. Find the current leading edge of the drag
-        val intersectingIndices = itemPositions.entries
-            .filter { marqueeRect.overlaps(it.value) }
-            .map { allFiles.indexOf(it.key) }
-            .filter { it != -1 }
-
-        if (intersectingIndices.isNotEmpty()) {
-            val draggingDown = start.y <= end.y
-            val draggingRight = start.x <= end.x
-
-            currentRow = if (draggingDown) {
-                intersectingIndices.maxOf { it / columnCount }
-            } else {
-                intersectingIndices.minOf { it / columnCount }
-            }
-
-            currentCol = if (draggingRight) {
-                intersectingIndices.maxOf { it % columnCount }
-            } else {
-                intersectingIndices.minOf { it % columnCount }
-            }
-        } else {
-            currentRow = -1
-            currentCol = -1
-            onSelectionChange(emptySet())
+        var referenceW = 0f
+        var referenceH = 0f
+        for (item in visibleItems) {
+            if (item.size.width > referenceW) referenceW = item.size.width.toFloat()
+            if (item.size.height > referenceH) referenceH = item.size.height.toFloat()
         }
 
-        // 4. Apply the flawless 2D conversion math
-        if (startRow != -1 && currentRow != -1) {
-            val finalMinRow = kotlin.comparisons.minOf(startRow, currentRow)
-            val finalMaxRow = kotlin.comparisons.maxOf(startRow, currentRow)
-            val finalMinCol = kotlin.comparisons.minOf(startCol, currentCol)
-            val finalMaxCol = kotlin.comparisons.maxOf(startCol, currentCol)
+        // Base the virtual grid strictly on live internal layout info to guarantee 0-lag synchronization
+        val anchorItem = visibleItems.firstOrNull {
+            it.size.width >= referenceW * 0.9f && it.size.height >= referenceH * 0.9f
+        } ?: visibleItems.firstOrNull()
 
-            val selectedFiles = mutableSetOf<UniversalFile>()
-            for (i in allFiles.indices) {
-                val r = i / columnCount
-                val c = i % columnCount
+        if (anchorItem != null) {
+            val anchorIndex = anchorItem.index
 
-                if (r in finalMinRow..finalMaxRow && c in finalMinCol..finalMaxCol) {
-                    selectedFiles.add(allFiles[i])
+            // Exact layout top-left relative to the MarqueeRenderer canvas
+            val anchorRectLeft = anchorItem.offset.x.toFloat() + xOffset
+            val anchorRectTop = anchorItem.offset.y.toFloat()
+
+            val anchorR = anchorIndex / columnCount
+            val anchorC = anchorIndex % columnCount
+
+            var stepX = referenceW
+            var stepY = referenceH
+
+            val rawAnchorX = anchorItem.offset.x.toFloat()
+
+            // Determine true horizontal and vertical step sizes
+            for (item in visibleItems) {
+                val index = item.index
+                val r = index / columnCount
+                val c = index % columnCount
+
+                if (c != anchorC) {
+                    val calcX = kotlin.math.abs((item.offset.x.toFloat() - rawAnchorX) / (c - anchorC))
+                    if (calcX > stepX) stepX = calcX
+                }
+                if (r != anchorR) {
+                    val calcY = kotlin.math.abs((item.offset.y.toFloat() - anchorRectTop) / (r - anchorR))
+                    if (calcY > stepY) stepY = calcY
                 }
             }
 
-            // Pass the perfectly calculated list back to the UI
-            onSelectionChange(selectedFiles)
+            for (i in allFiles.indices) {
+                val file = allFiles[i]
+
+                val visibleItem = visibleItems.firstOrNull { it.index == i }
+                val isFullyVisible = visibleItem != null && visibleItem.size.width >= referenceW * 0.9f && visibleItem.size.height >= referenceH * 0.9f
+
+                // If physically visible natively on screen, use the completely exact runtime layout bounds
+                // If scrolled off-screen, mathematically extrapolate using the guaranteed safe steps!
+                val rect = if (isFullyVisible) {
+                    val vLeft = visibleItem!!.offset.x.toFloat() + xOffset
+                    val vTop = visibleItem.offset.y.toFloat()
+                    Rect(vLeft, vTop, vLeft + visibleItem.size.width, vTop + visibleItem.size.height)
+                } else {
+                    val r = i / columnCount
+                    val c = i % columnCount
+                    val estLeft = anchorRectLeft + (c - anchorC) * stepX
+                    val estTop = anchorRectTop + (r - anchorR) * stepY
+                    Rect(estLeft, estTop, estLeft + referenceW, estTop + referenceH)
+                }
+
+                // Deflate physical target to avoid invisible padding collisions
+                // For off-screen mathematically predicted items, inflate slightly (-2f) instead of deflating
+                // to completely eliminate floating-point precision misses for small items during autoscroll!
+                val insetX = if (isFullyVisible) minOf(rect.width * 0.05f, 2f) else -2f
+                val insetY = if (isFullyVisible) minOf(rect.height * 0.05f, 2f) else -2f
+                val coreRect = Rect(
+                    left = rect.left + insetX,
+                    top = rect.top + insetY,
+                    right = rect.right - insetX,
+                    bottom = rect.bottom - insetY
+                )
+
+                if (marqueeRect.overlaps(coreRect)) {
+                    selectedFiles.add(file)
+                    intersectedRects.add(rect)
+                }
+            }
         }
+
+        debugIntersectedRects = intersectedRects
+        onSelectionChange(selectedFiles)
     }
 }
 
@@ -205,7 +238,8 @@ fun MarqueeAutoScroller(
 @Composable
 fun MarqueeRenderer(
     dragStart: Offset?,
-    dragEnd: Offset?
+    dragEnd: Offset?,
+    marquee: Marquee? = null
 ) {
     if (dragStart != null && dragEnd != null) {
         // Canvas takes up the exact size of your File Explorer box
@@ -236,6 +270,23 @@ fun MarqueeRenderer(
                     size = rectSize,
                     style = Stroke(width = 1.dp.toPx())
                 )
+            }
+
+            if (marquee != null) {
+                // Draw actual bounds of all intersecting files in translucent red
+                marquee.debugIntersectedRects.forEach { rect ->
+                    drawRect(
+                        color = Color(0x33FF0000), // Red overlay
+                        topLeft = rect.topLeft,
+                        size = rect.size
+                    )
+                    drawRect(
+                        color = Color.Red,
+                        topLeft = rect.topLeft,
+                        size = rect.size,
+                        style = Stroke(width = 1f)
+                    )
+                }
             }
         }
     }
