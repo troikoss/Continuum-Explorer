@@ -105,7 +105,7 @@ fun FileContent(appState: FileExplorerState) {
     ) {
         val width = containerCoordinates?.size?.width ?: 0
         if ((viewMode == ViewMode.GRID || viewMode == ViewMode.GALLERY) && width > 0) {
-            val totalPaddingPx = with(density) { 80.dp.toPx() }
+            val totalPaddingPx = with(density) { 96.dp.toPx() }
             val gridItemSizePx = with(density) { appState.folderConfigs.gridItemSize.dp.toPx() }
             val availableGridWidthPx = (width - totalPaddingPx).coerceAtLeast(0f)
             (availableGridWidthPx / gridItemSizePx).toInt().coerceAtLeast(1)

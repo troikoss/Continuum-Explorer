@@ -103,6 +103,10 @@ class Marquee {
             } else {
                 intersectingIndices.minOf { it % columnCount }
             }
+        } else {
+            currentRow = -1
+            currentCol = -1
+            onSelectionChange(emptySet())
         }
 
         // 4. Apply the flawless 2D conversion math
