@@ -355,4 +355,8 @@
     <string name="settings_touch_drag_move">Her zaman taşı</string>
     <string name="msg_cancelled_deletion">Silme İptal Edildi</string>
     <string name="msg_deletion">%1$d dosya silindi</string>
+    <string name="nav_gallery">Galeri</string>
+    <string name="menu_gallery_albums">Albümler</string>
+    <string name="details_header_type">Tür</string>
+    <string name="menu_by_type">Türe Göre</string>
 </resources>

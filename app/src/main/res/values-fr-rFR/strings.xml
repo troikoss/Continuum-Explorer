@@ -388,4 +388,8 @@
     <string name="settings_touch_drag_move">Toujours déplacer</string>
     <string name="msg_cancelled_deletion">Suppression annulée</string>
     <string name="msg_deletion">%1$d fichiers supprimés</string>
+    <string name="nav_gallery">Galerie</string>
+    <string name="menu_gallery_albums">Albums</string>
+    <string name="details_header_type">Type</string>
+    <string name="menu_by_type">Par type</string>
 </resources>
