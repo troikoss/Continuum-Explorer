@@ -31,6 +31,7 @@ class FolderConfigurations(private val context: Context) {
         FileColumnDefinition(FileColumnType.DATE, context.getString(R.string.details_header_date), initialWidth = 135.dp),
         FileColumnDefinition(FileColumnType.DATE_DELETED, context.getString(R.string.details_header_date_deleted), initialWidth = 135.dp),
         FileColumnDefinition(FileColumnType.DELETED_FROM, context.getString(R.string.details_header_deleted_from), initialWidth = 160.dp),
+        FileColumnDefinition(FileColumnType.TYPE, context.getString(R.string.details_header_type), initialWidth = 110.dp),
         FileColumnDefinition(FileColumnType.SIZE, context.getString(R.string.details_header_size), initialWidth = 90.dp)
     )
 

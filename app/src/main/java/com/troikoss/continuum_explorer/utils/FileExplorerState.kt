@@ -494,6 +494,11 @@ class FileExplorerState(
                 FileColumnType.NAME -> f1.name.lowercase().compareTo(f2.name.lowercase())
                 FileColumnType.DATE -> f1.lastModified.compareTo(f2.lastModified)
                 FileColumnType.SIZE -> f1.length.compareTo(f2.length)
+                FileColumnType.TYPE -> {
+                    val type1 = getFileType(f1, context)
+                    val type2 = getFileType(f2, context)
+                    type1.compareTo(type2)
+                }
                 FileColumnType.DATE_DELETED -> (meta[f1.name]?.deletedAt ?: 0L).compareTo(meta[f2.name]?.deletedAt ?: 0L)
                 FileColumnType.DELETED_FROM -> (meta[f1.name]?.deletedFrom ?: "").compareTo(meta[f2.name]?.deletedFrom ?: "")
             }

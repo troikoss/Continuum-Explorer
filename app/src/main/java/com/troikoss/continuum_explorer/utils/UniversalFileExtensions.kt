@@ -66,11 +66,11 @@ fun getFileType(file: UniversalFile, context: Context): String {
     val extensionString = extension.uppercase()
 
     return when (extension) {
-        "zip", "rar", "7z", "tar", "gz" -> context.getString(R.string.archive)
-        "jpg", "jpeg", "bmp", "png", "gif", "webp" -> context.getString(R.string.image)
-        "mp4", "mkv", "avi", "mov", "webm" -> context.getString(R.string.video)
-        "mp3", "wav", "ogg", "m4a", "flac" -> context.getString(R.string.audio)
-        "txt", "doc", "docx", "odt", "pdf" -> context.getString(R.string.document)
+        "zip", "rar", "7z", "tar", "gz" -> "$extensionString ${context.getString(R.string.archive)}"
+        "jpg", "jpeg", "bmp", "png", "gif", "webp" -> "$extensionString ${context.getString(R.string.image)}"
+        "mp4", "mkv", "avi", "mov", "webm" -> "$extensionString ${context.getString(R.string.video)}"
+        "mp3", "wav", "ogg", "m4a", "flac" -> "$extensionString ${context.getString(R.string.audio)}"
+        "txt", "doc", "docx", "odt", "pdf" -> "$extensionString ${context.getString(R.string.document)}"
         "" -> context.getString(R.string.file)
         else -> "$extensionString ${context.getString(R.string.file)}"
     }

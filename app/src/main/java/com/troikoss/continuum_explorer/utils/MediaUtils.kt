@@ -192,6 +192,7 @@ fun getSiblingFiles(context: Context, uriString: String, extensions: Set<String>
                         filtered.sortedBy { deletedAtMap[it.name] }
                     }
                     FileColumnType.SIZE -> filtered.sortedBy { it.length() }
+                    FileColumnType.TYPE -> filtered.sortedBy { it.extension.lowercase() }
                     FileColumnType.DELETED_FROM -> filtered.sortedBy { it.name.lowercase() }
                 }
                 val ordered = if (sortOrder == SortOrder.Descending) sorted.reversed() else sorted

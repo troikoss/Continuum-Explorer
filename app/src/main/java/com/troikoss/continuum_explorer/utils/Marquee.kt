@@ -7,7 +7,6 @@ import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
@@ -19,7 +18,6 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import com.troikoss.continuum_explorer.model.UniversalFile
 import kotlinx.coroutines.delay
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.drawscope.Stroke
 
@@ -27,19 +25,6 @@ import androidx.compose.ui.graphics.drawscope.Stroke
  * State holder for 2D Marquee selections.
  */
 class Marquee {
-    var debugMarqueeRect: Rect? = null
-        private set
-    var debugIntersectedRects: List<Rect> = emptyList()
-        private set
-
-    /**
-     * Resets the logical grid boundaries when a new drag starts.
-     */
-    fun reset() {
-        debugMarqueeRect = null
-        debugIntersectedRects = emptyList()
-    }
-
     /**
      * Calculates the logical grid bounds and returns the selected files.
      */
@@ -51,6 +36,7 @@ class Marquee {
         columnCount: Int,
         xOffset: Float,
         yOffset: Float,
+        overrideWidth: Float? = null,
         onSelectionChange: (Set<UniversalFile>) -> Unit
     ) {
         if (start == null || end == null) return
@@ -66,14 +52,12 @@ class Marquee {
         val top = minOf(adjStartY, adjEndY) - 1f
         val bottom = maxOf(adjStartY, adjEndY) + 1f
         val marqueeRect = Rect(left, top, right, bottom)
-        debugMarqueeRect = marqueeRect
 
         val selectedFiles = mutableSetOf<UniversalFile>()
         val intersectedRects = mutableListOf<Rect>()
 
         val visibleItems = gridState.layoutInfo.visibleItemsInfo
         if (visibleItems.isEmpty()) {
-            debugIntersectedRects = intersectedRects
             onSelectionChange(selectedFiles)
             return
         }
@@ -106,18 +90,23 @@ class Marquee {
             val rawAnchorX = anchorItem.offset.x.toFloat()
 
             // Determine true horizontal and vertical step sizes
+            var foundAdjacentX = false
+            var foundAdjacentY = false
+
             for (item in visibleItems) {
                 val index = item.index
                 val r = index / columnCount
                 val c = index % columnCount
 
-                if (c != anchorC) {
+                if (c != anchorC && !foundAdjacentX) {
                     val calcX = kotlin.math.abs((item.offset.x.toFloat() - rawAnchorX) / (c - anchorC))
-                    if (calcX > stepX) stepX = calcX
+                    stepX = calcX
+                    if (kotlin.math.abs(c - anchorC) == 1) foundAdjacentX = true
                 }
-                if (r != anchorR) {
+                if (r != anchorR && !foundAdjacentY) {
                     val calcY = kotlin.math.abs((item.offset.y.toFloat() - anchorRectTop) / (r - anchorR))
-                    if (calcY > stepY) stepY = calcY
+                    stepY = calcY
+                    if (kotlin.math.abs(r - anchorR) == 1) foundAdjacentY = true
                 }
             }
 
@@ -125,42 +114,30 @@ class Marquee {
                 val file = allFiles[i]
 
                 val visibleItem = visibleItems.firstOrNull { it.index == i }
-                val isFullyVisible = visibleItem != null && visibleItem.size.width >= referenceW * 0.9f && visibleItem.size.height >= referenceH * 0.9f
 
                 // If physically visible natively on screen, use the completely exact runtime layout bounds
                 // If scrolled off-screen, mathematically extrapolate using the guaranteed safe steps!
-                val rect = if (isFullyVisible) {
-                    val vLeft = visibleItem!!.offset.x.toFloat() + xOffset
+                val rect = if (visibleItem != null) {
+                    val vLeft = visibleItem.offset.x.toFloat() + xOffset
                     val vTop = visibleItem.offset.y.toFloat()
-                    Rect(vLeft, vTop, vLeft + visibleItem.size.width, vTop + visibleItem.size.height)
+                    val vWidth = overrideWidth ?: visibleItem.size.width.toFloat()
+                    Rect(vLeft, vTop, vLeft + vWidth, vTop + visibleItem.size.height)
                 } else {
                     val r = i / columnCount
                     val c = i % columnCount
                     val estLeft = anchorRectLeft + (c - anchorC) * stepX
                     val estTop = anchorRectTop + (r - anchorR) * stepY
-                    Rect(estLeft, estTop, estLeft + referenceW, estTop + referenceH)
+                    val estWidth = overrideWidth ?: referenceW
+                    Rect(estLeft, estTop, estLeft + estWidth, estTop + referenceH)
                 }
 
-                // Deflate physical target to avoid invisible padding collisions
-                // For off-screen mathematically predicted items, inflate slightly (-2f) instead of deflating
-                // to completely eliminate floating-point precision misses for small items during autoscroll!
-                val insetX = if (isFullyVisible) minOf(rect.width * 0.05f, 2f) else -2f
-                val insetY = if (isFullyVisible) minOf(rect.height * 0.05f, 2f) else -2f
-                val coreRect = Rect(
-                    left = rect.left + insetX,
-                    top = rect.top + insetY,
-                    right = rect.right - insetX,
-                    bottom = rect.bottom - insetY
-                )
-
-                if (marqueeRect.overlaps(coreRect)) {
+                if (marqueeRect.overlaps(rect)) {
                     selectedFiles.add(file)
                     intersectedRects.add(rect)
                 }
             }
         }
 
-        debugIntersectedRects = intersectedRects
         onSelectionChange(selectedFiles)
     }
 }
@@ -191,6 +168,7 @@ fun MarqueeAutoScroller(
 
     LaunchedEffect(dragStart != null, dragEnd) {
         if (currentDragStart != null && currentDragEnd != null) {
+            var activeDragStart = currentDragStart
             while (true) {
                 val container = containerCoordinates ?: break
                 val containerHeight = container.size.height.toFloat()
@@ -217,9 +195,9 @@ fun MarqueeAutoScroller(
                     val consumed = gridState.scrollBy(scrollDelta)
                     if (consumed != 0f) {
                         // When the list scrolls, we must adjust the drag start point to keep it pinned to the same file items
-                        val newStart = currentDragStart?.let { it.copy(y = it.y - consumed) }
-                        onDragStartChange(newStart)
-                        onSelectionChange(newStart, endPos)
+                        activeDragStart = activeDragStart?.let { it.copy(y = it.y - consumed) }
+                        onDragStartChange(activeDragStart)
+                        onSelectionChange(activeDragStart, endPos)
                     } else {
                         break
                     }
@@ -270,23 +248,6 @@ fun MarqueeRenderer(
                     size = rectSize,
                     style = Stroke(width = 1.dp.toPx())
                 )
-            }
-
-            if (marquee != null) {
-                // Draw actual bounds of all intersecting files in translucent red
-                marquee.debugIntersectedRects.forEach { rect ->
-                    drawRect(
-                        color = Color(0x33FF0000), // Red overlay
-                        topLeft = rect.topLeft,
-                        size = rect.size
-                    )
-                    drawRect(
-                        color = Color.Red,
-                        topLeft = rect.topLeft,
-                        size = rect.size,
-                        style = Stroke(width = 1f)
-                    )
-                }
             }
         }
     }

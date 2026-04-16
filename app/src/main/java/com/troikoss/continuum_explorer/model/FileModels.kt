@@ -30,7 +30,7 @@ enum class SortOrder { Ascending, Descending }
 /**
  * Available metadata columns and sorting modes.
  */
-enum class FileColumnType { NAME, DATE, SIZE, DATE_DELETED, DELETED_FROM }
+enum class FileColumnType { NAME, DATE, SIZE, TYPE, DATE_DELETED, DELETED_FROM }
 
 /**
  * Represents the current sorting configuration.

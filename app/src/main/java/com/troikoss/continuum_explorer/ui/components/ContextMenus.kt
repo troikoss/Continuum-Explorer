@@ -1,5 +1,7 @@
 package com.troikoss.continuum_explorer.ui.components
 
+import android.content.ClipboardManager
+import android.content.Context
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
@@ -56,7 +58,6 @@ import androidx.compose.ui.unit.dp
 import com.troikoss.continuum_explorer.R
 import com.troikoss.continuum_explorer.model.FileColumnType
 import com.troikoss.continuum_explorer.model.LibraryItem
-import com.troikoss.continuum_explorer.model.ScreenSize
 import com.troikoss.continuum_explorer.model.ViewMode
 import com.troikoss.continuum_explorer.utils.*
 
@@ -87,160 +88,124 @@ fun ItemContextMenu(
     appState: FileExplorerState
 ) {
     val context = LocalContext.current
+    val clipboard = remember { context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager }
+    var hasClipboardItems by remember { mutableStateOf(clipboard.hasPrimaryClip()) }
     val selectionManager = appState.selectionManager
+    val virtualStorage = listOf(LibraryItem.RecycleBin, LibraryItem.Gallery, LibraryItem.Recent)
+    val isInVirtualStorage = appState.libraryItem in virtualStorage
     val isInRecycleBin = appState.libraryItem == LibraryItem.RecycleBin
+    val selectedItems = selectionManager.selectedItems.toList()
+    val onlyOneSelected = selectedItems.size == 1
+    val hasDirectories = selectedItems.any { it.isDirectory }
+    val hasArchive = selectedItems.any { ZipUtils.isArchive(it) }
+
 
     DropdownMenu(
         expanded = expanded,
         onDismissRequest = onDismiss
     ) {
-        if (appState.libraryItem in setOf(LibraryItem.Gallery, LibraryItem.Recent, LibraryItem.RecycleBin)) {
-
+        if (onlyOneSelected) {
+            val item = selectedItems.first()
             DropdownMenuItem(
-                text = { Text(stringResource(R.string.menu_copy)) },
-                leadingIcon = { Icon(Icons.Default.CopyAll, null) },
+                text = { Text(stringResource(R.string.menu_open)) },
                 onClick = {
-                    appState.copySelection()
                     onDismiss()
+                    appState.open(item)
                 },
-                trailingIcon = { CtrlShortcut("C") }
+                leadingIcon = { Icon(IconHelper.getIconForItem(item), null) },
+                trailingIcon = {
+                    Icon(
+                        Icons.AutoMirrored.Filled.KeyboardReturn,
+                        contentDescription = null,
+                        modifier = Modifier.size(12.dp)
+                    )
+                }
             )
 
-            if (isInRecycleBin) {
+            if (!hasDirectories) {
                 DropdownMenuItem(
-                    text = { Text(stringResource(R.string.menu_restore)) },
+                    text = { Text(stringResource(R.string.menu_open_with)) },
                     onClick = {
-                        appState.restoreSelection()
                         onDismiss()
+                        openWith(context, selectedItems.first())
                     },
-                    leadingIcon = { Icon(Icons.Default.Restore, null) }
-                )
-
-                DropdownMenuItem(
-                    text = { Text(stringResource(R.string.menu_delete_permanently)) },
-                    onClick = {
-                        appState.deleteSelection(forcePermanent = true)
-                        onDismiss()
-                    },
-                    leadingIcon = { Icon(Icons.Default.Delete, null) }
+                    leadingIcon = { Icon(Icons.Default.FolderOpen, null) }
                 )
             }
 
+            HorizontalDivider()
+        }
+
+        if (hasDirectories || hasArchive) {
             DropdownMenuItem(
-                text = { Text(stringResource(R.string.menu_properties)) },
+                text = { Text(stringResource(R.string.menu_open_new_tab)) },
                 onClick = {
                     onDismiss()
-                    appState.showProperties()
+                    appState.openInNewTab(selectedItems)
                 },
-                leadingIcon = { Icon(Icons.Default.Info, null) }
+                leadingIcon = { Icon(Icons.Default.Tab, null) },
+                trailingIcon = {
+                    Text(
+                        text = "MMB",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             )
-        } else {
-            val selectedItems = selectionManager.selectedItems.toList()
-            val onlyOneSelected = selectedItems.size == 1
-            val hasDirectories = selectedItems.any { it.isDirectory }
-            val hasArchive = selectedItems.any { ZipUtils.isArchive(it) }
 
-            if (onlyOneSelected) {
-                val item = selectedItems.first()
-                DropdownMenuItem(
-                    text = { Text(stringResource(R.string.menu_open)) },
-                    onClick = {
-                        onDismiss()
-                        appState.open(item)
-                    },
-                    leadingIcon = { Icon(IconHelper.getIconForItem(item), null) },
-                    trailingIcon = {
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.menu_open_new_window)) },
+                onClick = {
+                    onDismiss()
+                    appState.openInNewWindow(selectedItems)
+                },
+                leadingIcon = { Icon(Icons.Default.Splitscreen, null) },
+                trailingIcon = {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
-                            Icons.AutoMirrored.Filled.KeyboardReturn,
+                            painter = painterResource(id = R.drawable.ic_shift),
                             contentDescription = null,
                             modifier = Modifier.size(12.dp)
                         )
-                    }
-                )
-
-                if (!hasDirectories) {
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.menu_open_with)) },
-                        onClick = {
-                            onDismiss()
-                            openWith(context, selectedItems.first())
-                        },
-                        leadingIcon = { Icon(Icons.Default.FolderOpen, null) }
-                    )
-                }
-
-                HorizontalDivider()
-            }
-
-            if (hasDirectories || hasArchive) {
-                DropdownMenuItem(
-                    text = { Text(stringResource(R.string.menu_open_new_tab)) },
-                    onClick = {
-                        onDismiss()
-                        appState.openInNewTab(selectedItems)
-                    },
-                    leadingIcon = { Icon(Icons.Default.Tab, null) },
-                    trailingIcon = {
                         Text(
-                            text = "MMB",
+                            text = "+ MMB",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
-                )
+                }
+            )
+            HorizontalDivider()
+        }
 
-                DropdownMenuItem(
-                    text = { Text(stringResource(R.string.menu_open_new_window)) },
-                    onClick = {
-                        onDismiss()
-                        appState.openInNewWindow(selectedItems)
-                    },
-                    leadingIcon = { Icon(Icons.Default.Splitscreen, null) },
-                    trailingIcon = {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                painter = painterResource(id = R.drawable.ic_shift),
-                                contentDescription = null,
-                                modifier = Modifier.size(12.dp)
-                            )
-                            Text(
-                                text = "+ MMB",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                )
-                HorizontalDivider()
-            }
+        if (onlyOneSelected && selectedItems.first().isDirectory && selectedItems.first().fileRef != null) {
+            val path = selectedItems.first().fileRef!!.absolutePath
+            val isFav = appState.appConfigs.isFavorite(path)
 
-            if (onlyOneSelected && selectedItems.first().isDirectory && selectedItems.first().fileRef != null) {
-                val path = selectedItems.first().fileRef!!.absolutePath
-                val isFav = appState.appConfigs.isFavorite(path)
+            DropdownMenuItem(
+                text = { Text(if (isFav) stringResource(R.string.menu_remove_favorites) else stringResource(R.string.menu_add_favorites)) },
+                onClick = {
+                    if (isFav) appState.appConfigs.removeFavorite(path)
+                    else appState.appConfigs.addFavorite(path)
+                    onDismiss()
+                },
+                leadingIcon = { Icon(if (isFav) Icons.Default.StarOutline else Icons.Default.Star, null) }
+            )
+        }
 
-                DropdownMenuItem(
-                    text = { Text(if (isFav) stringResource(R.string.menu_remove_favorites) else stringResource(R.string.menu_add_favorites)) },
-                    onClick = {
-                        if (isFav) appState.appConfigs.removeFavorite(path)
-                        else appState.appConfigs.addFavorite(path)
-                        onDismiss()
-                    },
-                    leadingIcon = { Icon(if (isFav) Icons.Default.StarOutline else Icons.Default.Star, null) }
-                )
-            }
+        if (onlyOneSelected) {
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.menu_add_home)) },
+                onClick = {
+                    onDismiss()
+                    appState.pinSelectionToHome()
+                },
+                leadingIcon = { Icon(Icons.Default.PushPin, null) }
+            )
+            HorizontalDivider()
+        }
 
-            if (onlyOneSelected) {
-                DropdownMenuItem(
-                    text = { Text(stringResource(R.string.menu_add_home)) },
-                    onClick = {
-                        onDismiss()
-                        appState.pinSelectionToHome()
-                    },
-                    leadingIcon = { Icon(Icons.Default.PushPin, null) }
-                )
-                HorizontalDivider()
-            }
-
+        if (!isInVirtualStorage || (appState.libraryItem == LibraryItem.Gallery && appState.currentPath != null)) {
             if (hasArchive) {
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.menu_extract)) },
@@ -260,9 +225,10 @@ fun ItemContextMenu(
                 },
                 leadingIcon = { Icon(Icons.Default.Archive, null) }
             )
+        HorizontalDivider()
+        }
 
-            HorizontalDivider()
-
+        if (!isInRecycleBin) {
             DropdownMenuItem(
                 text = { Text(stringResource(R.string.menu_cut)) },
                 onClick = {
@@ -272,17 +238,19 @@ fun ItemContextMenu(
                 leadingIcon = { Icon(Icons.Default.ContentCut, null) },
                 trailingIcon = { CtrlShortcut("X") }
             )
+        }
 
-            DropdownMenuItem(
-                text = { Text(stringResource(R.string.menu_copy)) },
-                onClick = {
-                    appState.copySelection()
-                    onDismiss()
-                },
-                leadingIcon = { Icon(Icons.Default.CopyAll, null) },
-                trailingIcon = { CtrlShortcut("C") }
-            )
+        DropdownMenuItem(
+            text = { Text(stringResource(R.string.menu_copy)) },
+            onClick = {
+                appState.copySelection()
+                onDismiss()
+            },
+            leadingIcon = { Icon(Icons.Default.CopyAll, null) },
+            trailingIcon = { CtrlShortcut("C") }
+        )
 
+        if (hasClipboardItems && (!isInVirtualStorage || (appState.libraryItem == LibraryItem.Gallery && appState.currentPath != null))) {
             DropdownMenuItem(
                 text = { Text(stringResource(R.string.menu_paste)) },
                 onClick = {
@@ -292,9 +260,11 @@ fun ItemContextMenu(
                 leadingIcon = { Icon(Icons.Default.ContentPaste, null) },
                 trailingIcon = { CtrlShortcut("V") }
             )
+        }
 
-            HorizontalDivider()
+        HorizontalDivider()
 
+        if (!isInRecycleBin) {
             DropdownMenuItem(
                 text = { Text(stringResource(R.string.menu_rename)) },
                 onClick = {
@@ -310,17 +280,19 @@ fun ItemContextMenu(
                     )
                 }
             )
-            if (!hasDirectories) {
-                DropdownMenuItem(
-                    text = { Text(stringResource(R.string.menu_share)) },
-                    onClick = {
-                        shareFiles(context, selectedItems)
-                        onDismiss()
-                    },
-                    leadingIcon = { Icon(Icons.Default.Share, null) }
-                )
-            }
+        }
+        if (!hasDirectories) {
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.menu_share)) },
+                onClick = {
+                    shareFiles(context, selectedItems)
+                    onDismiss()
+                },
+                leadingIcon = { Icon(Icons.Default.Share, null) }
+            )
+        }
 
+        if (!isInRecycleBin) {
             DropdownMenuItem(
                 text = { Text(stringResource(R.string.menu_delete)) },
                 onClick = {
@@ -336,16 +308,34 @@ fun ItemContextMenu(
                     )
                 }
             )
+        } else {
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.menu_restore)) },
+                onClick = {
+                    appState.restoreSelection()
+                    onDismiss()
+                },
+                leadingIcon = { Icon(Icons.Default.Restore, null) }
+            )
 
             DropdownMenuItem(
-                text = { Text(stringResource(R.string.menu_properties)) },
+                text = { Text(stringResource(R.string.menu_delete_permanently)) },
                 onClick = {
+                    appState.deleteSelection(forcePermanent = true)
                     onDismiss()
-                    appState.showProperties()
                 },
-                leadingIcon = { Icon(Icons.Default.Info, null) }
+                leadingIcon = { Icon(Icons.Default.Delete, null) }
             )
         }
+
+        DropdownMenuItem(
+            text = { Text(stringResource(R.string.menu_properties)) },
+            onClick = {
+                onDismiss()
+                appState.showProperties()
+            },
+            leadingIcon = { Icon(Icons.Default.Info, null) }
+        )
     }
 }
 
@@ -358,7 +348,13 @@ fun BackgroundContextMenu(
     onDismiss: () -> Unit,
     appState: FileExplorerState
 ) {
+    val context = LocalContext.current
+    val clipboard = remember { context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager }
+    var hasClipboardItems by remember { mutableStateOf(clipboard.hasPrimaryClip()) }
+
     var currentScreen by remember { mutableStateOf("MAIN") }
+    val virtualStorage = listOf(LibraryItem.RecycleBin, LibraryItem.Gallery, LibraryItem.Recent)
+    val isInVirtualStorage = appState.libraryItem in virtualStorage
     val isInRecycleBin = appState.libraryItem == LibraryItem.RecycleBin
 
     LaunchedEffect(expanded) {
@@ -373,7 +369,7 @@ fun BackgroundContextMenu(
     ) {
         when (currentScreen) {
             "MAIN" -> {
-                if (!isInRecycleBin) {
+                if (!isInVirtualStorage || (appState.libraryItem == LibraryItem.Gallery && appState.currentPath != null)) {
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.menu_new)) },
                         leadingIcon = { Icon(Icons.Default.Add, null) },
@@ -422,7 +418,7 @@ fun BackgroundContextMenu(
                     }
                 )
 
-                if (!isInRecycleBin) {
+                if (hasClipboardItems && (!isInVirtualStorage || (appState.libraryItem == LibraryItem.Gallery && appState.currentPath != null))) {
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.menu_paste)) },
                         leadingIcon = { Icon(Icons.Default.ContentPaste, null) },
@@ -484,6 +480,15 @@ fun BackgroundContextMenu(
                     trailingIcon = { appState.folderConfigs.SortArrow(FileColumnType.DATE) },
                     onClick = {
                         appState.folderConfigs.toggleSort(FileColumnType.DATE, appState.getCurrentStorageKey()) { appState.refresh() }
+                        onDismiss()
+                    }
+                )
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.menu_by_type)) },
+                    leadingIcon = { Icon(Icons.AutoMirrored.Filled.List, null) },
+                    trailingIcon = { appState.folderConfigs.SortArrow(FileColumnType.TYPE) },
+                    onClick = {
+                        appState.folderConfigs.toggleSort(FileColumnType.TYPE, appState.getCurrentStorageKey()) { appState.refresh() }
                         onDismiss()
                     }
                 )

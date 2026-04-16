@@ -33,6 +33,7 @@ import androidx.compose.material.icons.filled.DriveFileRenameOutline
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.InsertDriveFile
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.PhotoLibrary
@@ -96,6 +97,10 @@ fun CommandBar(
     val clipboard = remember { context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager }
     var hasClipboardItems by remember { mutableStateOf(clipboard.hasPrimaryClip()) }
 
+    val virtualStorage = listOf(LibraryItem.RecycleBin, LibraryItem.Gallery, LibraryItem.Recent)
+    val isInVirtualStorage = appState.libraryItem in virtualStorage
+    val isInRecycleBin = appState.libraryItem == LibraryItem.RecycleBin
+
     DisposableEffect(clipboard) {
         val listener = ClipboardManager.OnPrimaryClipChangedListener {
             hasClipboardItems = clipboard.hasPrimaryClip()
@@ -134,114 +139,13 @@ fun CommandBar(
                 .horizontalScroll(scrollState),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            if (appState.libraryItem in listOf(LibraryItem.Gallery, LibraryItem.Recent, LibraryItem.RecycleBin)) {
-                if (isSelectionMode) {
-                    CommandButton(
-                        text = stringResource(R.string.menu_copy),
-                        icon = Icons.Default.CopyAll,
-                        onClick = { isTouch -> appState.copySelection(); if (isTouch) selectionManager.clear() }
-                    )
-
-                    if (appState.libraryItem == LibraryItem.RecycleBin) {
-                        CommandButton(
-                            text = stringResource(R.string.menu_restore),
-                            icon = Icons.Default.Restore,
-                            onClick = { isTouch ->
-                                appState.restoreSelection()
-                                if (isTouch) selectionManager.clear()
-                            }
-                        )
-                        CommandButton(
-                            text = stringResource(R.string.menu_delete_permanently),
-                            icon = Icons.Default.Delete,
-                            onClick = { appState.deleteSelection(forcePermanent = true) },
-                        )
-                    }
-
-                    CommandButton(
-                        text = stringResource(R.string.menu_properties),
-                        icon = Icons.Default.Info,
-                        onClick = { isTouch ->
-                            appState.showProperties()
-                            if (isTouch) selectionManager.clear()
-                        },
-                    )
-                } else {
-                    val sortIcon = when (appState.folderConfigs.sortParams.columnType) {
-                        FileColumnType.NAME -> Icons.Default.TextFormat
-                        FileColumnType.DATE -> Icons.Default.DateRange
-                        FileColumnType.DATE_DELETED -> Icons.Default.DateRange
-                        FileColumnType.DELETED_FROM -> Icons.Default.LocationOn
-                        FileColumnType.SIZE -> Icons.AutoMirrored.Filled.List
-                    }
-
-                    CommandDropDown(text = stringResource(R.string.menu_sort), icon = sortIcon) { onDismiss ->
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.menu_by_name)) },
-                            leadingIcon = { Icon(Icons.Default.TextFormat, null) },
-                            trailingIcon = { appState.folderConfigs.SortArrow(FileColumnType.NAME) },
-                            onClick = { appState.folderConfigs.toggleSort(FileColumnType.NAME, appState.getCurrentStorageKey()) { appState.refresh() }; onDismiss() }
-                        )
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.menu_by_date)) },
-                            leadingIcon = { Icon(Icons.Default.DateRange, null) },
-                            trailingIcon = { appState.folderConfigs.SortArrow(FileColumnType.DATE) },
-                            onClick = { appState.folderConfigs.toggleSort(FileColumnType.DATE, appState.getCurrentStorageKey()) { appState.refresh() }; onDismiss() }
-                        )
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.menu_by_size)) },
-                            leadingIcon = { Icon(Icons.AutoMirrored.Filled.List, null) },
-                            trailingIcon = { appState.folderConfigs.SortArrow(FileColumnType.SIZE) },
-                            onClick = { appState.folderConfigs.toggleSort(FileColumnType.SIZE, appState.getCurrentStorageKey()) { appState.refresh() }; onDismiss() }
-                        )
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.menu_by_date_deleted)) },
-                            leadingIcon = { Icon(Icons.Default.DateRange, null) },
-                            trailingIcon = { appState.folderConfigs.SortArrow(FileColumnType.DATE_DELETED) },
-                            onClick = { appState.folderConfigs.toggleSort(FileColumnType.DATE_DELETED, appState.getCurrentStorageKey()) { appState.refresh() }; onDismiss() }
-                        )
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.menu_by_location)) },
-                            leadingIcon = { Icon(Icons.Default.LocationOn, null) },
-                            trailingIcon = { appState.folderConfigs.SortArrow(FileColumnType.DELETED_FROM) },
-                            onClick = { appState.folderConfigs.toggleSort(FileColumnType.DELETED_FROM, appState.getCurrentStorageKey()) { appState.refresh() }; onDismiss() }
-                        )
-                    }
-
-                    ViewMenuDropDown(appState)
-
-                    if (canUndo || canRedo || appState.libraryItem == LibraryItem.RecycleBin) {
-                        VerticalDivider()
-                    }
-
-                    if (appState.libraryItem == LibraryItem.RecycleBin) {
-                        CommandButton(
-                            text = stringResource(R.string.menu_empty_recycle_bin),
-                            icon = Icons.Default.DeleteForever,
-                            onClick = { appState.emptyRecycleBin() },
-                        )
-                    }
-
-                    if (canUndo) {
-                        CommandButton(
-                            text = stringResource(R.string.menu_undo),
-                            icon = Icons.AutoMirrored.Filled.Undo,
-                            onClick = { appState.undo() }
-                        )
-                    }
-
-                    if (canRedo) {
-                        CommandButton(
-                            text = stringResource(R.string.menu_redo),
-                            icon = Icons.AutoMirrored.Filled.Redo,
-                            onClick = { appState.redo() }
-                        )
-                    }
-                }
-            } else {
-                // Normal Folder UI
-                if (!isSelectionMode) {
-                    CommandDropDown(text = stringResource(R.string.menu_new), icon = Icons.Default.Add) { onDismiss ->
+            // Normal Folder UI
+            if (!isSelectionMode) {
+                if (!isInVirtualStorage || (appState.libraryItem == LibraryItem.Gallery && appState.currentPath != null)) {
+                    CommandDropDown(
+                        text = stringResource(R.string.menu_new),
+                        icon = Icons.Default.Add
+                    ) { onDismiss ->
                         DropdownMenuItem(
                             text = { Text(stringResource(R.string.folder)) },
                             leadingIcon = { Icon(Icons.Default.Folder, null) },
@@ -253,137 +157,112 @@ fun CommandBar(
                             onClick = { appState.createNewFile(); onDismiss() }
                         )
                     }
+                }
 
-                    val sortIcon = when (appState.folderConfigs.sortParams.columnType) {
-                        FileColumnType.NAME -> Icons.Default.TextFormat
-                        FileColumnType.DATE -> Icons.Default.DateRange
-                        FileColumnType.DATE_DELETED -> Icons.Default.DateRange
-                        FileColumnType.DELETED_FROM -> Icons.Default.LocationOn
-                        FileColumnType.SIZE -> Icons.AutoMirrored.Filled.List
-                    }
+                SortDropDown(appState, isInRecycleBin)
 
-                    CommandDropDown(text = stringResource(R.string.menu_sort), icon = sortIcon) { onDismiss ->
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.menu_by_name)) },
-                            leadingIcon = { Icon(Icons.Default.TextFormat, null) },
-                            trailingIcon = { appState.folderConfigs.SortArrow(FileColumnType.NAME) },
-                            onClick = { appState.folderConfigs.toggleSort(FileColumnType.NAME, appState.getCurrentStorageKey()) { appState.refresh() }; onDismiss() }
-                        )
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.menu_by_date)) },
-                            leadingIcon = { Icon(Icons.Default.DateRange, null) },
-                            trailingIcon = { appState.folderConfigs.SortArrow(FileColumnType.DATE) },
-                            onClick = { appState.folderConfigs.toggleSort(FileColumnType.DATE, appState.getCurrentStorageKey()) { appState.refresh() }; onDismiss() }
-                        )
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.menu_by_size)) },
-                            leadingIcon = { Icon(Icons.AutoMirrored.Filled.List, null) },
-                            trailingIcon = { appState.folderConfigs.SortArrow(FileColumnType.SIZE) },
-                            onClick = { appState.folderConfigs.toggleSort(FileColumnType.SIZE, appState.getCurrentStorageKey()) { appState.refresh() }; onDismiss() }
-                        )
-                    }
+                ViewMenuDropDown(appState)
 
-                    ViewMenuDropDown(appState)
+                VerticalDivider()
 
+                CommandButton(
+                    text = stringResource(R.string.shortcuts_ctrl_a_desc),
+                    icon = Icons.Default.SelectAll,
+                    onClick = { selectionManager.selectAll() },
+                )
+
+                if (hasClipboardItems && (!isInVirtualStorage || (appState.libraryItem == LibraryItem.Gallery && appState.currentPath != null))) {
+                    CommandButton(
+                        text = stringResource(R.string.menu_paste),
+                        icon = Icons.Default.ContentPaste,
+                        onClick = { appState.paste() }
+                    )
+                }
+
+                if (canUndo) {
+                    CommandButton(
+                        text = stringResource(R.string.menu_undo),
+                        icon = Icons.AutoMirrored.Filled.Undo,
+                        onClick = { appState.undo() }
+                    )
+                }
+
+                if (canRedo) {
+                    CommandButton(
+                        text = stringResource(R.string.menu_redo),
+                        icon = Icons.AutoMirrored.Filled.Redo,
+                        onClick = { appState.redo() }
+                    )
+                }
+            } else {
+                // Selection Mode Actions
+                val selectedList = selectionManager.selectedItems.toList()
+                val hasDirectories = selectedList.any { it.isDirectory }
+                val onlyOneSelected = selectedList.size == 1
+                val hasArchive = selectedList.any { ZipUtils.isArchive(it) }
+
+                if (onlyOneSelected && !hasDirectories) {
+                    CommandButton(
+                        text = stringResource(R.string.menu_open_with_no_dots),
+                        icon = Icons.Default.FolderOpen,
+                        onClick = { isTouch ->
+                            openWith(context, selectedList[0])
+                            if (isTouch) selectionManager.clear()
+                        },
+                    )
+                }
+
+                if (hasDirectories || hasArchive) {
+                    CommandButton(
+                        text = stringResource(R.string.menu_open_new_tab),
+                        icon = Icons.Default.Tab,
+                        onClick = { isTouch ->
+                            appState.openInNewTab(selectionManager.selectedItems.toList())
+                            if (isTouch) selectionManager.clear()
+                        },
+                    )
+                    CommandButton(
+                        text = stringResource(R.string.menu_open_new_window),
+                        icon = Icons.Default.Splitscreen,
+                        onClick = { isTouch ->
+                            appState.openInNewWindow(selectionManager.selectedItems.toList())
+                            if (isTouch) selectionManager.clear()
+                        },
+                    )
+                }
+
+                if (onlyOneSelected || hasArchive || hasDirectories) {
                     VerticalDivider()
+                }
+
+                if (onlyOneSelected && selectedList.first().isDirectory && selectedList.first().fileRef != null) {
+                    val path = selectedList.first().fileRef!!.absolutePath
+                    val isFav = appState.appConfigs.isFavorite(path)
 
                     CommandButton(
-                        text = stringResource(R.string.shortcuts_ctrl_a_desc),
-                        icon = Icons.Default.SelectAll,
-                        onClick = { selectionManager.selectAll() },
+                        text = if (isFav) stringResource(R.string.menu_remove_favorites) else stringResource(R.string.menu_add_favorites),
+                        onClick = { isTouch ->
+                            if (isFav) appState.appConfigs.removeFavorite(path)
+                            else appState.appConfigs.addFavorite(path)
+                            if (isTouch) selectionManager.clear()
+                        },
+                        icon = if (isFav) Icons.Default.StarOutline else Icons.Default.Star
                     )
+                }
 
-                    if (hasClipboardItems) {
-                        CommandButton(
-                            text = stringResource(R.string.menu_paste),
-                            icon = Icons.Default.ContentPaste,
-                            onClick = { appState.paste() }
-                        )
-                    }
+                if (onlyOneSelected) {
+                    CommandButton(
+                        text = stringResource(R.string.menu_add_home),
+                        icon = Icons.Default.PushPin,
+                        onClick = { isTouch ->
+                            appState.pinSelectionToHome()
+                            if (isTouch) selectionManager.clear()
+                        }
+                    )
+                    VerticalDivider()
+                }
 
-                    if (canUndo) {
-                        CommandButton(
-                            text = stringResource(R.string.menu_undo),
-                            icon = Icons.AutoMirrored.Filled.Undo,
-                            onClick = { appState.undo() }
-                        )
-                    }
-
-                    if (canRedo) {
-                        CommandButton(
-                            text = stringResource(R.string.menu_redo),
-                            icon = Icons.AutoMirrored.Filled.Redo,
-                            onClick = { appState.redo() }
-                        )
-                    }
-                } else {
-                    // Selection Mode Actions
-                    val selectedList = selectionManager.selectedItems.toList()
-                    val hasDirectories = selectedList.any { it.isDirectory }
-                    val onlyOneSelected = selectedList.size == 1
-                    val hasArchive = selectedList.any { ZipUtils.isArchive(it) }
-
-                    if (onlyOneSelected && !hasDirectories) {
-                        CommandButton(
-                            text = stringResource(R.string.menu_open_with_no_dots),
-                            icon = Icons.Default.FolderOpen,
-                            onClick = { isTouch ->
-                                openWith(context, selectedList[0])
-                                if (isTouch) selectionManager.clear()
-                            },
-                        )
-                    }
-
-                    if (hasDirectories || hasArchive) {
-                        CommandButton(
-                            text = stringResource(R.string.menu_open_new_tab),
-                            icon = Icons.Default.Tab,
-                            onClick = { isTouch ->
-                                appState.openInNewTab(selectionManager.selectedItems.toList())
-                                if (isTouch) selectionManager.clear()
-                            },
-                        )
-                        CommandButton(
-                            text = stringResource(R.string.menu_open_new_window),
-                            icon = Icons.Default.Splitscreen,
-                            onClick = { isTouch ->
-                                appState.openInNewWindow(selectionManager.selectedItems.toList())
-                                if (isTouch) selectionManager.clear()
-                            },
-                        )
-                    }
-
-                    if (onlyOneSelected || hasArchive || hasDirectories) {
-                        VerticalDivider()
-                    }
-
-                    if (onlyOneSelected && selectedList.first().isDirectory && selectedList.first().fileRef != null) {
-                        val path = selectedList.first().fileRef!!.absolutePath
-                        val isFav = appState.appConfigs.isFavorite(path)
-
-                        CommandButton(
-                            text = if (isFav) stringResource(R.string.menu_remove_favorites) else stringResource(R.string.menu_add_favorites),
-                            onClick = { isTouch ->
-                                if (isFav) appState.appConfigs.removeFavorite(path)
-                                else appState.appConfigs.addFavorite(path)
-                                if (isTouch) selectionManager.clear()
-                            },
-                            icon = if (isFav) Icons.Default.StarOutline else Icons.Default.Star
-                        )
-                    }
-
-                    if (onlyOneSelected) {
-                        CommandButton(
-                            text = stringResource(R.string.menu_add_home),
-                            icon = Icons.Default.PushPin,
-                            onClick = { isTouch ->
-                                appState.pinSelectionToHome()
-                                if (isTouch) selectionManager.clear()
-                            }
-                        )
-                        VerticalDivider()
-                    }
-
+                if (!isInVirtualStorage || (appState.libraryItem == LibraryItem.Gallery && appState.currentPath != null)) {
                     if (hasArchive) {
                         CommandButton(
                             text = stringResource(R.string.menu_extract).removeSuffix("..."),
@@ -403,80 +282,171 @@ fun CommandBar(
                             if (isTouch) selectionManager.clear()
                         }
                     )
+                VerticalDivider()
+                }
 
-                    VerticalDivider()
+                CommandDropDown(text = stringResource(R.string.menu_select), icon = Icons.Default.SelectAll) { onDismiss ->
+                    val allSelected = selectionManager.selectedItems.size == selectionManager.allFiles.size
 
-                    CommandDropDown(text = stringResource(R.string.menu_select), icon = Icons.Default.SelectAll) { onDismiss ->
-                        val allSelected = selectionManager.selectedItems.size == selectionManager.allFiles.size
-
-                        if (!allSelected) {
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.shortcuts_ctrl_a_desc)) },
-                                leadingIcon = { Icon(Icons.Default.Deselect, null) },
-                                onClick = { selectionManager.selectAll(); onDismiss() }
-                            )
-                        }
+                    if (!allSelected) {
                         DropdownMenuItem(
-                            text = { Text(stringResource(R.string.menu_clear_selection)) },
+                            text = { Text(stringResource(R.string.shortcuts_ctrl_a_desc)) },
                             leadingIcon = { Icon(Icons.Default.Deselect, null) },
-                            onClick = { selectionManager.clear(); onDismiss() }
-                        )
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.menu_select_inverse)) },
-                            leadingIcon = { Icon(Icons.Default.Deselect, null) },
-                            onClick = { selectionManager.selectInverse(); onDismiss() }
+                            onClick = { selectionManager.selectAll(); onDismiss() }
                         )
                     }
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.menu_clear_selection)) },
+                        leadingIcon = { Icon(Icons.Default.Deselect, null) },
+                        onClick = { selectionManager.clear(); onDismiss() }
+                    )
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.menu_select_inverse)) },
+                        leadingIcon = { Icon(Icons.Default.Deselect, null) },
+                        onClick = { selectionManager.selectInverse(); onDismiss() }
+                    )
+                }
 
+                if (!isInRecycleBin) {
                     CommandButton(
                         text = stringResource(R.string.menu_cut),
                         icon = Icons.Default.ContentCut,
                         onClick = { isTouch -> appState.cutSelection(); if (isTouch) selectionManager.clear() },
                     )
+                }
+                CommandButton(
+                    text = stringResource(R.string.menu_copy),
+                    icon = Icons.Default.CopyAll,
+                    onClick = { isTouch -> appState.copySelection(); if (isTouch) selectionManager.clear() },
+                )
+
+                if (hasClipboardItems && (!isInVirtualStorage || (appState.libraryItem == LibraryItem.Gallery && appState.currentPath != null))) {
                     CommandButton(
-                        text = stringResource(R.string.menu_copy),
-                        icon = Icons.Default.CopyAll,
-                        onClick = { isTouch -> appState.copySelection(); if (isTouch) selectionManager.clear() },
+                        text = stringResource(R.string.menu_paste),
+                        icon = Icons.Default.ContentPaste,
+                        onClick = { isTouch -> appState.paste(); if (isTouch) selectionManager.clear() }
                     )
+                }
 
-                    if (hasClipboardItems) {
-                        CommandButton(
-                            text = stringResource(R.string.menu_paste),
-                            icon = Icons.Default.ContentPaste,
-                            onClick = { isTouch -> appState.paste(); if (isTouch) selectionManager.clear() }
-                        )
-                    }
-
+                if (!isInRecycleBin) {
                     CommandButton(
                         text = stringResource(R.string.menu_rename),
                         icon = Icons.Default.DriveFileRenameOutline,
                         onClick = { isTouch -> appState.renameSelection(); if (isTouch) selectionManager.clear() }
                     )
+                }
 
-                    if (!selectionManager.selectedItems.any { it.isDirectory }) {
-                        CommandButton(
-                            text = stringResource(R.string.menu_share),
-                            icon = Icons.Default.Share,
-                            onClick = { isTouch -> shareFiles(context, selectionManager.selectedItems.toList()); if (isTouch) selectionManager.clear() }
-                        )
-                    }
+                if (!selectionManager.selectedItems.any { it.isDirectory }) {
+                    CommandButton(
+                        text = stringResource(R.string.menu_share),
+                        icon = Icons.Default.Share,
+                        onClick = { isTouch -> shareFiles(context, selectionManager.selectedItems.toList()); if (isTouch) selectionManager.clear() }
+                    )
+                }
 
+                if (!isInRecycleBin) {
                     CommandButton(
                         text = stringResource(R.string.menu_delete),
                         icon = Icons.Default.Delete,
                         onClick = { appState.deleteSelection() },
                     )
+                } else {
                     CommandButton(
-                        text = stringResource(R.string.menu_properties),
-                        icon = Icons.Default.Info,
+                        text = stringResource(R.string.menu_restore),
+                        icon = Icons.Default.Restore,
                         onClick = { isTouch ->
-                            appState.showProperties()
+                            appState.restoreSelection()
                             if (isTouch) selectionManager.clear()
-                        },
+                        }
+                    )
+                    CommandButton(
+                        text = stringResource(R.string.menu_delete_permanently),
+                        icon = Icons.Default.Delete,
+                        onClick = { appState.deleteSelection(forcePermanent = true) },
                     )
                 }
+                CommandButton(
+                    text = stringResource(R.string.menu_properties),
+                    icon = Icons.Default.Info,
+                    onClick = { isTouch ->
+                        appState.showProperties()
+                        if (isTouch) selectionManager.clear()
+                    },
+                )
             }
         }
+    }
+}
+
+@Composable
+fun SortDropDown(
+    appState: FileExplorerState, // This gives the function access to your app's data
+    isInRecycleBin: Boolean
+) {
+    // 1. Determine which icon to show based on current sort settings
+    val sortIcon = when (appState.folderConfigs.sortParams.columnType) {
+        FileColumnType.NAME -> Icons.Default.TextFormat
+        FileColumnType.DATE -> Icons.Default.DateRange
+        FileColumnType.DATE_DELETED -> Icons.Default.DateRange
+        FileColumnType.DELETED_FROM -> Icons.Default.LocationOn
+        FileColumnType.TYPE -> Icons.AutoMirrored.Filled.InsertDriveFile
+        FileColumnType.SIZE -> Icons.AutoMirrored.Filled.List
+    }
+
+    // 2. Use the existing CommandDropDown component
+    CommandDropDown(text = stringResource(R.string.menu_sort), icon = sortIcon) { onDismiss ->
+
+        // Helper to handle the click logic so we don't repeat it 5 times
+        val onSortClick: (FileColumnType) -> Unit = { type ->
+            appState.folderConfigs.toggleSort(type, appState.getCurrentStorageKey()) {
+                appState.refresh()
+            }
+            onDismiss()
+        }
+
+        DropdownMenuItem(
+            text = { Text(stringResource(R.string.menu_by_name)) },
+            leadingIcon = { Icon(Icons.Default.TextFormat, null) },
+            trailingIcon = { appState.folderConfigs.SortArrow(FileColumnType.NAME) },
+            onClick = { onSortClick(FileColumnType.NAME) }
+        )
+
+        DropdownMenuItem(
+            text = { Text(stringResource(R.string.menu_by_date)) },
+            leadingIcon = { Icon(Icons.Default.DateRange, null) },
+            trailingIcon = { appState.folderConfigs.SortArrow(FileColumnType.DATE) },
+            onClick = { onSortClick(FileColumnType.DATE) }
+        )
+
+        // Only show these if we are in the Recycle Bin
+        if (isInRecycleBin) {
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.menu_by_date_deleted)) },
+                leadingIcon = { Icon(Icons.Default.DateRange, null) },
+                trailingIcon = { appState.folderConfigs.SortArrow(FileColumnType.DATE_DELETED) },
+                onClick = { onSortClick(FileColumnType.DATE_DELETED) }
+            )
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.menu_by_location)) },
+                leadingIcon = { Icon(Icons.Default.LocationOn, null) },
+                trailingIcon = { appState.folderConfigs.SortArrow(FileColumnType.DELETED_FROM) },
+                onClick = { onSortClick(FileColumnType.DELETED_FROM) }
+            )
+        }
+
+        DropdownMenuItem(
+            text = { Text(stringResource(R.string.menu_by_type)) },
+            leadingIcon = { Icon(Icons.AutoMirrored.Filled.InsertDriveFile, null) },
+            trailingIcon = { appState.folderConfigs.SortArrow(FileColumnType.TYPE) },
+            onClick = { onSortClick(FileColumnType.TYPE) }
+        )
+
+        DropdownMenuItem(
+            text = { Text(stringResource(R.string.menu_by_size)) },
+            leadingIcon = { Icon(Icons.AutoMirrored.Filled.List, null) },
+            trailingIcon = { appState.folderConfigs.SortArrow(FileColumnType.SIZE) },
+            onClick = { onSortClick(FileColumnType.SIZE) }
+        )
     }
 }
 

@@ -19,6 +19,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -52,7 +53,6 @@ fun FileView(
     focusRequester: FocusRequester,
     isHovered: Boolean,
     hScrollState: ScrollState? = null,
-    nameColumnWidth: Dp = 0.dp
 ) {
     // Selection
     val selectionManager = appState.selectionManager
@@ -70,11 +70,8 @@ fun FileView(
         onDispose { itemPositions.remove(file) }
     }
 
-    // Tooltips
-    val tooltipState = rememberTooltipState()
-    var isOverflowing by remember { mutableStateOf(false) }
 
-    val mouseTooltipProvider = remember {
+    val mouseTooltipProvider = remember(containerCoordinates) {
         object : PopupPositionProvider {
             override fun calculatePosition(
                 anchorBounds: IntRect,
@@ -82,12 +79,15 @@ fun FileView(
                 layoutDirection: LayoutDirection,
                 popupContentSize: IntSize
             ): IntOffset {
-                val pos = mousePosition()
-                val itemRect = itemPositions[file]
-                val relativeOffset = if (pos != null && itemRect != null) pos - itemRect.topLeft else Offset.Zero
+                val mousePos = mousePosition()
+                if (mousePos == null || containerCoordinates == null || !containerCoordinates.isAttached) {
+                    return IntOffset.Zero
+                }
+
+                val windowMousePos = containerCoordinates.localToWindow(mousePos)
                 return IntOffset(
-                    x = anchorBounds.left + relativeOffset.x.toInt(),
-                    y = anchorBounds.top + relativeOffset.y.toInt() + 40
+                    x = windowMousePos.x.toInt() + 15,
+                    y = windowMousePos.y.toInt() + 15
                 )
             }
         }
@@ -99,11 +99,6 @@ fun FileView(
     val shape = if (isGridView) RoundedCornerShape(8.dp) else RectangleShape
     
     Box(modifier = if (isGridView) Modifier.padding(4.dp) else Modifier) {
-        TooltipBox(
-            positionProvider = mouseTooltipProvider,
-            tooltip = { if (isOverflowing) PlainTooltip { Text(file.name) } },
-            state = tooltipState
-        ) {
             Surface(
                 color = Color.Transparent,
                 shape = shape,
@@ -147,13 +142,12 @@ fun FileView(
                     }
             ) {
                 when (viewMode) {
-                    ViewMode.GRID -> FileGridView(file, isSelected, isHovered, isLead, appState) { isOverflowing = it }
-                    ViewMode.GALLERY -> FileGalleryView(file, isSelected, isHovered, isLead, appState) { isOverflowing = it }
-                    ViewMode.CONTENT -> FileContentView(file, isSelected, isHovered, isLead, appState) { isOverflowing = it }
-                    ViewMode.DETAILS -> FileDetailsView(file, isSelected, isHovered, isLead, appState, hScrollState, nameColumnWidth) { isOverflowing = it }
+                    ViewMode.GRID -> FileGridView(file, isSelected, isHovered, isLead, appState, mouseTooltipProvider)
+                    ViewMode.GALLERY -> FileGalleryView(file, isSelected, isHovered, isLead, appState, mouseTooltipProvider)
+                    ViewMode.CONTENT -> FileContentView(file, isSelected, isHovered, isLead, appState, mouseTooltipProvider)
+                    ViewMode.DETAILS -> FileDetailsView(file, isSelected, isHovered, isLead, appState, hScrollState, mouseTooltipProvider)
                 }
             }
-        }
 
         // Context Menu
         Box(modifier = Modifier.offset(menuOffset.x, menuOffset.y)) {
@@ -168,6 +162,7 @@ fun FileView(
 
 // --- Specific View Components ---
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun FileGalleryView(
     file: UniversalFile,
@@ -175,51 +170,62 @@ private fun FileGalleryView(
     isHovered: Boolean,
     isLead: Boolean,
     appState: FileExplorerState,
-    onOverflowChange: (Boolean) -> Unit
+    toolTipProvider: PopupPositionProvider
 ) {
-    Box(
-        modifier = Modifier.padding(2.dp).fillMaxWidth().aspectRatio(1f),
-        contentAlignment = Alignment.Center
+
+    val tooltipState = rememberTooltipState()
+    var isOverflowing by remember { mutableStateOf(false) }
+
+    TooltipBox(
+        positionProvider = toolTipProvider,
+        tooltip = { if (isOverflowing) PlainTooltip { Text(file.name) } },
+        state = tooltipState
     ) {
-
-        FileThumbnail(
-            file = file,
-            modifier = Modifier.fillMaxSize(),
-            tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary,
-            iconModifier = Modifier.size((appState.folderConfigs.gridItemSize * 0.7f).dp),
-            contentScale = ContentScale.Crop
-        )
-
-        if (!isMimeTypePreviewable(file) || file.isDirectory) {
-            Box (
-                modifier = Modifier
-                    .fillMaxSize(),
-                contentAlignment = Alignment.BottomCenter
-            ) {
-                Text(
-                    text = file.name,
-                    modifier = Modifier.background(Color.Black.copy(alpha = 0.5f)),
-                    textAlign = TextAlign.Center,
-                    style = MaterialTheme.typography.bodyMedium,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                    onTextLayout = { textLayoutResult ->
-                        onOverflowChange(textLayoutResult.hasVisualOverflow)
-                    }
-                )
-            }
-        } else onOverflowChange(true)
-
-        Box (
-            modifier = Modifier
-                .fillMaxSize()
-                .alpha(0.5f)
-                .selectionBackground(isSelected, isHovered, isLead, hoverAlpha = false),
+        Box(
+            modifier = Modifier.padding(2.dp).fillMaxWidth().aspectRatio(1f),
             contentAlignment = Alignment.Center
-        ) {}
+        ) {
+            FileThumbnail(
+                file = file,
+                modifier = Modifier.fillMaxSize(),
+                tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary,
+                iconModifier = Modifier.size((appState.folderConfigs.gridItemSize * 0.7f).dp),
+                contentScale = ContentScale.Crop
+            )
+
+
+            if (!isMimeTypePreviewable(file) || file.isDirectory) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize(),
+                    contentAlignment = Alignment.BottomCenter
+                ) {
+                    Text(
+                        text = file.name,
+                        modifier = Modifier.background(Color.Black.copy(alpha = 0.5f)),
+                        textAlign = TextAlign.Center,
+                        style = MaterialTheme.typography.bodyMedium,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        onTextLayout = { textLayoutResult ->
+                            isOverflowing = textLayoutResult.hasVisualOverflow
+                        }
+                    )
+                }
+            } else isOverflowing = true
+
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .alpha(0.5f)
+                    .selectionBackground(isSelected, isHovered, isLead, hoverAlpha = false),
+                contentAlignment = Alignment.Center
+            ) {}
+        }
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun FileGridView(
     file: UniversalFile,
@@ -227,8 +233,12 @@ private fun FileGridView(
     isHovered: Boolean,
     isLead: Boolean,
     appState: FileExplorerState,
-    onOverflowChange: (Boolean) -> Unit
+    toolTipProvider: PopupPositionProvider
 ) {
+
+    val tooltipState = rememberTooltipState()
+    var isOverflowing by remember { mutableStateOf(false) }
+
     Column(
         modifier = Modifier
             .padding(8.dp).fillMaxWidth()
@@ -236,27 +246,34 @@ private fun FileGridView(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Box(contentAlignment = Alignment.BottomEnd) {
+
             FileThumbnail(
                 file = file,
                 modifier = Modifier.size((appState.folderConfigs.gridItemSize * 0.6f).dp),
                 tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary,
                 iconModifier = Modifier.size((appState.folderConfigs.gridItemSize * 0.6f).dp)
-
             )
         }
-        Text(
-            text = file.name,
-            textAlign = TextAlign.Center,
-            style = MaterialTheme.typography.bodyMedium,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-            onTextLayout = { textLayoutResult ->
-                onOverflowChange(textLayoutResult.hasVisualOverflow)
-            }
-        )
+        TooltipBox(
+            positionProvider = toolTipProvider,
+            tooltip = { if (isOverflowing) PlainTooltip { Text(file.name) } },
+            state = tooltipState
+        ) {
+            Text(
+                text = file.name,
+                textAlign = TextAlign.Center,
+                style = MaterialTheme.typography.bodyMedium,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                onTextLayout = { textLayoutResult ->
+                    isOverflowing = textLayoutResult.hasVisualOverflow
+                }
+            )
+        }
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun FileContentView(
     file: UniversalFile,
@@ -264,23 +281,33 @@ private fun FileContentView(
     isHovered: Boolean,
     isLead: Boolean,
     appState: FileExplorerState,
-    onOverflowChange: (Boolean) -> Unit
+    toolTipProvider: PopupPositionProvider
 ) {
     val formattedSize = remember(file) { appState.formatSize(file.length) }
     val formattedDate = remember(file) { appState.formatDate(file.lastModified) }
+
     val iconSelectionEnabled = SettingsManager.iconTouchSelection.value
+
+    val tooltipState = rememberTooltipState()
+    var isOverflowing by remember { mutableStateOf(false) }
 
     Column (modifier = Modifier.selectionBackground(isSelected, isHovered, isLead)) {
         ListItem(
             headlineContent = {
-                Text(
-                    text = file.name,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    onTextLayout = { textLayoutResult ->
-                        onOverflowChange(textLayoutResult.hasVisualOverflow)
-                    }
-                )
+                TooltipBox(
+                    positionProvider = toolTipProvider,
+                    tooltip = { if (isOverflowing) PlainTooltip { Text(file.name) } },
+                    state = tooltipState
+                ) {
+                    Text(
+                        text = file.name,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        onTextLayout = { textLayoutResult ->
+                            isOverflowing = textLayoutResult.hasVisualOverflow
+                        }
+                    )
+                }
             },
             supportingContent = { Text(if (file.isDirectory) "Folder - $formattedDate" else "$formattedSize - $formattedDate") },
             leadingContent = {
@@ -299,7 +326,7 @@ private fun FileContentView(
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 @Composable
 private fun FileDetailsView(
     file: UniversalFile,
@@ -308,10 +335,16 @@ private fun FileDetailsView(
     isLead: Boolean,
     appState: FileExplorerState,
     hScrollState: ScrollState?,
-    nameColumnWidth: Dp,
-    onOverflowChange: (Boolean) -> Unit
+    toolTipProvider: PopupPositionProvider
 ) {
+    val context = LocalContext.current
+
     val iconSelectionEnabled = SettingsManager.iconTouchSelection.value
+
+    val nameColumnWidth = appState.folderConfigs.columnWidths.getOrElse(FileColumnType.NAME) {Dp.Unspecified}
+
+    val tooltipState = rememberTooltipState()
+    var isOverflowing by remember { mutableStateOf(false) }
 
     CompositionLocalProvider(LocalOverscrollConfiguration provides null) {
         Column(
@@ -332,15 +365,21 @@ private fun FileDetailsView(
                     tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary
                 )
                 Spacer(Modifier.width(12.dp))
-                Text(
-                    text = file.name,
-                    modifier = Modifier.width(nameColumnWidth),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    onTextLayout = { textLayoutResult ->
-                        onOverflowChange(textLayoutResult.hasVisualOverflow)
-                    }
-                )
+                TooltipBox(
+                    positionProvider = toolTipProvider,
+                    tooltip = { if (isOverflowing) PlainTooltip { Text(file.name) } },
+                    state = tooltipState
+                ) {
+                    Text(
+                        text = file.name,
+                        modifier = Modifier.width(nameColumnWidth),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        onTextLayout = { textLayoutResult ->
+                            isOverflowing = textLayoutResult.hasVisualOverflow
+                        }
+                    )
+                }
 
                 appState.folderConfigs.visibleColumns.forEach { column ->
                     val width = appState.folderConfigs.columnWidths[column.type] ?: column.minWidth
@@ -348,6 +387,7 @@ private fun FileDetailsView(
                     val text = when (column.type) {
                         FileColumnType.DATE -> remember(file) { appState.formatDate(file.lastModified) }
                         FileColumnType.SIZE -> if (file.isDirectory) "--" else remember(file) { appState.formatSize(file.length) }
+                        FileColumnType.TYPE -> getFileType(file, context)
                         FileColumnType.DATE_DELETED -> meta?.deletedAt?.let { appState.formatDate(it) } ?: "--"
                         FileColumnType.DELETED_FROM -> meta?.deletedFrom ?: "--"
                         else -> ""

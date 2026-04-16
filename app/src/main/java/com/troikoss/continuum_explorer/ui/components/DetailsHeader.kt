@@ -44,10 +44,12 @@ import com.troikoss.continuum_explorer.utils.contextMenuDetector
  * Header row for the "Details" view mode. 
  */
 @Composable
-fun DetailsHeader(appState: FileExplorerState, scrollState: ScrollState, nameColumnWidth: Dp) {
+fun DetailsHeader(appState: FileExplorerState, scrollState: ScrollState) {
     val density = LocalDensity.current
     var showColumnMenu by remember { mutableStateOf(false) }
     var columnMenuOffset by remember { mutableStateOf(DpOffset.Zero) }
+    val nameColumnWidth = appState.folderConfigs.columnWidths.getOrElse(FileColumnType.NAME) { Dp.Unspecified }
+
 
     Box {
         Row(

@@ -93,6 +93,24 @@ fun FileContent(appState: FileExplorerState) {
     val headerOffsetPx = gridContainerTopPx - (containerCoordinates?.positionInRoot()?.y ?: 0f)
     val horizontalPaddingPx = with(density) { if (viewMode == ViewMode.DETAILS) 16.dp.toPx() else 32.dp.toPx() }
 
+    // Compute the intrinsic width of a details row (icon + spacer + name + columns + padding)
+    // so hover is only triggered when the mouse is over the actual content, not blank space to the right.
+    // Uses remember with no key so the State object is stable — all reads inside are state-tracked via
+    // mutableStateMapOf, so any column resize triggers an automatic recompute.
+    val detailsContentWidthPx = remember {
+        derivedStateOf {
+            if (appState.folderConfigs.viewMode != ViewMode.DETAILS) Float.MAX_VALUE
+            else with(density) {
+                val nameWidth = appState.folderConfigs.columnWidths.getOrElse(FileColumnType.NAME) { 200.dp }
+                val columnsWidth = appState.folderConfigs.visibleColumns.fold(0.dp) { acc, col ->
+                    val colWidth = appState.folderConfigs.columnWidths[col.type] ?: col.minWidth
+                    acc + 1.dp + colWidth
+                }
+                (52.dp + nameWidth + columnsWidth).toPx()  // 52 = 8(pad) + 24(icon) + 12(spacer) + 8(pad)
+            }
+        }
+    }
+
     // Recreate grid state when the path changes to keep scroll fresh
     val gridState = key(appState.loadedPathKey) {
         rememberLazyGridState(initialFirstVisibleItemIndex = appState.scrollToItemIndex ?: 0)
@@ -224,6 +242,7 @@ fun FileContent(appState: FileExplorerState) {
                 columnCount = columnCount,
                 xOffset = horizontalPaddingPx,
                 yOffset = headerOffsetPx,
+                overrideWidth = if (viewMode == ViewMode.DETAILS) detailsContentWidthPx.value else null,
                 onSelectionChange = { selectionManager.updateSelectionFromDrag(it) }
             )
         }
@@ -240,6 +259,7 @@ fun FileContent(appState: FileExplorerState) {
                 columnCount = columnCount,
                 xOffset = horizontalPaddingPx,
                 yOffset = headerOffsetPx,
+                overrideWidth = if (viewMode == ViewMode.DETAILS) detailsContentWidthPx.value else null,
                 onSelectionChange = { selectionManager.updateSelectionFromDrag(it) }
             )
         }
@@ -265,7 +285,6 @@ fun FileContent(appState: FileExplorerState) {
                 },
                 onDragStart = { offset ->
                     dragStart = offset
-                    marquee.reset()
                     selectionManager.clear(true)
                 },
                 onDrag = { offset ->
@@ -278,6 +297,7 @@ fun FileContent(appState: FileExplorerState) {
                         columnCount = columnCount,
                         xOffset = horizontalPaddingPx,
                         yOffset = headerOffsetPx,
+                        overrideWidth = if (viewMode == ViewMode.DETAILS) detailsContentWidthPx.value else null,
                         onSelectionChange = { selectionManager.updateSelectionFromDrag(it) }
                     )
                 },
@@ -308,6 +328,7 @@ fun FileContent(appState: FileExplorerState) {
             dragStart = dragStart,
             dragEnd = dragEnd,
             marquee = marquee,
+            detailsContentWidthPx = detailsContentWidthPx.value,
             onGridPositioned = { top, height ->
                 gridContainerTopPx = top
                 gridContainerHeightPx = height
@@ -346,13 +367,12 @@ private fun FileLayout(
     dragStart: Offset?,
     dragEnd: Offset?,
     marquee: Marquee,
+    detailsContentWidthPx: Float,
     onGridPositioned: (Float, Float) -> Unit
 ) {
     val viewMode = appState.activeViewMode
     val hScrollState = rememberScrollState()
-    val nameColumnWidth: Dp = if (viewMode == ViewMode.DETAILS)
-        appState.folderConfigs.columnWidths.getOrElse(FileColumnType.NAME) { 200.dp }
-    else 0.dp
+
 
     val density = LocalDensity.current
     val coroutineScope = rememberCoroutineScope()
@@ -378,7 +398,7 @@ private fun FileLayout(
                 .padding(horizontal = 16.dp)
                 .onGloballyPositioned { headerHeightPx = it.size.height.toFloat() }
             ) {
-                DetailsHeader(appState = appState, scrollState = hScrollState, nameColumnWidth = nameColumnWidth)
+                DetailsHeader(appState = appState, scrollState = hScrollState)
             }
         } else {
             headerHeightPx = 0f
@@ -433,7 +453,7 @@ private fun FileLayout(
                 focusRequester = focusRequester,
                 dragActive = dragStart != null,
                 hScrollState = hScrollState,
-                nameColumnWidth = nameColumnWidth
+                detailsContentWidthPx = detailsContentWidthPx
             )
 
             MarqueeRenderer(
@@ -472,28 +492,10 @@ private fun FileGrid(
     focusRequester: FocusRequester,
     dragActive: Boolean,
     hScrollState: ScrollState? = null,
-    nameColumnWidth: Dp = 0.dp
+    detailsContentWidthPx: Float
 ) {
     val viewMode = appState.activeViewMode
     val density = LocalDensity.current
-
-    // Compute the intrinsic width of a details row (icon + spacer + name + columns + padding)
-    // so hover is only triggered when the mouse is over the actual content, not blank space to the right.
-    // Uses remember with no key so the State object is stable — all reads inside are state-tracked via
-    // mutableStateMapOf, so any column resize triggers an automatic recompute.
-    val detailsContentWidthPx = remember {
-        derivedStateOf {
-            if (appState.folderConfigs.viewMode != ViewMode.DETAILS) Float.MAX_VALUE
-            else with(density) {
-                val nameWidth = appState.folderConfigs.columnWidths.getOrElse(FileColumnType.NAME) { 200.dp }
-                val columnsWidth = appState.folderConfigs.visibleColumns.fold(0.dp) { acc, col ->
-                    val colWidth = appState.folderConfigs.columnWidths[col.type] ?: col.minWidth
-                    acc + 1.dp + colWidth
-                }
-                (52.dp + nameWidth + columnsWidth).toPx()  // 52 = 8(pad) + 24(icon) + 12(spacer) + 8(pad)
-            }
-        }
-    }
 
     LazyVerticalGrid(
         state = gridState,
@@ -527,7 +529,7 @@ private fun FileGrid(
                         val currentRect = itemPositions[file]
                         val pos = mousePosition()
                         if (pos == null || currentRect == null || !currentRect.contains(pos)) false
-                        else if (viewMode == ViewMode.DETAILS) (pos.x - currentRect.left) < detailsContentWidthPx.value
+                        else if (viewMode == ViewMode.DETAILS) (pos.x - currentRect.left) < detailsContentWidthPx
                         else true
                     }
                 }
@@ -541,8 +543,7 @@ private fun FileGrid(
                 appState = appState,
                 focusRequester = focusRequester,
                 isHovered = isHovered,
-                hScrollState = hScrollState,
-                nameColumnWidth = nameColumnWidth
+                hScrollState = hScrollState
             )
         }
     }
