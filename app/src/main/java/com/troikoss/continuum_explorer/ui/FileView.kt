@@ -190,7 +190,7 @@ private fun FileGalleryView(
                 file = file,
                 modifier = Modifier.fillMaxSize(),
                 tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary,
-                iconModifier = Modifier.size((appState.folderConfigs.gridItemSize * 0.7f).dp),
+                iconSize = ((appState.folderConfigs.gridItemSize * 0.7f).dp),
                 contentScale = ContentScale.Crop
             )
 
@@ -254,7 +254,7 @@ private fun FileGridView(
                 file = file,
                 modifier = Modifier.size((appState.folderConfigs.gridItemSize * 0.6f).dp),
                 tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary,
-                iconModifier = Modifier.size((appState.folderConfigs.gridItemSize * 0.6f).dp)
+                iconSize = ((appState.folderConfigs.gridItemSize * 0.6f).dp)
             )
         }
         TooltipBox(
@@ -321,7 +321,8 @@ private fun FileContentView(
                     tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary,
                     modifier = Modifier
                         .size(40.dp)
-                        .then(if (iconSelectionEnabled) Modifier.iconTouchToggle(file, appState.selectionManager) else Modifier)
+                        .then(if (iconSelectionEnabled) Modifier.iconTouchToggle(file, appState.selectionManager) else Modifier),
+                    iconSize = 40.dp
                 )
             },
             colors = ListItemDefaults.colors(containerColor = Color.Transparent),

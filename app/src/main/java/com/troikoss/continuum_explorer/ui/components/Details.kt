@@ -100,7 +100,7 @@ fun DetailsPane(
                     IconHelper.FileThumbnail(
                         if (selectedItems.isEmpty()) currentPath else selectedItems.first(),
                         isDetailView = true,
-                        iconModifier = Modifier.size(100.dp)
+                        iconSize = 100.dp
                     )
                 } else {
                     Text(stringResource(R.string.msg_invalid_path))
@@ -190,7 +190,7 @@ fun DetailsBar(
                     if (selectedItems.isEmpty()) currentPath else selectedItems.first(),
                     isDetailView = true,
                     modifier = Modifier.padding(8.dp),
-                    iconModifier = Modifier.size(50.dp)
+                    iconSize = 50.dp
                 )
             } else {
                 Text(stringResource(R.string.msg_invalid_path))
