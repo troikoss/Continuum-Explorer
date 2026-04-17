@@ -30,6 +30,7 @@ import androidx.compose.ui.unit.sp
 import com.troikoss.continuum_explorer.model.UniversalFile
 import com.troikoss.continuum_explorer.utils.FileExplorerState
 import com.troikoss.continuum_explorer.utils.IconHelper
+import com.troikoss.continuum_explorer.managers.SettingsManager
 import com.troikoss.continuum_explorer.R
 import kotlinx.coroutines.launch
 
@@ -56,7 +57,7 @@ fun TabBar(
     ) {
         Row(
             modifier = Modifier
-                .height(44.dp)
+                .height(56.dp)
                 .fillMaxWidth(),
             verticalAlignment = Alignment.Bottom
         ) {
@@ -155,17 +156,29 @@ private fun TabItem(
     onClick: () -> Unit,
     onClose: () -> Unit
 ) {
-    val textColor = if (selected) MaterialTheme.colorScheme.onPrimaryContainer else Color(0xFF9AA0A6)
+    val isColorful = SettingsManager.isColorfulBarsEnabled.value
+    val backgroundColor = if (selected) {
+        if (isColorful) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainer
+    } else {
+        Color.Transparent
+    }
+    val textColor = if (selected) {
+        if (isColorful) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
+    } else {
+        MaterialTheme.colorScheme.onSurfaceVariant
+    }
+    val iconColor = if (selected) {
+        if (isColorful) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
+    } else {
+        MaterialTheme.colorScheme.onSurfaceVariant
+    }
 
     Box(
         modifier = Modifier
-            .padding(4.dp)
-            .clip(RoundedCornerShape(8.dp))
-            .height(38.dp)
-            .background(
-                if (selected) MaterialTheme.colorScheme.primaryContainer
-                else Color.Transparent
-            )
+            .padding(8.dp)
+            .clip(MaterialTheme.shapes.extraLarge)
+            .height(50.dp)
+            .background(backgroundColor)
             .pointerInput(Unit) {
                 awaitEachGesture {
                     val event = awaitPointerEvent()
@@ -188,7 +201,7 @@ private fun TabItem(
                 imageVector = icon,
                 contentDescription = null,
                 modifier = Modifier.size(16.dp),
-                tint = MaterialTheme.colorScheme.onPrimaryContainer
+                tint = iconColor
             )
 
             Spacer(Modifier.width(8.dp))
@@ -209,7 +222,7 @@ private fun TabItem(
                     .size(14.dp)
 
                     .clickable { onClose() },
-                tint = MaterialTheme.colorScheme.onPrimaryContainer
+                tint = iconColor
             )
 
 

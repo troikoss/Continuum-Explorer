@@ -83,7 +83,6 @@ fun DetailsPane(
     Box(
         modifier = modifier
             .fillMaxHeight()
-            .background(MaterialTheme.colorScheme.surface)
     ) {
         Column(
             modifier = Modifier

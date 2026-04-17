@@ -6,6 +6,7 @@ import android.os.Environment
 import android.view.PointerIcon
 import android.view.View
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.draganddrop.dragAndDropSource
 import androidx.compose.foundation.draganddrop.dragAndDropTarget
 import androidx.compose.foundation.focusable
@@ -14,8 +15,10 @@ import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.awaitLongPressOrCancellation
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.requiredWidth
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.*
@@ -297,7 +300,8 @@ fun Modifier.containerGestures(
 
                     Key.MoveHome -> {
                         // 1. Find where we are currently (the lead item)
-                        val currentIndex = selectionManager.leadItem?.let { appState.files.indexOf(it) } ?: 0
+                        val currentIndex =
+                            selectionManager.leadItem?.let { appState.files.indexOf(it) } ?: 0
                         // 2. To get to index 0, move back by exactly the current index
                         selectionManager.moveSelection(-currentIndex, shift, ctrl, clamp = true)
                         true
@@ -305,11 +309,17 @@ fun Modifier.containerGestures(
 
                     Key.MoveEnd -> {
                         // 1. Find where we are currently
-                        val currentIndex = selectionManager.leadItem?.let { appState.files.indexOf(it) } ?: 0
+                        val currentIndex =
+                            selectionManager.leadItem?.let { appState.files.indexOf(it) } ?: 0
                         // 2. Find the index of the very last file
                         val lastIndex = (appState.files.size - 1).coerceAtLeast(0)
                         // 3. Move forward by the difference
-                        selectionManager.moveSelection(lastIndex - currentIndex, shift, ctrl, clamp = true)
+                        selectionManager.moveSelection(
+                            lastIndex - currentIndex,
+                            shift,
+                            ctrl,
+                            clamp = true
+                        )
                         true
                     }
 
@@ -423,7 +433,7 @@ fun Modifier.containerGestures(
                     if (isMouse && event.type == PointerEventType.Press && !wasHandled && event.buttons.isPrimaryPressed) {
                         selectionManager.clear(true)
                         focusRequester.requestFocus()
-                    }else if ((isTouch || isStylus) && event.type == PointerEventType.Press && !wasHandled) {
+                    } else if ((isTouch || isStylus) && event.type == PointerEventType.Press && !wasHandled) {
                         selectionManager.clear(false)
                         focusRequester.requestFocus()
                     }
@@ -610,7 +620,10 @@ fun Modifier.fileDragSource(
 
                             if (isDragging) {
                                 prepareInternalDragState(file, selectionManager, appState)
-                                createDragTransferData(context, selectionManager.selectedItems)?.let {
+                                createDragTransferData(
+                                    context,
+                                    selectionManager.selectedItems
+                                )?.let {
                                     dragScope.startTransfer(it)
                                 }
                             }
@@ -812,7 +825,8 @@ fun Modifier.fileDropTarget(
 @Composable
 fun VerticalResizeHandle(
     onResize: (Dp) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isPill: Boolean = false
 ) {
     val context = LocalContext.current
     val density = LocalDensity.current
@@ -826,20 +840,30 @@ fun VerticalResizeHandle(
 
     // Outer Box takes only 1dp of layout space — no gap between panes.
     Box(
-        modifier = modifier.width(1.dp),
+        modifier = modifier
+            .width(1.dp)
+            .fillMaxHeight()
+            .wrapContentWidth(unbounded = true),
         contentAlignment = Alignment.Center
     ) {
         // Visible divider line
-        VerticalDivider(
-            color = MaterialTheme.colorScheme.outlineVariant
-        )
-        // Invisible 32dp hitbox. requiredWidth ignores parent constraints, extending
-        // rightward into the adjacent pane. The outer Box doesn't clip, so pointer
-        // events reach this box even though it visually overflows the 1dp layout width.
+        if (isPill){
+            Box(
+                modifier = Modifier
+                    .width(4.dp)
+                    .height(60.dp)
+                    .background(
+                        color = MaterialTheme.colorScheme.outlineVariant,
+                        shape = androidx.compose.foundation.shape.CircleShape
+                    )
+            )
+        } else VerticalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+
         Box(
-            modifier = Modifier
-                .fillMaxHeight()
-                .requiredWidth(24.dp)
+            modifier = Modifier.then(
+                if (isPill) Modifier.height(80.dp) else Modifier.fillMaxHeight()
+                )
+                .requiredWidth(30.dp)
                 .pointerHoverIcon(resizeIcon)
                 .pointerInput(Unit) {
                     awaitEachGesture {

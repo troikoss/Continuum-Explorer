@@ -12,11 +12,14 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -35,6 +38,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerType
 import androidx.compose.ui.input.pointer.isShiftPressed
@@ -280,23 +284,36 @@ private fun ExplorerBody(
         Row(modifier = Modifier.weight(1f)) {
             // Navigation Pane (Side)
             if (screenSize != ScreenSize.SMALL) {
-                PermanentDrawerSheet(
-                    modifier = Modifier.width(navPaneWidth),
-                    windowInsets = WindowInsets(0, 0, 0, 0)
-                ) {
-                    NavigationPane(
-                        appState = appState,
-                        onItemSelected = { section -> navigateToSection(appState, context, section) },
-                        onSafItemSelected = { appState.navigateTo(null, it) },
-                        onAddStorageClick = onAddStorage
-                    )
+                Box (modifier = Modifier.padding(vertical = 8.dp)) {
+                    PermanentDrawerSheet(
+                        modifier = Modifier.width(navPaneWidth),
+                        windowInsets = WindowInsets(0, 0, 0, 0),
+                        drawerShape = RoundedCornerShape(topEnd = 32.dp, bottomEnd = 32.dp),
+                        drawerContainerColor = MaterialTheme.colorScheme.surfaceContainer
+                    ) {
+                        NavigationPane(
+                            appState = appState,
+                            onItemSelected = { section ->
+                                navigateToSection(
+                                    appState,
+                                    context,
+                                    section
+                                )
+                            },
+                            onSafItemSelected = { appState.navigateTo(null, it) },
+                            onAddStorageClick = onAddStorage
+                        )
+                    }
                 }
+
+                Spacer(modifier = Modifier.size(16.dp))
 
                 VerticalResizeHandle(
                     onResize = { delta ->
                         appState.appConfigs.navPaneWidth = (appState.appConfigs.navPaneWidth + delta).coerceIn(200.dp, 300.dp)
                         appState.appConfigs.savePaneWidths()
-                    }
+                    },
+                    isPill = true
                 )
             }
 
@@ -309,15 +326,26 @@ private fun ExplorerBody(
             if (screenSize == ScreenSize.LARGE && SettingsManager.detailsMode.value == DetailsMode.PANE) {
                 VerticalResizeHandle(
                     onResize = { delta ->
-                        appState.appConfigs.detailsPaneWidth = (appState.appConfigs.detailsPaneWidth - delta).coerceIn(200.dp, 300.dp)
+                        appState.appConfigs.detailsPaneWidth =
+                            (appState.appConfigs.detailsPaneWidth - delta).coerceIn(200.dp, 300.dp)
                         appState.appConfigs.savePaneWidths()
-                    }
+                    },
+                    isPill = true
                 )
 
-                DetailsPane(
-                    appState = appState,
-                    modifier = Modifier.width(detailsPaneWidth)
-                )
+                Spacer(modifier = Modifier.size(16.dp))
+
+                Box(
+                    modifier = Modifier
+                        .padding(vertical = 8.dp)
+                        .clip(RoundedCornerShape(topStart = 32.dp, bottomStart = 32.dp))
+                        .background(MaterialTheme.colorScheme.surfaceContainer)
+                ) {
+                    DetailsPane(
+                        appState = appState,
+                        modifier = Modifier.width(detailsPaneWidth)
+                    )
+                }
             }
         }
 

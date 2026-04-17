@@ -48,6 +48,7 @@ import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.TextFieldValue
+import com.troikoss.continuum_explorer.managers.SettingsManager
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.documentfile.provider.DocumentFile
@@ -175,7 +176,9 @@ fun TopBar(
 
     Surface( modifier = Modifier
         .fillMaxWidth()
-        .height(56.dp), color = MaterialTheme.colorScheme.primaryContainer) {
+        .height(56.dp), 
+        color = if (SettingsManager.isColorfulBarsEnabled.value) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainer
+    ) {
         Row (modifier = Modifier.padding(8.dp), verticalAlignment = CenterVertically) {
             if (appState.getScreenSize() == ScreenSize.SMALL) {
                 IconButton(onClick = onMenuClick) {
@@ -341,7 +344,7 @@ fun TopBar(
                         if (!addressBar && !searchBar) addressBar = true
                     },
                 color = MaterialTheme.colorScheme.surface,
-                shape = MaterialTheme.shapes.small
+                shape = MaterialTheme.shapes.extraLarge
             ) {
                 if (searchBar) {
                     Row(

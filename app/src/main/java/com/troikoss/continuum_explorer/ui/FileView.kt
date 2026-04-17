@@ -12,6 +12,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
@@ -239,10 +240,12 @@ private fun FileGridView(
     val tooltipState = rememberTooltipState()
     var isOverflowing by remember { mutableStateOf(false) }
 
+    val shape = RoundedCornerShape(8.dp)
+
     Column(
         modifier = Modifier
             .padding(8.dp).fillMaxWidth()
-            .selectionBackground(isSelected, isHovered, isLead),
+            .selectionBackground(isSelected, isHovered, isLead, shape = shape),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Box(contentAlignment = Alignment.BottomEnd) {
@@ -291,7 +294,9 @@ private fun FileContentView(
     val tooltipState = rememberTooltipState()
     var isOverflowing by remember { mutableStateOf(false) }
 
-    Column (modifier = Modifier.selectionBackground(isSelected, isHovered, isLead)) {
+    val shape = RoundedCornerShape(8.dp)
+
+    Column (modifier = Modifier.selectionBackground(isSelected, isHovered, isLead, shape = shape)) {
         ListItem(
             headlineContent = {
                 TooltipBox(
@@ -346,6 +351,8 @@ private fun FileDetailsView(
     val tooltipState = rememberTooltipState()
     var isOverflowing by remember { mutableStateOf(false) }
 
+    val shape = RoundedCornerShape(8.dp)
+
     CompositionLocalProvider(LocalOverscrollConfiguration provides null) {
         Column(
             modifier = Modifier
@@ -353,7 +360,7 @@ private fun FileDetailsView(
         ) {
             Row(
                 modifier = Modifier
-                    .selectionBackground(isSelected, isHovered, isLead)
+                    .selectionBackground(isSelected, isHovered, isLead, shape = shape)
                     .padding(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {

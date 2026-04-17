@@ -56,6 +56,7 @@ fun SettingsScreen(onBack: () -> Unit) {
     val showHiddenFiles = SettingsManager.showHiddenFiles.value
     val iconTouchSelection = SettingsManager.iconTouchSelection.value
     val defaultViewMode = SettingsManager.defaultViewMode.value
+    val isColorfulBarsEnabled = SettingsManager.isColorfulBarsEnabled.value
 
     var showDeleteDialog by remember { mutableStateOf(false) }
     var showTouchDragDialog by remember { mutableStateOf(false) }
@@ -102,6 +103,18 @@ fun SettingsScreen(onBack: () -> Unit) {
                 },
                 modifier = Modifier.clickable { showThemeDialog = true }
             )
+
+            ListItem(
+                headlineContent = { Text(stringResource(R.string.settings_colorful_bars)) },
+                supportingContent = { Text(stringResource(R.string.settings_colorful_bars_desc)) },
+                trailingContent = {
+                    Switch(
+                        checked = isColorfulBarsEnabled,
+                        onCheckedChange = { SettingsManager.setColorfulBarsEnabled(context, it) }
+                    )
+                }
+            )
+
 
             ListItem(
                 headlineContent = { Text(stringResource(R.string.settings_language)) },

@@ -47,6 +47,7 @@ object SettingsManager {
     private const val KEY_SHOW_HIDDEN_FILES = "show_hidden_files"
     private const val KEY_ICON_TOUCH_SELECTION = "icon_touch_selection"
     private const val KEY_DEFAULT_VIEW_MODE = "default_view_mode"
+    private const val KEY_COLORFUL_BARS = "colorful_bars"
 
     private val _deleteBehavior = mutableStateOf(DeleteBehavior.ASK)
     val deleteBehavior: State<DeleteBehavior> = _deleteBehavior
@@ -74,6 +75,9 @@ object SettingsManager {
 
     private val _defaultViewMode = mutableStateOf(ViewMode.DETAILS)
     val defaultViewMode: State<ViewMode> = _defaultViewMode
+
+    private val _isColorfulBarsEnabled = mutableStateOf(false)
+    val isColorfulBarsEnabled: State<Boolean> = _isColorfulBarsEnabled
 
     // Derived state: enabled if behavior is not PERMANENT
     private val _isRecycleBinEnabled = mutableStateOf(true)
@@ -123,6 +127,7 @@ object SettingsManager {
         _isCommandBarVisible.value = prefs.getBoolean(KEY_COMMAND_BAR_VISIBLE, true)
         _showHiddenFiles.value = prefs.getBoolean(KEY_SHOW_HIDDEN_FILES, false)
         _iconTouchSelection.value = prefs.getBoolean(KEY_ICON_TOUCH_SELECTION, true)
+        _isColorfulBarsEnabled.value = prefs.getBoolean(KEY_COLORFUL_BARS, false)
 
         _isDefaultArchiveViewerEnabled.value = prefs.getBoolean(KEY_DEFAULT_ARCHIVE_VIEWER, true)
 
@@ -179,6 +184,13 @@ object SettingsManager {
         _iconTouchSelection.value = enabled
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         prefs.edit().putBoolean(KEY_ICON_TOUCH_SELECTION, enabled).apply()
+        GlobalEvents.triggerConfigUpdate()
+    }
+
+    fun setColorfulBarsEnabled(context: Context, enabled: Boolean) {
+        _isColorfulBarsEnabled.value = enabled
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putBoolean(KEY_COLORFUL_BARS, enabled).apply()
         GlobalEvents.triggerConfigUpdate()
     }
 

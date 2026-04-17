@@ -182,6 +182,8 @@
     <string name="settings_theme_system">System default</string>
     <string name="settings_theme_light">Light mode</string>
     <string name="settings_theme_dark">Dark mode</string>
+    <string name="settings_colorful_bars">Colorful top and tab bars</string>
+    <string name="settings_colorful_bars_desc">Enable accent colors for the top bar and tab bar.</string>
     <string name="settings_details_large">Details (Large screens only)</string>
     <string name="settings_details_hidden">Hidden</string>
     <string name="settings_details_pane">Side Pane</string>
