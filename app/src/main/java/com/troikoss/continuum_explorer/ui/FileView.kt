@@ -38,6 +38,7 @@ import com.troikoss.continuum_explorer.model.*
 import com.troikoss.continuum_explorer.ui.components.ItemContextMenu
 import com.troikoss.continuum_explorer.utils.*
 import com.troikoss.continuum_explorer.utils.IconHelper.FileThumbnail
+import com.troikoss.continuum_explorer.utils.IconHelper.FolderPreview
 import com.troikoss.continuum_explorer.utils.IconHelper.isMimeTypePreviewable
 
 /**
@@ -82,7 +83,10 @@ fun FileView(
             ): IntOffset {
                 val mousePos = mousePosition()
                 if (mousePos == null || containerCoordinates == null || !containerCoordinates.isAttached) {
-                    return IntOffset.Zero
+                    return IntOffset(
+                        x = anchorBounds.left + (anchorBounds.width - popupContentSize.width) / 2,
+                        y = anchorBounds.bottom
+                    )
                 }
 
                 val windowMousePos = containerCoordinates.localToWindow(mousePos)
@@ -177,6 +181,8 @@ private fun FileGalleryView(
     val tooltipState = rememberTooltipState()
     var isOverflowing by remember { mutableStateOf(false) }
 
+    val contentSize = (appState.folderConfigs.gridItemSize * 0.6f).dp
+
     TooltipBox(
         positionProvider = toolTipProvider,
         tooltip = { if (isOverflowing) PlainTooltip { Text(file.name) } },
@@ -190,8 +196,14 @@ private fun FileGalleryView(
                 file = file,
                 modifier = Modifier.fillMaxSize(),
                 tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary,
-                iconSize = ((appState.folderConfigs.gridItemSize * 0.7f).dp),
+                iconSize = contentSize,
                 contentScale = ContentScale.Crop
+            )
+
+            FolderPreview(
+                folder = file,
+                thumbSize = contentSize/1.5f,
+                modifier = Modifier.align(Alignment.BottomEnd)
             )
 
 
@@ -201,17 +213,19 @@ private fun FileGalleryView(
                         .fillMaxSize(),
                     contentAlignment = Alignment.BottomCenter
                 ) {
-                    Text(
-                        text = file.name,
-                        modifier = Modifier.background(Color.Black.copy(alpha = 0.5f)),
-                        textAlign = TextAlign.Center,
-                        style = MaterialTheme.typography.bodyMedium,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                        onTextLayout = { textLayoutResult ->
-                            isOverflowing = textLayoutResult.hasVisualOverflow
-                        }
-                    )
+                    Box (modifier = Modifier.background(Color.Black.copy(alpha = 0.5f)).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                        Text(
+                            text = file.name,
+                            color = Color.White,
+                            textAlign = TextAlign.Center,
+                            style = MaterialTheme.typography.bodyMedium,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                            onTextLayout = { textLayoutResult ->
+                                isOverflowing = textLayoutResult.hasVisualOverflow
+                            }
+                        )
+                    }
                 }
             } else isOverflowing = true
 
@@ -248,13 +262,20 @@ private fun FileGridView(
             .selectionBackground(isSelected, isHovered, isLead, shape = shape),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Box(contentAlignment = Alignment.BottomEnd) {
 
+        val contentSize = (appState.folderConfigs.gridItemSize * 0.6f).dp
+
+        Box {
             FileThumbnail(
                 file = file,
                 modifier = Modifier.size((appState.folderConfigs.gridItemSize * 0.6f).dp),
                 tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary,
-                iconSize = ((appState.folderConfigs.gridItemSize * 0.6f).dp)
+                iconSize = contentSize
+            )
+            FolderPreview(
+                folder = file,
+                thumbSize = contentSize/2,
+                modifier = Modifier.align(Alignment.BottomEnd)
             )
         }
         TooltipBox(
@@ -365,13 +386,20 @@ private fun FileDetailsView(
                     .padding(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                FileThumbnail(
-                    file = file,
-                    modifier = Modifier
-                        .size(24.dp)
-                        .then(if (iconSelectionEnabled) Modifier.iconTouchToggle(file, appState.selectionManager) else Modifier),
-                    tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary
-                )
+                Box{
+                    FileThumbnail(
+                        file = file,
+                        modifier = Modifier
+                            .size(24.dp)
+                            .then(if (iconSelectionEnabled) Modifier.iconTouchToggle(file, appState.selectionManager) else Modifier),
+                        tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary
+                    )
+                    FolderPreview(
+                        folder = file,
+                        thumbSize = 16.dp,
+                        modifier = Modifier.align(Alignment.BottomEnd)
+                    )
+                }
                 Spacer(Modifier.width(12.dp))
                 TooltipBox(
                     positionProvider = toolTipProvider,

@@ -9,6 +9,9 @@ import android.graphics.pdf.PdfRenderer
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
 import android.os.ParcelFileDescriptor
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
@@ -33,7 +36,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asAndroidPath
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -168,6 +173,41 @@ object IconHelper {
     )
 
     // --- Internal Thumbnail Helpers ---
+
+    private val folderPreviewCache = android.util.LruCache<String, java.util.Optional<UniversalFile>>(256)
+
+    @Composable
+    fun FolderPreview(
+        folder: UniversalFile,
+        thumbSize: Dp,
+        modifier: Modifier = Modifier,
+    ) {
+        var previewFile by remember(folder) {
+            mutableStateOf(folderPreviewCache[folder.absolutePath]?.orElse(null))
+        }
+
+        LaunchedEffect(folder) {
+            val key = folder.absolutePath
+            if (folderPreviewCache[key] != null) return@LaunchedEffect
+            withContext(Dispatchers.IO) {
+                val found = (folder.fileRef?.listFiles()?.asSequence()?.map { it.toUniversal() }
+                    ?: folder.documentFileRef?.listFiles()?.asSequence()?.map { it.toUniversal() })
+                    ?.find { !it.isDirectory && isMimeTypePreviewable(it) && !it.name.lowercase().endsWith(".txt") }
+                folderPreviewCache.put(key, java.util.Optional.ofNullable(found))
+                previewFile = found
+            }
+        }
+
+        Box(modifier = modifier) {
+            previewFile?.let { file ->
+                FileThumbnail(
+                    file = file,
+                    modifier = Modifier.size(thumbSize),
+                    contentScale = ContentScale.Crop,
+                )
+            }
+        }
+    }
 
     @Composable
     private fun PdfThumbnail(
