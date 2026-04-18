@@ -10,11 +10,9 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -34,6 +32,8 @@ import com.troikoss.continuum_explorer.R
 import com.troikoss.continuum_explorer.model.UniversalFile
 import com.troikoss.continuum_explorer.utils.FileExplorerState
 import com.troikoss.continuum_explorer.utils.IconHelper
+import com.troikoss.continuum_explorer.utils.IconHelper.FileThumbnail
+import com.troikoss.continuum_explorer.utils.IconHelper.FolderPreview
 import com.troikoss.continuum_explorer.utils.getFileType
 import com.troikoss.continuum_explorer.utils.getImageResolution
 import com.troikoss.continuum_explorer.utils.getMediaDuration
@@ -97,11 +97,19 @@ fun DetailsPane(
                 contentAlignment = Alignment.Center
             ) {
                 if (currentPath != null) {
-                    IconHelper.FileThumbnail(
-                        if (selectedItems.isEmpty()) currentPath else selectedItems.first(),
-                        isDetailView = true,
-                        iconSize = 100.dp
-                    )
+                    val file = if (selectedItems.isEmpty()) currentPath else selectedItems.first()
+                    Box {
+                        FileThumbnail(
+                            file = file,
+                            isDetailView = true,
+                            iconSize = 100.dp
+                        )
+                        FolderPreview(
+                            folder = file,
+                            thumbSize = 50.dp,
+                            modifier = Modifier.align(Alignment.BottomEnd)
+                        )
+                    }
                 } else {
                     Text(stringResource(R.string.msg_invalid_path))
                 }
@@ -186,12 +194,20 @@ fun DetailsBar(
             contentAlignment = Alignment.Center
         ) {
             if (currentPath != null) {
-                IconHelper.FileThumbnail(
-                    if (selectedItems.isEmpty()) currentPath else selectedItems.first(),
-                    isDetailView = true,
-                    modifier = Modifier.padding(8.dp),
-                    iconSize = 50.dp
-                )
+                val file = if (selectedItems.isEmpty()) currentPath else selectedItems.first()
+                Box {
+                    FileThumbnail(
+                        file = file,
+                        isDetailView = true,
+                        modifier = Modifier.padding(8.dp),
+                        iconSize = 50.dp
+                    )
+                    FolderPreview(
+                        folder = file,
+                        thumbSize = 25.dp,
+                        modifier = Modifier.align(Alignment.BottomEnd)
+                    )
+                }
             } else {
                 Text(stringResource(R.string.msg_invalid_path))
             }

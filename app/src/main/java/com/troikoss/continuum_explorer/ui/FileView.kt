@@ -12,7 +12,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
@@ -337,14 +336,21 @@ private fun FileContentView(
             },
             supportingContent = { Text(if (file.isDirectory) "Folder - $formattedDate" else "$formattedSize - $formattedDate") },
             leadingContent = {
-                FileThumbnail(
-                    file = file,
-                    tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary,
-                    modifier = Modifier
-                        .size(40.dp)
-                        .then(if (iconSelectionEnabled) Modifier.iconTouchToggle(file, appState.selectionManager) else Modifier),
-                    iconSize = 40.dp
-                )
+                Box {
+                    FileThumbnail(
+                        file = file,
+                        tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary,
+                        modifier = Modifier
+                            .size(40.dp)
+                            .then(if (iconSelectionEnabled) Modifier.iconTouchToggle(file, appState.selectionManager) else Modifier),
+                        iconSize = 40.dp
+                    )
+                    FolderPreview(
+                        folder = file,
+                        thumbSize = 24.dp,
+                        modifier = Modifier.align(Alignment.BottomEnd)
+                    )
+                }
             },
             colors = ListItemDefaults.colors(containerColor = Color.Transparent),
             modifier = Modifier.padding(horizontal = 8.dp)
