@@ -1,6 +1,7 @@
 package com.troikoss.continuum_explorer.ui
 
 import android.content.Context
+import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
@@ -46,8 +47,10 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.troikoss.continuum_explorer.managers.DetailsMode
+import com.troikoss.continuum_explorer.managers.FileOperationsManager
 import com.troikoss.continuum_explorer.managers.SettingsManager
 import com.troikoss.continuum_explorer.model.NavSection
+import com.troikoss.continuum_explorer.ui.activities.PopUpActivity
 import com.troikoss.continuum_explorer.model.ScreenSize
 import com.troikoss.continuum_explorer.model.LibraryItem
 import com.troikoss.continuum_explorer.ui.components.*
@@ -136,6 +139,18 @@ fun FileExplorer(
         appState.handleSafResult(uri)
     }
 
+    // --- Network Storage Launcher ---
+    val networkScope = rememberCoroutineScope()
+    val onAddNetwork: () -> Unit = {
+        networkScope.launch {
+            val result = FileOperationsManager.requestNetworkConnection()
+            if (result != null) {
+                appState.appConfigs.addNetworkConnection(result)
+            }
+        }
+        context.startActivity(Intent(context, PopUpActivity::class.java))
+    }
+
     // --- Side Effects ---
     LaunchedEffect(appState, appState.currentPath, appState.currentSafUri, appState.folderConfigs.sortParams,
                    appState.currentArchiveFile, appState.currentArchiveUri, appState.currentArchivePath, appState.libraryItem) {
@@ -174,7 +189,8 @@ fun FileExplorer(
                     NavigationContent(
                         appState = appState,
                         onCloseDrawer = { scope.launch { drawerState.close() } },
-                        onAddStorage = { safLauncher.launch(null) }
+                        onAddStorage = { safLauncher.launch(null) },
+                        onAddNetwork = onAddNetwork
                     )
                 }
             }
@@ -205,7 +221,8 @@ fun FileExplorer(
                 ExplorerBody(
                     modifier = Modifier.padding(innerPadding),
                     appState = appState,
-                    onAddStorage = { safLauncher.launch(null) }
+                    onAddStorage = { safLauncher.launch(null) },
+                    onAddNetwork = onAddNetwork
                 )
             }
         }
@@ -216,7 +233,8 @@ fun FileExplorer(
 private fun NavigationContent(
     appState: FileExplorerState,
     onCloseDrawer: () -> Unit,
-    onAddStorage: () -> Unit
+    onAddStorage: () -> Unit,
+    onAddNetwork: () -> Unit = {}
 ) {
     val context = LocalContext.current
     NavigationPane(
@@ -230,6 +248,7 @@ private fun NavigationContent(
             onCloseDrawer()
         },
         onAddStorageClick = onAddStorage,
+        onAddNetworkClick = onAddNetwork,
         onNavigate = onCloseDrawer
     )
 }
@@ -273,7 +292,8 @@ private fun ExplorerTopBar(
 private fun ExplorerBody(
     modifier: Modifier = Modifier,
     appState: FileExplorerState,
-    onAddStorage: () -> Unit
+    onAddStorage: () -> Unit,
+    onAddNetwork: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val screenSize = appState.getScreenSize()
@@ -301,7 +321,8 @@ private fun ExplorerBody(
                                 )
                             },
                             onSafItemSelected = { appState.navigateTo(null, it) },
-                            onAddStorageClick = onAddStorage
+                            onAddStorageClick = onAddStorage,
+                            onAddNetworkClick = onAddNetwork
                         )
                     }
                 }
@@ -368,6 +389,10 @@ private fun navigateToSection(appState: FileExplorerState, context: Context, sec
         }
         is NavSection.Recent -> appState.navigateTo(null, null, libraryItem = LibraryItem.Recent)
         is NavSection.Gallery -> appState.navigateTo(null, null, libraryItem = LibraryItem.Gallery)
+        is NavSection.NetworkStorage -> {
+            // Stub: actual browsing implemented when protocol libraries are added
+            android.widget.Toast.makeText(context, "Network storage coming soon", android.widget.Toast.LENGTH_SHORT).show()
+        }
         is NavSection.RemovableVolume -> {
             val storageManager = context.getSystemService(Context.STORAGE_SERVICE) as StorageManager
             val volumes = storageManager.storageVolumes

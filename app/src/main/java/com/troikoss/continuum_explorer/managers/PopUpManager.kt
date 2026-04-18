@@ -5,6 +5,7 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
+import com.troikoss.continuum_explorer.model.NetworkConnection
 import com.troikoss.continuum_explorer.model.UniversalFile
 import com.troikoss.continuum_explorer.R
 import kotlinx.coroutines.CompletableDeferred
@@ -23,7 +24,8 @@ enum class PopupType {
     ARCHIVE_OPTIONS,
     SHORTCUTS,
     PROPERTIES,
-    MOVE_COPY_CHOICE
+    MOVE_COPY_CHOICE,
+    NETWORK_CONNECTION
 }
 
 enum class CollisionResult {
@@ -133,6 +135,10 @@ object FileOperationsManager {
 
     // Properties State
     var propertiesTargets = mutableStateOf<List<UniversalFile>>(emptyList())
+
+    // Network Connection State
+    var networkConnectionToEdit = mutableStateOf<NetworkConnection?>(null)
+    private var networkConnectionDeferred: CompletableDeferred<NetworkConnection?>? = null
 
     // List of listeners to be notified on updates
     private val listeners = mutableListOf<() -> Unit>()
@@ -351,6 +357,24 @@ object FileOperationsManager {
         notifyListeners()
     }
 
+    suspend fun requestNetworkConnection(existing: NetworkConnection? = null): NetworkConnection? {
+        networkConnectionToEdit.value = existing
+        popupType.value = PopupType.NETWORK_CONNECTION
+        isOperating.value = false
+        val deferred = CompletableDeferred<NetworkConnection?>()
+        networkConnectionDeferred = deferred
+        notifyListeners()
+        val result = deferred.await()
+        popupType.value = PopupType.PROGRESS
+        notifyListeners()
+        return result
+    }
+
+    fun onNetworkConnectionResult(connection: NetworkConnection?) {
+        networkConnectionDeferred?.complete(connection)
+        networkConnectionDeferred = null
+    }
+
     fun showProperties(files: List<UniversalFile>) {
         propertiesTargets.value = files
         popupType.value = PopupType.PROPERTIES
@@ -399,6 +423,7 @@ object FileOperationsManager {
         passwordDeferred?.complete(null)
         extractDeferred?.complete(ExtractSettings(false, false, true))
         archiveDeferred?.complete(ArchiveSettings("", CompressionMethod.STORE, CompressionLevel.NORMAL, EncryptionMethod.NONE, null, false, true))
+        networkConnectionDeferred?.complete(null)
         notifyListeners()
     }
 

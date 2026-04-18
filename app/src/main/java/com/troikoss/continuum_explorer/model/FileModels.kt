@@ -20,6 +20,7 @@ sealed class NavSection {
     object Recent : NavSection()
     object Gallery : NavSection()
     data class RemovableVolume(val volumeIndex: Int) : NavSection()
+    data class NetworkStorage(val connectionId: String) : NavSection()
 }
 
 /**
@@ -89,4 +90,19 @@ data class UniversalFile(
 data class RecycleBinMetadata(
     val deletedAt: Long?,
     val deletedFrom: String?
+)
+
+enum class NetworkProtocol(val defaultPort: Int) {
+    FTP(21), WEBDAV(443), SMB(445), GOOGLE_DRIVE(0)
+}
+
+data class NetworkConnection(
+    val id: String,
+    val protocol: NetworkProtocol,
+    val displayName: String,
+    val host: String = "",
+    val port: Int = 0,
+    val username: String = "",
+    val password: String = "",
+    val remotePath: String = "/"
 )

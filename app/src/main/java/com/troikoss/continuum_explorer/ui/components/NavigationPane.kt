@@ -44,6 +44,10 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.SdCard
 import androidx.compose.material.icons.filled.Splitscreen
+import androidx.compose.material.icons.filled.Cloud
+import androidx.compose.material.icons.filled.CloudCircle
+import androidx.compose.material.icons.filled.CloudQueue
+import androidx.compose.material.icons.filled.Lan
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.Tab
 import androidx.compose.material.icons.filled.Usb
@@ -87,6 +91,8 @@ import androidx.documentfile.provider.DocumentFile
 import com.troikoss.continuum_explorer.R
 import com.troikoss.continuum_explorer.model.NavSection
 import com.troikoss.continuum_explorer.model.LibraryItem
+import com.troikoss.continuum_explorer.model.NetworkConnection
+import com.troikoss.continuum_explorer.model.NetworkProtocol
 import com.troikoss.continuum_explorer.model.UniversalFile
 import com.troikoss.continuum_explorer.utils.FileExplorerState
 import com.troikoss.continuum_explorer.managers.SettingsManager
@@ -124,6 +130,7 @@ fun NavigationPane(
     onItemSelected: (NavSection) -> Unit,
     onSafItemSelected: (Uri) -> Unit,
     onAddStorageClick: () -> Unit,
+    onAddNetworkClick: () -> Unit = {},
     onNavigate: () -> Unit = {}
 ) {
     val context = LocalContext.current
@@ -487,6 +494,28 @@ fun NavigationPane(
                 }
             }
 
+            // Section: Network
+            if (appState.appConfigs.networkConnections.isNotEmpty()) {
+                item {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                    Spacer(modifier = Modifier.height(16.dp))
+                    NavSectionHeader(stringResource(R.string.nav_network))
+                }
+
+                itemsIndexed(
+                    items = appState.appConfigs.networkConnections,
+                    key = { _, conn -> conn.id }
+                ) { _, connection ->
+                    NavNetworkItem(
+                        connection = connection,
+                        onClick = { onItemSelected(NavSection.NetworkStorage(connection.id)) },
+                        onRemove = { appState.appConfigs.removeNetworkConnection(connection.id) },
+                        appState = appState
+                    )
+                }
+            }
+
             item { Spacer(modifier = Modifier.height(16.dp)) }
         }
 
@@ -496,7 +525,8 @@ fun NavigationPane(
                 expanded = showBgMenu,
                 onDismissRequest = { showBgMenu = false },
                 appState = appState,
-                onAddStorageClick = onAddStorageClick
+                onAddStorageClick = onAddStorageClick,
+                onAddNetworkClick = onAddNetworkClick
             )
         }
     }
@@ -507,7 +537,8 @@ private fun NavBackgroundContextMenu(
     expanded: Boolean,
     onDismissRequest: () -> Unit,
     appState: FileExplorerState,
-    onAddStorageClick: () -> Unit
+    onAddStorageClick: () -> Unit,
+    onAddNetworkClick: () -> Unit = {}
 ) {
     var currentScreen by remember { mutableStateOf("MAIN") }
 
@@ -526,9 +557,31 @@ private fun NavBackgroundContextMenu(
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.nav_add_storage)) },
                     leadingIcon = { Icon(Icons.Default.Add, null) },
+                    trailingIcon = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) },
+                    onClick = { currentScreen = "ADD_STORAGE" }
+                )
+            }
+            "ADD_STORAGE" -> {
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.back), color = MaterialTheme.colorScheme.primary) },
+                    leadingIcon = { Icon(Icons.AutoMirrored.Filled.ArrowBack, null, tint = MaterialTheme.colorScheme.primary) },
+                    onClick = { currentScreen = "MAIN" }
+                )
+                HorizontalDivider()
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.nav_add_local_storage)) },
+                    leadingIcon = { Icon(Icons.Default.Folder, null) },
                     onClick = {
                         onDismissRequest()
                         onAddStorageClick()
+                    }
+                )
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.nav_add_network_storage)) },
+                    leadingIcon = { Icon(Icons.Default.Cloud, null) },
+                    onClick = {
+                        onDismissRequest()
+                        onAddNetworkClick()
                     }
                 )
             }
@@ -828,6 +881,52 @@ private fun NavSafItem(
                 appState = appState,
                 label = label,
                 uri = uri,
+                onRemove = onRemove
+            )
+        }
+    }
+}
+
+@Composable
+private fun NavNetworkItem(
+    connection: NetworkConnection,
+    onClick: () -> Unit,
+    onRemove: () -> Unit,
+    appState: FileExplorerState
+) {
+    var expanded by remember { mutableStateOf(false) }
+    var menuOffset by remember { mutableStateOf(DpOffset.Zero) }
+    val density = LocalDensity.current
+
+    val icon = when (connection.protocol) {
+        NetworkProtocol.FTP -> Icons.Default.Cloud
+        NetworkProtocol.WEBDAV -> Icons.Default.CloudQueue
+        NetworkProtocol.SMB -> Icons.Default.Lan
+        NetworkProtocol.GOOGLE_DRIVE -> Icons.Default.CloudCircle
+    }
+
+    Box(modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)) {
+        NavigationDrawerItem(
+            label = { Text(connection.displayName, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+            selected = false,
+            onClick = onClick,
+            icon = { Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.secondary) },
+            shape = MaterialTheme.shapes.small,
+            modifier = Modifier
+                .height(40.dp)
+                .contextMenuDetector(enableLongPress = true, aggressive = true) { offset ->
+                    menuOffset = with(density) { DpOffset(offset.x.toDp(), offset.y.toDp()) }
+                    expanded = true
+                }
+        )
+
+        Box(modifier = Modifier.offset(menuOffset.x, menuOffset.y)) {
+            NavContextMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false },
+                appState = appState,
+                label = connection.displayName,
+                section = NavSection.NetworkStorage(connection.id),
                 onRemove = onRemove
             )
         }

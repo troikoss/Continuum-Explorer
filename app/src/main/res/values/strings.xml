@@ -289,6 +289,19 @@
     <string name="nav_collapse">Collapse</string>
     <string name="nav_expand">Expand</string>
     <string name="nav_storage_usage_label">%1$s free of %2$s</string>
+    <string name="nav_network">Network</string>
+    <string name="nav_add_local_storage">Add Local Storage</string>
+    <string name="nav_add_network_storage">Add Network Storage</string>
+    <string name="nav_network_protocol">Protocol</string>
+    <string name="nav_network_display_name">Display Name</string>
+    <string name="nav_network_host">Host</string>
+    <string name="nav_network_port">Port</string>
+    <string name="nav_network_username">Username</string>
+    <string name="nav_network_password">Password</string>
+    <string name="nav_network_remote_path">Remote Path</string>
+    <string name="nav_network_google_drive_note">Google Drive authentication will be configured separately.</string>
+    <string name="nav_network_save">Save</string>
+    <string name="nav_network_edit">Edit Connection</string>
 
     <!-- Item Types -->
     <string name="archive">Archive</string>

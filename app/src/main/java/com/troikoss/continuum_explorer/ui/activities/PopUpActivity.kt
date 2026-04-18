@@ -56,12 +56,15 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.troikoss.continuum_explorer.R
+import com.troikoss.continuum_explorer.model.NetworkConnection
+import com.troikoss.continuum_explorer.model.NetworkProtocol
 import com.troikoss.continuum_explorer.model.UniversalFile
 import com.troikoss.continuum_explorer.ui.theme.FileExplorerTheme
 import com.troikoss.continuum_explorer.managers.ArchiveSettings
@@ -88,6 +91,7 @@ import net.lingala.zip4j.model.enums.EncryptionMethod
 import java.text.NumberFormat
 import java.text.SimpleDateFormat
 import java.util.Locale
+import java.util.UUID
 
 class PopUpActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -120,6 +124,7 @@ class PopUpActivity : ComponentActivity() {
                             PopupType.ARCHIVE_OPTIONS -> ArchiveOptionsContent(onClose = { finish() })
                             PopupType.SHORTCUTS -> ShortcutsContent(onClose = { finish() })
                             PopupType.PROPERTIES -> PropertiesContent(onClose = { finish() })
+                            PopupType.NETWORK_CONNECTION -> NetworkConnectionContent(onClose = { finish() })
                             else -> ProgressContent(onClose = { finish() })
                         }
                     }
@@ -1109,6 +1114,168 @@ fun DetailRow(label: String, value: String) {
     Row(modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp), horizontalArrangement = Arrangement.Start) {
         Text(text = label, style = MaterialTheme.typography.bodySmall, modifier = Modifier.width(100.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
         Text(text = value, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun NetworkConnectionContent(onClose: () -> Unit) {
+    val existing = FileOperationsManager.networkConnectionToEdit.value
+    var protocol by remember { mutableStateOf(existing?.protocol ?: NetworkProtocol.FTP) }
+    var displayName by remember { mutableStateOf(existing?.displayName ?: "") }
+    var host by remember { mutableStateOf(existing?.host ?: "") }
+    var port by remember { mutableStateOf(existing?.port?.takeIf { it > 0 }?.toString() ?: protocol.defaultPort.toString()) }
+    var username by remember { mutableStateOf(existing?.username ?: "") }
+    var password by remember { mutableStateOf(existing?.password ?: "") }
+    var remotePath by remember { mutableStateOf(existing?.remotePath ?: "/") }
+
+    val isGoogleDrive = protocol == NetworkProtocol.GOOGLE_DRIVE
+    val focusRequester = remember { FocusRequester() }
+
+    LaunchedEffect(Unit) { focusRequester.requestFocus() }
+
+    val onSave = {
+        val connection = NetworkConnection(
+            id = existing?.id ?: UUID.randomUUID().toString(),
+            protocol = protocol,
+            displayName = displayName.trim(),
+            host = host.trim(),
+            port = port.toIntOrNull() ?: protocol.defaultPort,
+            username = username.trim(),
+            password = password,
+            remotePath = remotePath.trim().ifEmpty { "/" }
+        )
+        FileOperationsManager.onNetworkConnectionResult(connection)
+        onClose()
+    }
+
+    Column(
+        modifier = Modifier
+            .padding(16.dp)
+            .verticalScroll(rememberScrollState())
+            .fillMaxWidth()
+    ) {
+        Text(
+            text = stringResource(if (existing == null) R.string.nav_add_network_storage else R.string.nav_network_edit),
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+
+        var expProtocol by remember { mutableStateOf(false) }
+        ExposedDropdownMenuBox(
+            expanded = expProtocol,
+            onExpandedChange = { expProtocol = !expProtocol },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            OutlinedTextField(
+                value = protocol.name.replace('_', ' '),
+                onValueChange = {},
+                readOnly = true,
+                label = { Text(stringResource(R.string.nav_network_protocol)) },
+                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expProtocol) },
+                modifier = Modifier.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable).fillMaxWidth()
+            )
+            ExposedDropdownMenu(
+                expanded = expProtocol,
+                onDismissRequest = { expProtocol = false }
+            ) {
+                NetworkProtocol.entries.forEach { p ->
+                    DropdownMenuItem(
+                        text = { Text(p.name.replace('_', ' ')) },
+                        onClick = {
+                            protocol = p
+                            port = p.defaultPort.takeIf { it > 0 }?.toString() ?: ""
+                            expProtocol = false
+                        }
+                    )
+                }
+            }
+        }
+        Spacer(modifier = Modifier.height(12.dp))
+
+        OutlinedTextField(
+            value = displayName,
+            onValueChange = { displayName = it },
+            label = { Text(stringResource(R.string.nav_network_display_name)) },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth().focusRequester(focusRequester),
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
+        )
+
+        if (!isGoogleDrive) {
+            Spacer(modifier = Modifier.height(12.dp))
+            OutlinedTextField(
+                value = host,
+                onValueChange = { host = it },
+                label = { Text(stringResource(R.string.nav_network_host)) },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            OutlinedTextField(
+                value = port,
+                onValueChange = { port = it },
+                label = { Text(stringResource(R.string.nav_network_port)) },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next)
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            OutlinedTextField(
+                value = username,
+                onValueChange = { username = it },
+                label = { Text(stringResource(R.string.nav_network_username)) },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            OutlinedTextField(
+                value = password,
+                onValueChange = { password = it },
+                label = { Text(stringResource(R.string.nav_network_password)) },
+                singleLine = true,
+                visualTransformation = PasswordVisualTransformation(),
+                modifier = Modifier.fillMaxWidth(),
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            OutlinedTextField(
+                value = remotePath,
+                onValueChange = { remotePath = it },
+                label = { Text(stringResource(R.string.nav_network_remote_path)) },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                keyboardActions = KeyboardActions(onDone = { if (displayName.isNotBlank()) onSave() })
+            )
+        } else {
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(
+                text = stringResource(R.string.nav_network_google_drive_note),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+            TextButton(onClick = {
+                FileOperationsManager.onNetworkConnectionResult(null)
+                onClose()
+            }) {
+                Text(stringResource(R.string.cancel))
+            }
+            Spacer(modifier = Modifier.width(8.dp))
+            Button(
+                onClick = onSave,
+                enabled = displayName.isNotBlank() && (isGoogleDrive || host.isNotBlank())
+            ) {
+                Text(stringResource(R.string.nav_network_save))
+            }
+        }
     }
 }
 

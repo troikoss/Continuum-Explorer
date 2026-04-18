@@ -3,6 +3,8 @@ package com.troikoss.continuum_explorer.utils
 import android.content.Context
 import android.net.Uri
 import androidx.compose.material.icons.Icons
+import org.json.JSONArray
+import org.json.JSONObject
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.Icon
@@ -235,6 +237,7 @@ class AppConfigurations(private val context: Context) {
     val addedSafUris = mutableStateListOf<Uri>()
     val favoritePaths = mutableStateListOf<String>()
     val libraryOrder = mutableStateListOf("gallery", "recent", "trash")
+    val networkConnections = mutableStateListOf<NetworkConnection>()
     var isRecentVisible by mutableStateOf(true)
     var isGalleryVisible by mutableStateOf(true)
     var isGalleryAlbumsEnabled by mutableStateOf(false)
@@ -251,6 +254,7 @@ class AppConfigurations(private val context: Context) {
         loadFavorites()
         loadLibrarySettings()
         loadPaneWidths()
+        loadNetworkConnections()
     }
 
     fun savePaneWidths() {
@@ -380,5 +384,69 @@ class AppConfigurations(private val context: Context) {
     
     fun isFavorite(path: String): Boolean {
         return favoritePaths.contains(path)
+    }
+
+    private fun loadNetworkConnections() {
+        val prefs = context.getSharedPreferences("network_storage", Context.MODE_PRIVATE)
+        val jsonStr = prefs.getString("connections", null) ?: return
+        networkConnections.clear()
+        try {
+            val arr = JSONArray(jsonStr)
+            for (i in 0 until arr.length()) {
+                val obj = arr.getJSONObject(i)
+                networkConnections.add(
+                    NetworkConnection(
+                        id = obj.getString("id"),
+                        protocol = NetworkProtocol.valueOf(obj.getString("protocol")),
+                        displayName = obj.getString("displayName"),
+                        host = obj.optString("host", ""),
+                        port = obj.optInt("port", 0),
+                        username = obj.optString("username", ""),
+                        password = obj.optString("password", ""),
+                        remotePath = obj.optString("remotePath", "/")
+                    )
+                )
+            }
+        } catch (_: Exception) {}
+    }
+
+    fun saveNetworkConnections() {
+        val prefs = context.getSharedPreferences("network_storage", Context.MODE_PRIVATE)
+        val arr = JSONArray()
+        networkConnections.forEach { conn ->
+            arr.put(JSONObject().apply {
+                put("id", conn.id)
+                put("protocol", conn.protocol.name)
+                put("displayName", conn.displayName)
+                put("host", conn.host)
+                put("port", conn.port)
+                put("username", conn.username)
+                put("password", conn.password)
+                put("remotePath", conn.remotePath)
+            })
+        }
+        prefs.edit().putString("connections", arr.toString()).apply()
+    }
+
+    fun addNetworkConnection(connection: NetworkConnection) {
+        networkConnections.add(connection)
+        saveNetworkConnections()
+        GlobalEvents.triggerConfigUpdate()
+    }
+
+    fun removeNetworkConnection(id: String) {
+        if (networkConnections.removeAll { it.id == id }) {
+            saveNetworkConnections()
+            GlobalEvents.triggerConfigUpdate()
+        }
+    }
+
+    fun updateNetworkConnection(connection: NetworkConnection) {
+        val index = networkConnections.indexOfFirst { it.id == connection.id }
+        if (index >= 0) {
+            networkConnections[index] = connection
+            saveNetworkConnections()
+            GlobalEvents.triggerConfigUpdate()
+        }
     }
 }
