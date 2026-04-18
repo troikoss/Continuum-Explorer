@@ -11,6 +11,8 @@ import com.troikoss.continuum_explorer.managers.ArchiveSettings
 import com.troikoss.continuum_explorer.managers.CollisionResult
 import com.troikoss.continuum_explorer.managers.FileOperationsManager
 import com.troikoss.continuum_explorer.managers.OperationType
+import com.troikoss.continuum_explorer.providers.ArchiveProvider
+import com.troikoss.continuum_explorer.providers.StorageProviders
 import com.troikoss.continuum_explorer.ui.activities.PopUpActivity
 import com.troikoss.continuum_explorer.model.UniversalFile
 import java.io.File
@@ -33,7 +35,7 @@ object ZipUtils {
      */
     suspend fun parseArchive(context: Context, source: Any): Map<String, List<UniversalFile>> = withContext(Dispatchers.IO) {
         val name = getName(context, source).lowercase()
-        val rootId = if (source is File) source.absolutePath else source.toString()
+        val provider = StorageProviders.archive(context, source)
         
         try {
             val rawEntries = when {
@@ -44,7 +46,7 @@ object ZipUtils {
                 else -> emptyList()
             }
             
-            organizeEntries(rawEntries, rootId)
+            organizeEntries(rawEntries, provider)
         } catch (e: Exception) {
             e.printStackTrace()
             emptyMap()
@@ -96,7 +98,7 @@ object ZipUtils {
         return result
     }
 
-    private fun organizeEntries(entries: List<RawEntry>, rootId: String): Map<String, List<UniversalFile>> {
+    private fun organizeEntries(entries: List<RawEntry>, provider: ArchiveProvider): Map<String, List<UniversalFile>> {
         val map = HashMap<String, MutableList<UniversalFile>>(entries.size / 5 + 1)
         val dirIndex = HashMap<String, UniversalFile>(entries.size / 10 + 1)
 
@@ -107,13 +109,13 @@ object ZipUtils {
             val parentPath = if (lastSlash == -1) "" else trimmed.substring(0, lastSlash + 1)
             val name = if (lastSlash == -1) trimmed else trimmed.substring(lastSlash + 1)
             ensureDir(parentPath)
-            val dirFile = createVirtualDirectory(name, rootId, dirPath)
+            val dirFile = createVirtualDirectory(name, provider, dirPath)
             dirIndex[dirPath] = dirFile
             map.getOrPut(parentPath) { mutableListOf() }.add(dirFile)
         }
 
         for (entry in entries) {
-            val fullPath = entry.path.replace('\\', '/') 
+            val fullPath = entry.path.replace('\\', '/')
             if (entry.isDirectory) {
                 val path = if (fullPath.endsWith('/')) fullPath else "$fullPath/"
                 ensureDir(path)
@@ -122,7 +124,7 @@ object ZipUtils {
                 val parentPath = if (lastSlash == -1) "" else fullPath.substring(0, lastSlash + 1)
                 val name = if (lastSlash == -1) fullPath else fullPath.substring(lastSlash + 1)
                 ensureDir(parentPath)
-                val file = createUniversalFile(name, false, entry.time, entry.size, rootId, fullPath)
+                val file = createUniversalFile(name, entry.time, entry.size, provider, fullPath)
                 map.getOrPut(parentPath) { mutableListOf() }.add(file)
             }
         }
@@ -241,31 +243,12 @@ object ZipUtils {
         return list
     }
 
-    private fun createUniversalFile(displayName: String, isDirectory: Boolean, time: Long, size: Long, rootId: String, fullEntryPath: String): UniversalFile {
-        return UniversalFile(
-            name = displayName,
-            isDirectory = isDirectory,
-            lastModified = time,
-            length = size,
-            fileRef = null,
-            absolutePath = "$rootId::$fullEntryPath",
-            isArchiveEntry = true,
-            archivePath = fullEntryPath
-        )
+    private fun createUniversalFile(displayName: String, time: Long, size: Long, provider: ArchiveProvider, fullEntryPath: String): UniversalFile {
+        return provider.createEntryFile(displayName, false, time, size, fullEntryPath)
     }
 
-
-    private fun createVirtualDirectory(name: String, rootId: String, fullPath: String): UniversalFile {
-        return UniversalFile(
-            name = name,
-            isDirectory = true,
-            lastModified = 0,
-            length = 0,
-            fileRef = null,
-            absolutePath = "$rootId::$fullPath",
-            isArchiveEntry = true,
-            archivePath = fullPath
-        )
+    private fun createVirtualDirectory(name: String, provider: ArchiveProvider, fullPath: String): UniversalFile {
+        return provider.createEntryFile(name, true, 0L, 0L, fullPath)
     }
 
     /**

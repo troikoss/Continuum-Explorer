@@ -19,3 +19,8 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+
+# Tink / EncryptedSharedPreferences — R8 strips reflection targets without these
+-keep class com.google.crypto.tink.** { *; }
+-keep class androidx.security.crypto.** { *; }
+-dontwarn com.google.crypto.tink.**

@@ -20,10 +20,12 @@ import kotlin.collections.filter
 fun getVideoResolution(context: Context, file: UniversalFile): String? {
     val retriever = MediaMetadataRetriever()
     return try {
-        if (file.fileRef != null) {
-            retriever.setDataSource(file.fileRef.absolutePath)
-        } else if (file.documentFileRef != null) {
-            retriever.setDataSource(context, file.documentFileRef.uri)
+        val fileRef = file.fileRef
+        val docRef = file.documentFileRef
+        if (fileRef != null) {
+            retriever.setDataSource(fileRef.absolutePath)
+        } else if (docRef != null) {
+            retriever.setDataSource(context, docRef.uri)
         } else {
             return null
         }
@@ -50,10 +52,12 @@ fun getVideoResolution(context: Context, file: UniversalFile): String? {
 fun getMediaDuration(context: Context, file: UniversalFile): String? {
     val retriever = MediaMetadataRetriever()
     return try {
-        if (file.fileRef != null) {
-            retriever.setDataSource(file.fileRef.absolutePath)
-        } else if (file.documentFileRef != null) {
-            retriever.setDataSource(context, file.documentFileRef.uri)
+        val fileRef = file.fileRef
+        val docRef = file.documentFileRef
+        if (fileRef != null) {
+            retriever.setDataSource(fileRef.absolutePath)
+        } else if (docRef != null) {
+            retriever.setDataSource(context, docRef.uri)
         } else {
             return null
         }
@@ -90,10 +94,12 @@ fun getImageResolution(context: Context, file: UniversalFile): String {
         inJustDecodeBounds = true
     }
     try {
-        val inputStream = if (file.fileRef != null) {
-            file.fileRef.inputStream()
-        } else if (file.documentFileRef != null) {
-            context.contentResolver.openInputStream(file.documentFileRef.uri)
+        val fileRef = file.fileRef
+        val docRef = file.documentFileRef
+        val inputStream = if (fileRef != null) {
+            fileRef.inputStream()
+        } else if (docRef != null) {
+            context.contentResolver.openInputStream(docRef.uri)
         } else {
             null
         }

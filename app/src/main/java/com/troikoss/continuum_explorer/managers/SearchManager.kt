@@ -5,6 +5,8 @@ import android.net.Uri
 import android.webkit.MimeTypeMap
 import androidx.documentfile.provider.DocumentFile
 import com.troikoss.continuum_explorer.model.UniversalFile
+import com.troikoss.continuum_explorer.providers.LocalProvider
+import com.troikoss.continuum_explorer.providers.SafProvider
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
@@ -207,8 +209,9 @@ object SearchManager {
         isDirectory = isDirectory,
         lastModified = lastModified(),
         length = length(),
-        fileRef = this,
-        absolutePath = absolutePath
+        provider = LocalProvider,
+        providerId = absolutePath,
+        parentId = parentFile?.absolutePath,
     )
 
     private fun DocumentFile.toUniversal() = UniversalFile(
@@ -216,7 +219,9 @@ object SearchManager {
         isDirectory = isDirectory,
         lastModified = lastModified(),
         length = length(),
-        documentFileRef = this,
-        absolutePath = uri.toString()
+        provider = SafProvider,
+        providerId = uri.toString(),
+        parentId = parentFile?.uri?.toString(),
+        mimeType = type,
     )
 }

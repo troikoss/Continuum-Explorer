@@ -5,6 +5,7 @@ import android.content.Context
 import android.os.Bundle
 import android.provider.MediaStore
 import com.troikoss.continuum_explorer.model.UniversalFile
+import com.troikoss.continuum_explorer.providers.LocalProvider
 import java.io.File
 
 object GalleryManager {
@@ -51,8 +52,9 @@ object GalleryManager {
                             isDirectory = false,
                             lastModified = c.getLong(dateIndex) * 1000,
                             length = c.getLong(sizeIndex),
-                            fileRef = File(path),
-                            absolutePath = path
+                            provider = LocalProvider,
+                            providerId = path,
+                            parentId = File(path).parentFile?.absolutePath,
                         )
                     )
                 }
@@ -111,8 +113,9 @@ object GalleryManager {
                                 isDirectory = false,
                                 lastModified = c.getLong(dateIndex) * 1000,
                                 length = c.getLong(sizeIndex),
-                                fileRef = file,
-                                absolutePath = path
+                                provider = LocalProvider,
+                                providerId = path,
+                                parentId = file.parentFile?.absolutePath,
                             )
                         )
                     }
@@ -172,8 +175,9 @@ object GalleryManager {
                 isDirectory = true,
                 lastModified = dir.lastModified(),
                 length = 0,
-                fileRef = dir,
-                absolutePath = dir.absolutePath
+                provider = LocalProvider,
+                providerId = dir.absolutePath,
+                parentId = dir.parentFile?.absolutePath,
             )
         }
     }

@@ -387,8 +387,28 @@ class AppConfigurations(private val context: Context) {
     }
 
     private fun loadNetworkConnections() {
-        val prefs = context.getSharedPreferences("network_storage", Context.MODE_PRIVATE)
-        val jsonStr = prefs.getString("connections", null) ?: return
+        // Try encrypted prefs first; fall back to legacy plaintext (one-shot migration)
+        var securePrefs: android.content.SharedPreferences? = null
+        try {
+            securePrefs = SecurePrefs.get(context)
+        } catch (_: Exception) {}
+
+        var jsonStr = securePrefs?.getString("connections", null)
+
+        if (jsonStr == null) {
+            // Legacy plaintext fallback – migrate and wipe
+            val legacyPrefs = context.getSharedPreferences("network_storage", Context.MODE_PRIVATE)
+            val legacyJson = legacyPrefs.getString("connections", null)
+            if (legacyJson != null) {
+                jsonStr = legacyJson
+                try {
+                    securePrefs?.edit()?.putString("connections", legacyJson)?.apply()
+                } catch (_: Exception) {}
+                legacyPrefs.edit().clear().apply()
+            }
+        }
+
+        jsonStr ?: return
         networkConnections.clear()
         try {
             val arr = JSONArray(jsonStr)
@@ -411,7 +431,6 @@ class AppConfigurations(private val context: Context) {
     }
 
     fun saveNetworkConnections() {
-        val prefs = context.getSharedPreferences("network_storage", Context.MODE_PRIVATE)
         val arr = JSONArray()
         networkConnections.forEach { conn ->
             arr.put(JSONObject().apply {
@@ -425,7 +444,13 @@ class AppConfigurations(private val context: Context) {
                 put("remotePath", conn.remotePath)
             })
         }
-        prefs.edit().putString("connections", arr.toString()).apply()
+        try {
+            SecurePrefs.get(context).edit().putString("connections", arr.toString()).apply()
+        } catch (_: Exception) {
+            // Fallback to plaintext if crypto init fails (shouldn't happen on supported devices)
+            context.getSharedPreferences("network_storage", Context.MODE_PRIVATE)
+                .edit().putString("connections", arr.toString()).apply()
+        }
     }
 
     fun addNetworkConnection(connection: NetworkConnection) {

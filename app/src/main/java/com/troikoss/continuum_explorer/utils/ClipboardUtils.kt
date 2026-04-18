@@ -15,6 +15,8 @@ import com.troikoss.continuum_explorer.managers.OperationType
 import com.troikoss.continuum_explorer.managers.UndoAction
 import com.troikoss.continuum_explorer.managers.UndoManager
 import com.troikoss.continuum_explorer.model.UniversalFile
+import com.troikoss.continuum_explorer.providers.LocalProvider
+import com.troikoss.continuum_explorer.providers.SafProvider
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -190,15 +192,28 @@ suspend fun pasteFromClipboard(
                     isDir = true
                 }
 
-                UniversalFile(
-                    name = name,
-                    isDirectory = isDir,
-                    lastModified = docFile?.lastModified() ?: 0L,
-                    length = docFile?.length() ?: 0L,
-                    fileRef = fileRef,
-                    documentFileRef = docFile,
-                    absolutePath = sourceUri.toString()
-                )
+                if (fileRef != null) {
+                    UniversalFile(
+                        name = name,
+                        isDirectory = isDir,
+                        lastModified = fileRef.lastModified(),
+                        length = fileRef.length(),
+                        provider = LocalProvider,
+                        providerId = fileRef.absolutePath,
+                        parentId = fileRef.parentFile?.absolutePath,
+                    )
+                } else {
+                    UniversalFile(
+                        name = name,
+                        isDirectory = isDir,
+                        lastModified = docFile?.lastModified() ?: 0L,
+                        length = docFile?.length() ?: 0L,
+                        provider = SafProvider,
+                        providerId = sourceUri.toString(),
+                        parentId = docFile?.parentFile?.uri?.toString(),
+                        mimeType = docFile?.type,
+                    )
+                }
             }
 
             withContext(Dispatchers.Main) {
@@ -220,11 +235,14 @@ suspend fun pasteFromClipboard(
                             val archiveSource: Any = if (rootId.startsWith("/")) File(rootId) else Uri.parse(rootId)
                             ZipUtils.getArchiveInputStream(context, archiveSource, src.archivePath ?: "")
                         } else null
-                    } else if (src.fileRef != null) {
-                        src.fileRef.inputStream()
                     } else {
-                        val uri = src.documentFileRef?.uri ?: sourceUri
-                        context.contentResolver.openInputStream(uri)
+                        val srcFileRef = src.fileRef
+                        if (srcFileRef != null) {
+                            srcFileRef.inputStream()
+                        } else {
+                            val uri = src.documentFileRef?.uri ?: sourceUri
+                            context.contentResolver.openInputStream(uri)
+                        }
                     }
 
                     if (inputStream != null) {
@@ -273,8 +291,9 @@ suspend fun pasteFromClipboard(
                             pasteLog.add(sourceFile.absolutePath to destFileUri)
                         }
                     }
-                    if (isPasteToTrash && sourceFile.fileRef != null) {
-                        saveTrashMetadata(finalTargetName, sourceFile.fileRef.absolutePath)
+                    val sourceFileRef = sourceFile.fileRef
+                    if (isPasteToTrash && sourceFileRef != null) {
+                        saveTrashMetadata(finalTargetName, sourceFileRef.absolutePath)
                     }
                 }
             } catch (e: Exception) {
@@ -290,8 +309,9 @@ suspend fun pasteFromClipboard(
                 .filter { it.absolutePath in successfullyCopiedPaths }
                 .forEach { file ->
                     try {
-                        if (file.fileRef != null) {
-                            if (file.fileRef.isDirectory) file.fileRef.deleteRecursively() else file.fileRef.delete()
+                        val cutFileRef = file.fileRef
+                        if (cutFileRef != null) {
+                            if (cutFileRef.isDirectory) cutFileRef.deleteRecursively() else cutFileRef.delete()
                         } else {
                             file.documentFileRef?.delete()
                         }

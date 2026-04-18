@@ -30,24 +30,29 @@ fun FileExplorerState.open(item: UniversalFile) {
                 archiveUri = currentArchiveUri,
                 archivePath = item.archivePath
             )
-        } else if (item.fileRef != null) {
-            if (libraryItem == LibraryItem.Gallery) {
-                navigateTo(item.fileRef, null, libraryItem = LibraryItem.Gallery)
-            } else {
-                safStack.clear()
-                navigateTo(item.fileRef, null)
+        } else {
+            val itemFileRef = item.fileRef
+            val itemDocRef = item.documentFileRef
+            if (itemFileRef != null) {
+                if (libraryItem == LibraryItem.Gallery) {
+                    navigateTo(itemFileRef, null, libraryItem = LibraryItem.Gallery)
+                } else {
+                    safStack.clear()
+                    navigateTo(itemFileRef, null)
+                }
+            } else if (itemDocRef != null) {
+                val oldUri = currentSafUri
+                navigateTo(null, itemDocRef.uri)
+                oldUri?.let { safStack.add(it) }
             }
-        } else if (item.documentFileRef != null) {
-            val oldUri = currentSafUri
-            navigateTo(null, item.documentFileRef.uri)
-            oldUri?.let { safStack.add(it) }
         }
     } else {
-        if (ZipUtils.isArchive(item) && item.fileRef != null && SettingsManager.isDefaultArchiveViewerEnabled.value) {
+        val itemFileRef = item.fileRef
+        if (ZipUtils.isArchive(item) && itemFileRef != null && SettingsManager.isDefaultArchiveViewerEnabled.value) {
             navigateTo(
                 newPath = null,
                 newUri = null,
-                archiveFile = item.fileRef,
+                archiveFile = itemFileRef,
                 archivePath = ""
             )
         } else if (item.isArchiveEntry) {
@@ -81,16 +86,18 @@ fun FileExplorerState.openInNewWindow(items: List<UniversalFile>) {
         context.startActivity(intent)
     } else {
         items.filter { it.isDirectory || (ZipUtils.isArchive(it) && it.fileRef != null && SettingsManager.isDefaultArchiveViewerEnabled.value) }.forEach { item ->
+            val itemFileRef = item.fileRef
+            val itemDocRef = item.documentFileRef
             val intent = Intent(context, MainActivity::class.java).apply {
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 addFlags(Intent.FLAG_ACTIVITY_MULTIPLE_TASK)
                 addFlags(Intent.FLAG_ACTIVITY_NEW_DOCUMENT)
-                if (ZipUtils.isArchive(item) && item.fileRef != null && SettingsManager.isDefaultArchiveViewerEnabled.value) {
-                    putExtra("archivePath", item.fileRef.absolutePath)
-                } else if (item.fileRef != null) {
-                    putExtra("path", item.fileRef.absolutePath)
-                } else if (item.documentFileRef != null) {
-                    putExtra("uri", item.documentFileRef.uri.toString())
+                if (ZipUtils.isArchive(item) && itemFileRef != null && SettingsManager.isDefaultArchiveViewerEnabled.value) {
+                    putExtra("archivePath", itemFileRef.absolutePath)
+                } else if (itemFileRef != null) {
+                    putExtra("path", itemFileRef.absolutePath)
+                } else if (itemDocRef != null) {
+                    putExtra("uri", itemDocRef.uri.toString())
                 }
             }
             context.startActivity(intent)

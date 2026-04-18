@@ -68,6 +68,7 @@ dependencies {
     implementation(libs.androidx.compose.runtime)
     implementation(libs.androidx.ui)
     implementation(libs.androidx.appcompat)
+    implementation(libs.androidx.security.crypto)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

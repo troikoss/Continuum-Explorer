@@ -5,7 +5,11 @@ import android.net.Uri
 import androidx.core.content.FileProvider
 import androidx.documentfile.provider.DocumentFile
 import com.troikoss.continuum_explorer.R
+import com.troikoss.continuum_explorer.model.ProviderKind
+import com.troikoss.continuum_explorer.model.StorageProvider
 import com.troikoss.continuum_explorer.model.UniversalFile
+import com.troikoss.continuum_explorer.providers.LocalProvider
+import com.troikoss.continuum_explorer.providers.SafProvider
 import java.io.File
 
 fun File.toUniversal(): UniversalFile {
@@ -14,9 +18,9 @@ fun File.toUniversal(): UniversalFile {
         isDirectory = this.isDirectory,
         lastModified = this.lastModified(),
         length = this.length(),
-        fileRef = this,
-        absolutePath = this.absolutePath,
-        parentFile = this.parentFile
+        provider = LocalProvider,
+        providerId = this.absolutePath,
+        parentId = this.parentFile?.absolutePath,
     )
 }
 
@@ -26,11 +30,26 @@ fun DocumentFile.toUniversal(): UniversalFile {
         isDirectory = this.isDirectory,
         lastModified = this.lastModified(),
         length = this.length(),
-        documentFileRef = this,
-        absolutePath = this.uri.toString(),
-        parentFile = null
+        provider = SafProvider,
+        providerId = this.uri.toString(),
+        parentId = this.parentFile?.uri?.toString(),
+        mimeType = this.type,
     )
 }
+
+/**
+ * Provider-aware extension shortcuts.
+ */
+val UniversalFile.kind: ProviderKind get() = provider.kind
+
+fun UniversalFile.openInput() = provider.openInput(providerId)
+fun UniversalFile.openReadFd() = provider.openReadFd(providerId)
+
+suspend fun UniversalFile.children() = provider.listChildren(providerId)
+
+fun UniversalFile.delete() = provider.delete(providerId)
+
+fun UniversalFile.rename(newName: String) = provider.rename(providerId, newName)
 
 /**
  * Generates a shareable URI for a file.
@@ -38,17 +57,14 @@ fun DocumentFile.toUniversal(): UniversalFile {
  */
 fun getUriForUniversalFile(context: Context, file: UniversalFile): Uri? {
     return try {
-        if (file.isArchiveEntry) {
-            // Virtual URI for archive entries to enable Drag & Drop
-            Uri.parse("archive://${file.absolutePath}")
-        } else if (file.fileRef != null) {
-            FileProvider.getUriForFile(
+        when {
+            file.isArchiveEntry -> Uri.parse("archive://${file.absolutePath}")
+            file.provider is LocalProvider -> FileProvider.getUriForFile(
                 context,
                 context.packageName + ".provider",
-                file.fileRef
+                File(file.providerId)
             )
-        } else {
-            file.documentFileRef?.uri
+            else -> Uri.parse(file.providerId)
         }
     } catch (e: Exception) {
         e.printStackTrace()

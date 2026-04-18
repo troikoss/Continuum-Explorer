@@ -82,6 +82,8 @@ fun FileExplorer(
         return FileExplorerState(ctx, scp).apply {
             onOpenInNewTab = { item ->
                 val newState = createNewTabState(ctx, scp)
+                val tabFileRef = item.fileRef
+                val tabDocRef = item.documentFileRef
                 when {
                     item.absolutePath == "recent://" -> newState.navigateTo(null, null, addToHistory = false, libraryItem = LibraryItem.Recent)
                     item.absolutePath == "gallery://" -> newState.navigateTo(null, null, addToHistory = false, libraryItem = LibraryItem.Gallery)
@@ -90,15 +92,15 @@ fun FileExplorer(
                         if (!trashDir.exists()) trashDir.mkdirs()
                         newState.navigateTo(trashDir, null, addToHistory = false, libraryItem = LibraryItem.RecycleBin)
                     }
-                    ZipUtils.isArchive(item) && item.fileRef != null && SettingsManager.isDefaultArchiveViewerEnabled.value -> newState.navigateTo(
+                    ZipUtils.isArchive(item) && tabFileRef != null && SettingsManager.isDefaultArchiveViewerEnabled.value -> newState.navigateTo(
                         newPath = null,
                         newUri = null,
                         addToHistory = false,
-                        archiveFile = item.fileRef,
+                        archiveFile = tabFileRef,
                         archivePath = ""
                     )
-                    item.fileRef != null -> newState.navigateTo(item.fileRef, null, addToHistory = false)
-                    item.documentFileRef != null -> newState.navigateTo(null, item.documentFileRef.uri, addToHistory = false)
+                    tabFileRef != null -> newState.navigateTo(tabFileRef, null, addToHistory = false)
+                    tabDocRef != null -> newState.navigateTo(null, tabDocRef.uri, addToHistory = false)
                 }
                 tabs.add(newState)
                 selectedTabIndex = tabs.size - 1

@@ -102,13 +102,15 @@ suspend fun deleteRecursivelyWithProgress(
     if (FileOperationsManager.isCancelled.value) return false
     val length = file.length
     if (file.isDirectory) {
+        val fileRef = file.fileRef
+        val docRef = file.documentFileRef
         val children = try {
             if (file.isArchiveEntry) {
                 emptyList()
-            } else if (file.fileRef != null) {
-                file.fileRef.listFiles()?.map { it.toUniversal() }
-            } else if (file.documentFileRef != null) {
-                file.documentFileRef.listFiles().map { it.toUniversal() }
+            } else if (fileRef != null) {
+                fileRef.listFiles()?.map { it.toUniversal() }
+            } else if (docRef != null) {
+                docRef.listFiles().map { it.toUniversal() }
             } else emptyList()
         } catch (_: Exception) { emptyList() }
         children?.forEach { child ->
@@ -118,10 +120,11 @@ suspend fun deleteRecursivelyWithProgress(
     }
 
     if (FileOperationsManager.isCancelled.value) return false
+    val fileRef2 = file.fileRef
     val success = try {
         if (file.isArchiveEntry) {
             false // Deleting archive entries not supported
-        } else if (file.fileRef != null) file.fileRef.delete()
+        } else if (fileRef2 != null) fileRef2.delete()
         else file.documentFileRef?.delete() == true
     } catch (_: Exception) { false }
     if (success) onProgress(file, length)
@@ -249,36 +252,38 @@ suspend fun moveToRecycleBin(context: Context, files: List<UniversalFile>) {
                 FileOperationsManager.update(index, files.size, operationType = OperationType.TRASH)
                 FileOperationsManager.currentFileName.value = file.name
             }
-            if (file.fileRef != null) {
+            val fileRef = file.fileRef
+            val documentFileRef = file.documentFileRef
+            if (fileRef != null) {
                 val recycledName = getUniqueName(file.name) { name -> File(trashDir, name).exists() }
                 val tempTarget = File(trashDir, recycledName)
                 try {
-                    if (file.fileRef.isDirectory) {
-                        val copied = file.fileRef.copyRecursively(tempTarget, overwrite = false)
+                    if (fileRef.isDirectory) {
+                        val copied = fileRef.copyRecursively(tempTarget, overwrite = false)
                         if (!copied) {
                             tempTarget.deleteRecursively()
-                            throw Exception("copyRecursively returned false for ${file.fileRef.absolutePath}")
+                            throw Exception("copyRecursively returned false for ${fileRef.absolutePath}")
                         }
-                        file.fileRef.deleteRecursively()
+                        fileRef.deleteRecursively()
                     } else {
-                        if (!file.fileRef.renameTo(tempTarget)) {
+                        if (!fileRef.renameTo(tempTarget)) {
                             // Fallback for cross-volume moves
-                            file.fileRef.copyTo(tempTarget, overwrite = false)
-                            file.fileRef.delete()
+                            fileRef.copyTo(tempTarget, overwrite = false)
+                            fileRef.delete()
                         }
                     }
-                    saveTrashMetadata(recycledName, file.fileRef.absolutePath)
-                    recycleLog.add(recycledName to file.fileRef.absolutePath)
+                    saveTrashMetadata(recycledName, fileRef.absolutePath)
+                    recycleLog.add(recycledName to fileRef.absolutePath)
                     movedCount++
                 } catch (e: Exception) {
                     e.printStackTrace()
                     tempTarget.deleteRecursively()
                 }
-            } else if (file.documentFileRef != null) {
+            } else if (documentFileRef != null) {
                 val recycledName = getUniqueName(file.name) { name -> File(trashDir, name).exists() }
                 val target = File(trashDir, recycledName)
                 try {
-                    if (file.documentFileRef.isDirectory) {
+                    if (documentFileRef.isDirectory) {
                         fun copyDocDirToLocal(srcDoc: DocumentFile, destDir: File) {
                             destDir.mkdirs()
                             srcDoc.listFiles().forEach { child ->
@@ -292,25 +297,25 @@ suspend fun moveToRecycleBin(context: Context, files: List<UniversalFile>) {
                                 }
                             }
                         }
-                        copyDocDirToLocal(file.documentFileRef, target)
+                        copyDocDirToLocal(documentFileRef, target)
                         if (target.exists()) {
-                            file.documentFileRef.delete()
-                            val parentUri = file.documentFileRef.parentFile?.uri?.toString()
-                            saveTrashMetadata(recycledName, file.documentFileRef.uri.toString(), parentUri)
-                            recycleLog.add(recycledName to file.documentFileRef.uri.toString())
+                            documentFileRef.delete()
+                            val parentUri = documentFileRef.parentFile?.uri?.toString()
+                            saveTrashMetadata(recycledName, documentFileRef.uri.toString(), parentUri)
+                            recycleLog.add(recycledName to documentFileRef.uri.toString())
                             movedCount++
                         } else {
                             target.deleteRecursively()
                         }
                     } else {
-                        context.contentResolver.openInputStream(file.documentFileRef.uri)?.use { input ->
+                        context.contentResolver.openInputStream(documentFileRef.uri)?.use { input ->
                             FileOutputStream(target).use { output -> input.copyTo(output) }
                         }
                         if (target.exists() && target.length() == file.length) {
-                            file.documentFileRef.delete()
-                            val parentUri = file.documentFileRef.parentFile?.uri?.toString()
-                            saveTrashMetadata(recycledName, file.documentFileRef.uri.toString(), parentUri)
-                            recycleLog.add(recycledName to file.documentFileRef.uri.toString())
+                            documentFileRef.delete()
+                            val parentUri = documentFileRef.parentFile?.uri?.toString()
+                            saveTrashMetadata(recycledName, documentFileRef.uri.toString(), parentUri)
+                            recycleLog.add(recycledName to documentFileRef.uri.toString())
                             movedCount++
                         } else {
                             target.delete()
@@ -439,17 +444,18 @@ suspend fun restoreFiles(context: Context, files: List<UniversalFile>) {
                 }
 
                 target.parentFile?.mkdirs()
-                if (file.fileRef != null && file.fileRef.renameTo(target)) {
+                val fileRef = file.fileRef
+                if (fileRef != null && fileRef.renameTo(target)) {
                     removeTrashMetadata(file.name)
                     restoredCount++
-                } else if (file.fileRef != null) {
+                } else if (fileRef != null) {
                     try {
-                        if (file.fileRef.isDirectory) {
-                            file.fileRef.copyRecursively(target, overwrite = false)
+                        if (fileRef.isDirectory) {
+                            fileRef.copyRecursively(target, overwrite = false)
                         } else {
-                            file.fileRef.copyTo(target, overwrite = false)
+                            fileRef.copyTo(target, overwrite = false)
                         }
-                        file.fileRef.deleteRecursively()
+                        fileRef.deleteRecursively()
                         removeTrashMetadata(file.name)
                         restoredCount++
                     } catch (e: Exception) {

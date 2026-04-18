@@ -17,6 +17,7 @@ import com.troikoss.continuum_explorer.model.LibraryItem
 import com.troikoss.continuum_explorer.ui.FileExplorer
 import com.troikoss.continuum_explorer.ui.theme.FileExplorerTheme
 import com.troikoss.continuum_explorer.managers.SettingsManager
+import com.troikoss.continuum_explorer.providers.StorageProviders
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.io.File
@@ -62,8 +63,9 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        // Initialize settings
+        // Initialize settings and storage providers
         SettingsManager.init(applicationContext)
+        StorageProviders.init(applicationContext)
 
         if (intent.action == "com.troikoss.continuum_explorer.OPEN_NEW_WINDOW") {
             val freshIntent = Intent(this, MainActivity::class.java).apply {

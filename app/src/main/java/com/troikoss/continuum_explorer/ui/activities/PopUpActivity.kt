@@ -66,6 +66,8 @@ import com.troikoss.continuum_explorer.R
 import com.troikoss.continuum_explorer.model.NetworkConnection
 import com.troikoss.continuum_explorer.model.NetworkProtocol
 import com.troikoss.continuum_explorer.model.UniversalFile
+import com.troikoss.continuum_explorer.providers.LocalProvider
+import com.troikoss.continuum_explorer.providers.SafProvider
 import com.troikoss.continuum_explorer.ui.theme.FileExplorerTheme
 import com.troikoss.continuum_explorer.managers.ArchiveSettings
 import com.troikoss.continuum_explorer.managers.CollisionResult
@@ -1298,28 +1300,32 @@ private fun calculateSizeOnDiskRecursively(file: UniversalFile): Long {
     var total = 4096L // Folders themselves take up at least one block of space
 
     // 1. If it's a standard local folder
-    if (file.fileRef != null) {
-        file.fileRef.listFiles()?.forEach { child ->
-            // Create a temporary UniversalFile so the math works in the loop
+    val popupFileRef = file.fileRef
+    val popupDocRef = file.documentFileRef
+    if (popupFileRef != null) {
+        popupFileRef.listFiles()?.forEach { child ->
             val tempFile = UniversalFile(
                 name = child.name,
                 isDirectory = child.isDirectory,
                 lastModified = child.lastModified(),
                 length = child.length(),
-                fileRef = child
+                provider = LocalProvider,
+                providerId = child.absolutePath,
+                parentId = child.parentFile?.absolutePath,
             )
             total += calculateSizeOnDiskRecursively(tempFile)
         }
-    }
-    // 2. If it's an external folder (like an SD card using SAF DocumentFile)
-    else if (file.documentFileRef != null) {
-        file.documentFileRef.listFiles().forEach { child ->
+    } else if (popupDocRef != null) {
+        popupDocRef.listFiles().forEach { child ->
             val tempFile = UniversalFile(
                 name = child.name ?: "Unknown",
                 isDirectory = child.isDirectory,
                 lastModified = child.lastModified(),
                 length = child.length(),
-                documentFileRef = child
+                provider = SafProvider,
+                providerId = child.uri.toString(),
+                parentId = child.parentFile?.uri?.toString(),
+                mimeType = child.type,
             )
             total += calculateSizeOnDiskRecursively(tempFile)
         }

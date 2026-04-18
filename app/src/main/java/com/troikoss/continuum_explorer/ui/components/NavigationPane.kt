@@ -94,6 +94,7 @@ import com.troikoss.continuum_explorer.model.LibraryItem
 import com.troikoss.continuum_explorer.model.NetworkConnection
 import com.troikoss.continuum_explorer.model.NetworkProtocol
 import com.troikoss.continuum_explorer.model.UniversalFile
+import com.troikoss.continuum_explorer.providers.LocalProvider
 import com.troikoss.continuum_explorer.utils.FileExplorerState
 import com.troikoss.continuum_explorer.managers.SettingsManager
 import com.troikoss.continuum_explorer.utils.contextMenuDetector
@@ -650,13 +651,13 @@ private fun NavContextMenu(
                 onDismissRequest()
                 when (section) {
                     is NavSection.RecycleBin -> appState.onOpenInNewTab?.invoke(
-                        UniversalFile(name = ".Trash", isDirectory = true, lastModified = 0, length = 0, absolutePath = "trash://")
+                        UniversalFile(name = ".Trash", isDirectory = true, lastModified = 0, length = 0, provider = LocalProvider, providerId = "trash://")
                     )
                     is NavSection.Recent -> appState.onOpenInNewTab?.invoke(
-                        UniversalFile(name = "Recent", isDirectory = true, lastModified = 0, length = 0, absolutePath = "recent://")
+                        UniversalFile(name = "Recent", isDirectory = true, lastModified = 0, length = 0, provider = LocalProvider, providerId = "recent://")
                     )
                     is NavSection.Gallery -> appState.onOpenInNewTab?.invoke(
-                        UniversalFile(name = "Gallery", isDirectory = true, lastModified = 0, length = 0, absolutePath = "gallery://")
+                        UniversalFile(name = "Gallery", isDirectory = true, lastModified = 0, length = 0, provider = LocalProvider, providerId = "gallery://")
                     )
                     else -> if (path != null) {
                         appState.onOpenInNewTab?.invoke(File(path).toUniversal())

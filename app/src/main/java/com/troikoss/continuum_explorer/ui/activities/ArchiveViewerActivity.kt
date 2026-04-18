@@ -8,13 +8,14 @@ import com.troikoss.continuum_explorer.R
 import com.troikoss.continuum_explorer.ui.FileExplorer
 import com.troikoss.continuum_explorer.ui.theme.FileExplorerTheme
 import com.troikoss.continuum_explorer.managers.SettingsManager
+import com.troikoss.continuum_explorer.providers.StorageProviders
 
 class ArchiveViewerActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
-        // Initialize settings
         SettingsManager.init(applicationContext)
+        StorageProviders.init(applicationContext)
 
         val uri = intent.data
         if (uri == null) {

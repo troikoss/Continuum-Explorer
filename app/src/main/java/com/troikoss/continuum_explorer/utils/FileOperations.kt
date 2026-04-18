@@ -35,15 +35,19 @@ suspend fun calculateSizeRecursively(context: Context, file: UniversalFile): Lon
                         size += calculateSizeRecursively(context, child)
                     }
                 }
-            } else if (file.fileRef != null) {
-                file.fileRef.listFiles()?.forEach {
-                    if (FileOperationsManager.isCancelled.value) return 0L
-                    size += calculateSizeRecursively(context, it.toUniversal())
-                }
-            } else if (file.documentFileRef != null) {
-                file.documentFileRef.listFiles().forEach {
-                    if (FileOperationsManager.isCancelled.value) return 0L
-                    size += calculateSizeRecursively(context, it.toUniversal())
+            } else {
+                val fileRef = file.fileRef
+                val docRef = file.documentFileRef
+                if (fileRef != null) {
+                    fileRef.listFiles()?.forEach {
+                        if (FileOperationsManager.isCancelled.value) return 0L
+                        size += calculateSizeRecursively(context, it.toUniversal())
+                    }
+                } else if (docRef != null) {
+                    docRef.listFiles().forEach {
+                        if (FileOperationsManager.isCancelled.value) return 0L
+                        size += calculateSizeRecursively(context, it.toUniversal())
+                    }
                 }
             }
         } catch (e: Exception) {
@@ -151,15 +155,19 @@ suspend fun copyRecursively(
                     copyRecursively(context, child, newDestLocal, newDestSaf, onCopyFile)
                 }
             }
-        } else if (source.fileRef != null) {
-            source.fileRef.listFiles()?.forEach { child ->
-                if (FileOperationsManager.isCancelled.value) return@forEach
-                copyRecursively(context, child.toUniversal(), newDestLocal, newDestSaf, onCopyFile)
-            }
-        } else if (source.documentFileRef != null) {
-            source.documentFileRef.listFiles().forEach { child ->
-                if (FileOperationsManager.isCancelled.value) return@forEach
-                copyRecursively(context, child.toUniversal(), newDestLocal, newDestSaf, onCopyFile)
+        } else {
+            val fileRef = source.fileRef
+            val docRef = source.documentFileRef
+            if (fileRef != null) {
+                fileRef.listFiles()?.forEach { child ->
+                    if (FileOperationsManager.isCancelled.value) return@forEach
+                    copyRecursively(context, child.toUniversal(), newDestLocal, newDestSaf, onCopyFile)
+                }
+            } else if (docRef != null) {
+                docRef.listFiles().forEach { child ->
+                    if (FileOperationsManager.isCancelled.value) return@forEach
+                    copyRecursively(context, child.toUniversal(), newDestLocal, newDestSaf, onCopyFile)
+                }
             }
         }
     } else {
@@ -248,21 +256,23 @@ suspend fun renameFile(file: UniversalFile, newName: String, context: Context? =
     if (FileOperationsManager.isCancelled.value) return false
     return withContext(Dispatchers.IO) {
         try {
-            if (file.fileRef != null) {
-                val oldName = file.fileRef.name
+            val fileRef = file.fileRef
+            val documentFileRef = file.documentFileRef
+            if (fileRef != null) {
+                val oldName = fileRef.name
                 if (oldName == newName) return@withContext true
 
                 var targetName = newName
-                if (File(file.fileRef.parentFile, newName).exists()) {
+                if (File(fileRef.parentFile, newName).exists()) {
                     val result = FileOperationsManager.resolveCollision(newName)
                     when (result) {
                         CollisionResult.CANCEL -> return@withContext false
                         CollisionResult.REPLACE -> {
-                            val existing = File(file.fileRef.parentFile, newName)
+                            val existing = File(fileRef.parentFile, newName)
                             if (existing.isDirectory) existing.deleteRecursively() else existing.delete()
                         }
                         CollisionResult.KEEP_BOTH -> {
-                            targetName = getUniqueName(newName) { File(file.fileRef.parentFile, it).exists() }
+                            targetName = getUniqueName(newName) { File(fileRef.parentFile, it).exists() }
                         }
                         CollisionResult.MERGE -> {
                             // No-op: fall through to recurse into existing directory
@@ -270,16 +280,16 @@ suspend fun renameFile(file: UniversalFile, newName: String, context: Context? =
                     }
                 }
 
-                val newFile = File(file.fileRef.parentFile, targetName)
-                if (file.fileRef.renameTo(newFile)) {
+                val newFile = File(fileRef.parentFile, targetName)
+                if (fileRef.renameTo(newFile)) {
                     UndoManager.record(UndoAction.Rename(newFile.parentFile, oldName, targetName))
                     true
                 } else false
-            } else if (file.documentFileRef != null) {
-                val oldName = file.documentFileRef.name ?: file.name
+            } else if (documentFileRef != null) {
+                val oldName = documentFileRef.name ?: file.name
                 if (oldName == newName) return@withContext true
 
-                val parent = file.documentFileRef.parentFile
+                val parent = documentFileRef.parentFile
                 var targetName = newName
                 if (parent?.findFile(newName) != null) {
                     val result = FileOperationsManager.resolveCollision(newName)
@@ -301,19 +311,19 @@ suspend fun renameFile(file: UniversalFile, newName: String, context: Context? =
 
                 val success = try {
                     if (context != null) {
-                        DocumentsContract.renameDocument(context.contentResolver, file.documentFileRef.uri, targetName) != null
+                        DocumentsContract.renameDocument(context.contentResolver, documentFileRef.uri, targetName) != null
                     } else {
-                        file.documentFileRef.renameTo(targetName)
+                        documentFileRef.renameTo(targetName)
                     }
                 } catch (e: UnsupportedOperationException) {
-                    val filePath = safUriToFilePath(file.documentFileRef.uri)
+                    val filePath = safUriToFilePath(documentFileRef.uri)
                     val fileRenamed = if (filePath != null) {
                         val f = File(filePath)
                         val dest = File(f.parent, targetName)
                         f.renameTo(dest)
                     } else false
                     if (!fileRenamed && context != null && parent != null) {
-                        safCopyRename(context, file.documentFileRef, parent, targetName)
+                        safCopyRename(context, documentFileRef, parent, targetName)
                     } else fileRenamed
                 } catch (e: Exception) {
                     android.util.Log.e("FileOperations", "SAF rename error: ${e.javaClass.simpleName}: ${e.message}", e)

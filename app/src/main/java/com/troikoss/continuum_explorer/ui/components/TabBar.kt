@@ -28,6 +28,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.troikoss.continuum_explorer.model.UniversalFile
+import com.troikoss.continuum_explorer.providers.LocalProvider
+import com.troikoss.continuum_explorer.providers.StorageProviders
 import com.troikoss.continuum_explorer.utils.FileExplorerState
 import com.troikoss.continuum_explorer.utils.IconHelper
 import com.troikoss.continuum_explorer.managers.SettingsManager
@@ -87,13 +89,14 @@ fun TabBar(
                         // If we are inside an archive file (local)
                         appState.currentArchiveFile != null -> {
                             appState.currentArchiveFile?.let { file ->
+                                val archiveProvider = StorageProviders.archive(appState.context, file)
                                 UniversalFile(
                                     name = file.name,
-                                    isDirectory = false, // It's a file acting like a folder
+                                    isDirectory = false,
                                     lastModified = file.lastModified(),
                                     length = file.length(),
-                                    fileRef = file,
-                                    isArchiveEntry = true // Tell the system this is an archive!
+                                    provider = archiveProvider,
+                                    providerId = archiveProvider.makeId(""),
                                 )
                             }
                         }
@@ -105,8 +108,9 @@ fun TabBar(
                                     isDirectory = file.isDirectory,
                                     lastModified = file.lastModified(),
                                     length = file.length(),
-                                    fileRef = file,
-                                    absolutePath = file.absolutePath
+                                    provider = LocalProvider,
+                                    providerId = file.absolutePath,
+                                    parentId = file.parentFile?.absolutePath,
                                 )
                             }
                         }

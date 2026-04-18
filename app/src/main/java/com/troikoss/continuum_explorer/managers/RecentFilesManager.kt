@@ -5,6 +5,7 @@ import android.content.Context
 import android.os.Bundle
 import android.provider.MediaStore
 import com.troikoss.continuum_explorer.model.UniversalFile
+import com.troikoss.continuum_explorer.providers.LocalProvider
 import java.io.File
 
 object RecentFilesManager {
@@ -59,8 +60,9 @@ object RecentFilesManager {
                                 isDirectory = false,
                                 lastModified = c.getLong(dateIndex) * 1000,
                                 length = c.getLong(sizeIndex),
-                                fileRef = file,
-                                absolutePath = path
+                                provider = LocalProvider,
+                                providerId = path,
+                                parentId = file.parentFile?.absolutePath,
                             )
                         )
                     }

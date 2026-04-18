@@ -20,6 +20,7 @@ import com.troikoss.continuum_explorer.managers.SearchManager
 import com.troikoss.continuum_explorer.managers.SelectionManager
 import com.troikoss.continuum_explorer.managers.SettingsManager
 import com.troikoss.continuum_explorer.model.*
+import com.troikoss.continuum_explorer.providers.LocalProvider
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -225,7 +226,8 @@ class FileExplorerState(
                 isDirectory = true,
                 lastModified = 0L,
                 length = 0L,
-                absolutePath = currentPath?.absolutePath ?: "virtual://gallery"
+                provider = LocalProvider,
+                providerId = currentPath?.absolutePath ?: "virtual://gallery",
             )
 
             libraryItem == LibraryItem.Recent -> UniversalFile(
@@ -233,7 +235,8 @@ class FileExplorerState(
                 isDirectory = true,
                 lastModified = 0L,
                 length = 0L,
-                absolutePath = "virtual://recent"
+                provider = LocalProvider,
+                providerId = "virtual://recent"
             )
 
             else -> null

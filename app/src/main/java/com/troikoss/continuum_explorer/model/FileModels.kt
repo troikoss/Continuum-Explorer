@@ -4,6 +4,8 @@ import android.net.Uri
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.documentfile.provider.DocumentFile
+import com.troikoss.continuum_explorer.providers.LocalProvider
+import com.troikoss.continuum_explorer.providers.SafProvider
 import java.io.File
 
 /**
@@ -67,22 +69,46 @@ data class FileColumnDefinition(
 )
 
 /**
- * A unified data class that represents a file or folder from either the 
- * standard Java File API or the Storage Access Framework (DocumentFile).
+ * A unified data class that represents a file or folder from any storage backend.
+ * `provider` + `providerId` are the authoritative identity. The legacy `fileRef`,
+ * `documentFileRef`, `isArchiveEntry`, and `archivePath` fields are derived
+ * automatically so that all existing call sites continue to compile unchanged.
  */
 data class UniversalFile(
     val name: String,
     val isDirectory: Boolean,
     val lastModified: Long,
     val length: Long,
-    val fileRef: File? = null,           // Reference to local file system item
-    val documentFileRef: DocumentFile? = null, // Reference to SAF/external item
-    val absolutePath: String = "",
-    val parentFile: File? = null,
-    // Archive support
-    val isArchiveEntry: Boolean = false,
-    val archivePath: String? = null // Path inside the zip file
-)
+    val provider: StorageProvider,
+    val providerId: String,
+    val parentId: String? = null,
+    val mimeType: String? = null,
+) {
+    // Legacy convenience accessors — delegate to the provider so existing code compiles
+    val fileRef: File?
+        get() = if (provider is LocalProvider) File(providerId) else null
+
+    val documentFileRef: DocumentFile?
+        get() = if (provider is SafProvider) {
+            try { DocumentFile.fromTreeUri(SafProvider.appContext(), Uri.parse(providerId))
+                    ?: DocumentFile.fromSingleUri(SafProvider.appContext(), Uri.parse(providerId)) }
+            catch (_: Exception) { null }
+        } else null
+
+    val isArchiveEntry: Boolean
+        get() = provider is com.troikoss.continuum_explorer.providers.ArchiveProvider
+
+    val archivePath: String?
+        get() = if (provider is com.troikoss.continuum_explorer.providers.ArchiveProvider)
+            (provider as com.troikoss.continuum_explorer.providers.ArchiveProvider).entryPath(providerId)
+        else null
+
+    val absolutePath: String
+        get() = providerId
+
+    val parentFile: File?
+        get() = if (provider is LocalProvider) File(providerId).parentFile else null
+}
 
 /**
  * Recycle bin metadata for a file, stored separately from UniversalFile.
