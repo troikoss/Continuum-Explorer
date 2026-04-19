@@ -6,9 +6,17 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import com.troikoss.continuum_explorer.model.NetworkConnection
+import com.troikoss.continuum_explorer.model.NetworkProtocol
 import com.troikoss.continuum_explorer.model.UniversalFile
+import com.troikoss.continuum_explorer.providers.FtpProvider
+import com.troikoss.continuum_explorer.providers.SafProvider
+import com.troikoss.continuum_explorer.providers.WebDavProvider
 import com.troikoss.continuum_explorer.R
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import java.io.Closeable
+import java.io.IOException
 import net.lingala.zip4j.model.enums.CompressionLevel
 import net.lingala.zip4j.model.enums.CompressionMethod
 import net.lingala.zip4j.model.enums.EncryptionMethod
@@ -374,6 +382,22 @@ object FileOperationsManager {
         networkConnectionDeferred?.complete(connection)
         networkConnectionDeferred = null
     }
+
+    suspend fun testNetworkConnection(connection: NetworkConnection): Result<Unit> =
+        withContext(Dispatchers.IO) {
+            runCatching {
+                val provider = when (connection.protocol) {
+                    NetworkProtocol.FTP -> FtpProvider(connection, SafProvider.appContext())
+                    NetworkProtocol.WEBDAV -> WebDavProvider(connection, SafProvider.appContext())
+                    else -> throw UnsupportedOperationException("Protocol not supported for testing")
+                }
+                try {
+                    if (!provider.exists(provider.rootId())) throw IOException("Root not reachable")
+                } finally {
+                    (provider as? Closeable)?.runCatching { close() }
+                }
+            }
+        }
 
     fun showProperties(files: List<UniversalFile>) {
         propertiesTargets.value = files

@@ -16,6 +16,7 @@ import androidx.compose.ui.unit.dp
 import com.troikoss.continuum_explorer.R
 import com.troikoss.continuum_explorer.managers.SettingsManager
 import com.troikoss.continuum_explorer.model.*
+import com.troikoss.continuum_explorer.providers.StorageProviders
 
 /**
  * Manages configuration specific to folders (view mode, sort order, etc.)
@@ -423,7 +424,11 @@ class AppConfigurations(private val context: Context) {
                         port = obj.optInt("port", 0),
                         username = obj.optString("username", ""),
                         password = obj.optString("password", ""),
-                        remotePath = obj.optString("remotePath", "/")
+                        remotePath = obj.optString("remotePath", "/"),
+                        useTls = obj.optBoolean("useTls", false),
+                        ftpPassiveMode = obj.optBoolean("ftpPassiveMode", true),
+                        rootUrl = obj.optString("rootUrl", ""),
+                        acceptUntrustedCerts = obj.optBoolean("acceptUntrustedCerts", false)
                     )
                 )
             }
@@ -442,6 +447,10 @@ class AppConfigurations(private val context: Context) {
                 put("username", conn.username)
                 put("password", conn.password)
                 put("remotePath", conn.remotePath)
+                put("useTls", conn.useTls)
+                put("ftpPassiveMode", conn.ftpPassiveMode)
+                put("rootUrl", conn.rootUrl)
+                put("acceptUntrustedCerts", conn.acceptUntrustedCerts)
             })
         }
         try {
@@ -461,6 +470,7 @@ class AppConfigurations(private val context: Context) {
 
     fun removeNetworkConnection(id: String) {
         if (networkConnections.removeAll { it.id == id }) {
+            StorageProviders.evictNetwork(id)
             saveNetworkConnections()
             GlobalEvents.triggerConfigUpdate()
         }
@@ -469,6 +479,7 @@ class AppConfigurations(private val context: Context) {
     fun updateNetworkConnection(connection: NetworkConnection) {
         val index = networkConnections.indexOfFirst { it.id == connection.id }
         if (index >= 0) {
+            StorageProviders.evictNetwork(connection.id)
             networkConnections[index] = connection
             saveNetworkConnections()
             GlobalEvents.triggerConfigUpdate()

@@ -22,6 +22,10 @@ import java.io.File
 
 fun FileExplorerState.open(item: UniversalFile) {
     if (item.isDirectory) {
+        if (item.provider.capabilities.isRemote) {
+            navigateTo(null, null, networkProvider = item.provider, networkId = item.providerId)
+            return
+        }
         if (item.isArchiveEntry) {
             navigateTo(
                 newPath = null,
@@ -57,6 +61,8 @@ fun FileExplorerState.open(item: UniversalFile) {
             )
         } else if (item.isArchiveEntry) {
             Toast.makeText(context, context.getString(R.string.msg_not_supported_archive), Toast.LENGTH_SHORT).show()
+        } else if (item.provider.capabilities.isRemote) {
+            openRemoteFile(context, scope, item)
         } else {
             openFile(context, item)
         }

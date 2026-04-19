@@ -7,8 +7,15 @@ import android.os.Build
 import android.provider.Settings
 import android.webkit.MimeTypeMap
 import android.widget.Toast
+import androidx.core.content.FileProvider
 import com.troikoss.continuum_explorer.R
+import com.troikoss.continuum_explorer.managers.FileOperationsManager
+import com.troikoss.continuum_explorer.managers.OperationType
 import com.troikoss.continuum_explorer.model.UniversalFile
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * Shares one or more files via the system share sheet.
@@ -70,10 +77,59 @@ fun openWith(context: Context, file: UniversalFile) {
 }
 
 /**
+ * Opens a remote file by caching it locally first, then launching the appropriate viewer.
+ */
+fun openRemoteFile(context: Context, scope: CoroutineScope, file: UniversalFile) {
+    val mime = MimeTypeMap.getSingleton()
+        .getMimeTypeFromExtension(file.name.substringAfterLast('.', "").lowercase())
+
+    scope.launch {
+        try {
+            FileOperationsManager.start()
+            withContext(Dispatchers.Main) {
+                FileOperationsManager.update(0, 1, operationType = OperationType.COPY)
+                FileOperationsManager.currentFileName.value = file.name
+            }
+            val cached = RemoteCache.cache(context, file) { copied, total ->
+                if (total > 0) {
+                    FileOperationsManager.updateDetailed(
+                        processedBytes = copied, totalBytes = total,
+                        speed = 0L, remainingMillis = 0L, fileName = file.name
+                    )
+                }
+            }
+            withContext(Dispatchers.Main) {
+                FileOperationsManager.finish()
+                val cachedUri = FileProvider.getUriForFile(
+                    context, context.packageName + ".provider", cached
+                )
+                val intent = Intent(Intent.ACTION_VIEW).apply {
+                    setDataAndType(cachedUri, mime ?: "*/*")
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                try {
+                    context.startActivity(intent)
+                } catch (_: Exception) {
+                    Toast.makeText(context, context.getString(R.string.msg_no_app_open), Toast.LENGTH_SHORT).show()
+                }
+            }
+        } catch (e: Exception) {
+            withContext(Dispatchers.Main) {
+                FileOperationsManager.finish()
+                Toast.makeText(context, e.message ?: context.getString(R.string.msg_share_failed_prepare), Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+}
+
+/**
  * Opens a file with the default system app.
  * Falls back to the "Open with" chooser if no default handles the type.
  */
 fun openFile(context: Context, file: UniversalFile) {
+    if (file.provider.capabilities.isRemote) return // Must use openRemoteFile with a scope instead
+
     val uri = getUriForUniversalFile(context, file) ?: return
 
     if (file.name.endsWith(".apk", ignoreCase = true)) {

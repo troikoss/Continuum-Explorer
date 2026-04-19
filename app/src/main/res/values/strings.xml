@@ -302,6 +302,11 @@
     <string name="nav_network_google_drive_note">Google Drive authentication will be configured separately.</string>
     <string name="nav_network_save">Save</string>
     <string name="nav_network_edit">Edit Connection</string>
+    <string name="nav_network_use_tls">Use FTPS (TLS)</string>
+    <string name="nav_network_passive_mode">Passive mode</string>
+    <string name="nav_network_root_url">Full URL (optional override)</string>
+    <string name="nav_network_accept_untrusted">Accept self-signed certificates</string>
+    <string name="nav_network_test">Test Connection</string>
 
     <!-- Item Types -->
     <string name="archive">Archive</string>

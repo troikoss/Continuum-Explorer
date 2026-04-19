@@ -53,6 +53,7 @@ import com.troikoss.continuum_explorer.model.NavSection
 import com.troikoss.continuum_explorer.ui.activities.PopUpActivity
 import com.troikoss.continuum_explorer.model.ScreenSize
 import com.troikoss.continuum_explorer.model.LibraryItem
+import com.troikoss.continuum_explorer.providers.StorageProviders
 import com.troikoss.continuum_explorer.ui.components.*
 import com.troikoss.continuum_explorer.utils.*
 import kotlinx.coroutines.CoroutineScope
@@ -85,6 +86,10 @@ fun FileExplorer(
                 val tabFileRef = item.fileRef
                 val tabDocRef = item.documentFileRef
                 when {
+                    item.provider.capabilities.isRemote -> newState.navigateTo(
+                        null, null, addToHistory = false,
+                        networkProvider = item.provider, networkId = item.providerId
+                    )
                     item.absolutePath == "recent://" -> newState.navigateTo(null, null, addToHistory = false, libraryItem = LibraryItem.Recent)
                     item.absolutePath == "gallery://" -> newState.navigateTo(null, null, addToHistory = false, libraryItem = LibraryItem.Gallery)
                     item.absolutePath == "trash://" -> {
@@ -155,7 +160,8 @@ fun FileExplorer(
 
     // --- Side Effects ---
     LaunchedEffect(appState, appState.currentPath, appState.currentSafUri, appState.folderConfigs.sortParams,
-                   appState.currentArchiveFile, appState.currentArchiveUri, appState.currentArchivePath, appState.libraryItem) {
+                   appState.currentArchiveFile, appState.currentArchiveUri, appState.currentArchivePath, appState.libraryItem,
+                   appState.currentNetworkProvider, appState.currentNetworkId) {
         appState.triggerLoad()
     }
 
@@ -392,8 +398,13 @@ private fun navigateToSection(appState: FileExplorerState, context: Context, sec
         is NavSection.Recent -> appState.navigateTo(null, null, libraryItem = LibraryItem.Recent)
         is NavSection.Gallery -> appState.navigateTo(null, null, libraryItem = LibraryItem.Gallery)
         is NavSection.NetworkStorage -> {
-            // Stub: actual browsing implemented when protocol libraries are added
-            android.widget.Toast.makeText(context, "Network storage coming soon", android.widget.Toast.LENGTH_SHORT).show()
+            val conn = appState.appConfigs.networkConnections.find { it.id == section.connectionId } ?: return
+            val provider = StorageProviders.network(conn)
+            appState.navigateTo(
+                newPath = null, newUri = null,
+                networkProvider = provider, networkId = provider.rootId(),
+                addToHistory = true,
+            )
         }
         is NavSection.RemovableVolume -> {
             val storageManager = context.getSystemService(Context.STORAGE_SERVICE) as StorageManager

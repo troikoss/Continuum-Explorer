@@ -26,6 +26,7 @@ import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -44,6 +45,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -86,6 +88,7 @@ import com.troikoss.continuum_explorer.utils.getMediaDuration
 import com.troikoss.continuum_explorer.utils.getVideoResolution
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import net.lingala.zip4j.model.enums.CompressionLevel
 import net.lingala.zip4j.model.enums.CompressionMethod
@@ -1130,9 +1133,18 @@ fun NetworkConnectionContent(onClose: () -> Unit) {
     var username by remember { mutableStateOf(existing?.username ?: "") }
     var password by remember { mutableStateOf(existing?.password ?: "") }
     var remotePath by remember { mutableStateOf(existing?.remotePath ?: "/") }
+    var useTls by remember { mutableStateOf(existing?.useTls ?: false) }
+    var ftpPassiveMode by remember { mutableStateOf(existing?.ftpPassiveMode ?: true) }
+    var rootUrl by remember { mutableStateOf(existing?.rootUrl ?: "") }
+    var acceptUntrustedCerts by remember { mutableStateOf(existing?.acceptUntrustedCerts ?: false) }
+    var testResult by remember { mutableStateOf<String?>(null) }
+    var isTesting by remember { mutableStateOf(false) }
 
     val isGoogleDrive = protocol == NetworkProtocol.GOOGLE_DRIVE
+    val isFtp = protocol == NetworkProtocol.FTP
+    val isWebDav = protocol == NetworkProtocol.WEBDAV
     val focusRequester = remember { FocusRequester() }
+    val scope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) { focusRequester.requestFocus() }
 
@@ -1145,7 +1157,11 @@ fun NetworkConnectionContent(onClose: () -> Unit) {
             port = port.toIntOrNull() ?: protocol.defaultPort,
             username = username.trim(),
             password = password,
-            remotePath = remotePath.trim().ifEmpty { "/" }
+            remotePath = remotePath.trim().ifEmpty { "/" },
+            useTls = useTls,
+            ftpPassiveMode = ftpPassiveMode,
+            rootUrl = rootUrl.trim(),
+            acceptUntrustedCerts = acceptUntrustedCerts
         )
         FileOperationsManager.onNetworkConnectionResult(connection)
         onClose()
@@ -1253,6 +1269,34 @@ fun NetworkConnectionContent(onClose: () -> Unit) {
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                 keyboardActions = KeyboardActions(onDone = { if (displayName.isNotBlank()) onSave() })
             )
+            Spacer(modifier = Modifier.height(8.dp))
+            if (isFtp) {
+                Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                    androidx.compose.material3.Checkbox(checked = useTls, onCheckedChange = { useTls = it })
+                    Text(stringResource(R.string.nav_network_use_tls))
+                }
+                Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                    androidx.compose.material3.Checkbox(checked = ftpPassiveMode, onCheckedChange = { ftpPassiveMode = it })
+                    Text(stringResource(R.string.nav_network_passive_mode))
+                }
+            }
+            if (isWebDav) {
+                OutlinedTextField(
+                    value = rootUrl,
+                    onValueChange = { rootUrl = it },
+                    label = { Text(stringResource(R.string.nav_network_root_url)) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+            }
+            if ((isFtp && useTls) || isWebDav) {
+                Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                    androidx.compose.material3.Checkbox(checked = acceptUntrustedCerts, onCheckedChange = { acceptUntrustedCerts = it })
+                    Text(stringResource(R.string.nav_network_accept_untrusted))
+                }
+            }
         } else {
             Spacer(modifier = Modifier.height(12.dp))
             Text(
@@ -1260,6 +1304,48 @@ fun NetworkConnectionContent(onClose: () -> Unit) {
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+        }
+
+        if (!isGoogleDrive && (isFtp || isWebDav)) {
+            Spacer(modifier = Modifier.height(8.dp))
+            val canTest = (host.isNotBlank() || rootUrl.isNotBlank()) && !isTesting
+            Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                OutlinedButton(
+                    onClick = {
+                        isTesting = true
+                        testResult = null
+                        val conn = NetworkConnection(
+                            id = existing?.id ?: UUID.randomUUID().toString(),
+                            protocol = protocol,
+                            displayName = displayName.trim(),
+                            host = host.trim(),
+                            port = port.toIntOrNull() ?: protocol.defaultPort,
+                            username = username.trim(),
+                            password = password,
+                            remotePath = remotePath.trim().ifEmpty { "/" },
+                            useTls = useTls, ftpPassiveMode = ftpPassiveMode,
+                            rootUrl = rootUrl.trim(), acceptUntrustedCerts = acceptUntrustedCerts
+                        )
+                        scope.launch {
+                            val result = FileOperationsManager.testNetworkConnection(conn)
+                            isTesting = false
+                            testResult = if (result.isSuccess) "✓ Connected" else "✗ ${result.exceptionOrNull()?.message ?: "Failed"}"
+                        }
+                    },
+                    enabled = canTest
+                ) {
+                    if (isTesting) {
+                        androidx.compose.material3.CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                        Spacer(Modifier.width(6.dp))
+                    }
+                    Text(stringResource(R.string.nav_network_test))
+                }
+                testResult?.let {
+                    Spacer(Modifier.width(12.dp))
+                    Text(it, style = MaterialTheme.typography.bodySmall,
+                        color = if (it.startsWith("✓")) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error)
+                }
+            }
         }
 
         Spacer(modifier = Modifier.height(16.dp))

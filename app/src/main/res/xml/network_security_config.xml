@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Allow cleartext HTTP/FTP for local network connections.
+    This is intentional: home NAS and self-hosted servers commonly run without TLS
+    (e.g. SFTPGo, Nextcloud on LAN). Public-internet HTTPS is still the norm;
+    we just don't block the user from reaching their own server.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true" />
+</network-security-config>

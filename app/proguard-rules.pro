@@ -24,3 +24,16 @@
 -keep class com.google.crypto.tink.** { *; }
 -keep class androidx.security.crypto.** { *; }
 -dontwarn com.google.crypto.tink.**
+
+# Network storage libraries
+-keep class org.apache.commons.net.** { *; }
+-keep class at.bitfire.dav4jvm.** { *; }
+-keep class okhttp3.** { *; }
+-keep class okio.** { *; }
+-dontwarn org.apache.commons.net.**
+-dontwarn at.bitfire.dav4jvm.**
+-dontwarn okhttp3.**
+-dontwarn okio.**
+-dontwarn org.bouncycastle.**
+-dontwarn org.conscrypt.**
+-dontwarn org.openjsse.**

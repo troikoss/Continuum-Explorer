@@ -55,7 +55,9 @@ data class NavLocation(
     val archiveUri: Uri? = null,
     val archivePath: String? = null,
     val safStack: List<Uri>? = null,
-    val libraryItem: LibraryItem = LibraryItem.None
+    val libraryItem: LibraryItem = LibraryItem.None,
+    val networkConnectionId: String? = null,
+    val networkPath: String? = null
 )
 
 /**
@@ -130,5 +132,9 @@ data class NetworkConnection(
     val port: Int = 0,
     val username: String = "",
     val password: String = "",
-    val remotePath: String = "/"
+    val remotePath: String = "/",
+    val useTls: Boolean = false,
+    val ftpPassiveMode: Boolean = true,
+    val rootUrl: String = "",
+    val acceptUntrustedCerts: Boolean = false
 )

@@ -20,6 +20,7 @@ import com.troikoss.continuum_explorer.managers.SearchManager
 import com.troikoss.continuum_explorer.managers.SelectionManager
 import com.troikoss.continuum_explorer.managers.SettingsManager
 import com.troikoss.continuum_explorer.model.*
+import com.troikoss.continuum_explorer.model.StorageProvider
 import com.troikoss.continuum_explorer.providers.LocalProvider
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -59,6 +60,11 @@ class FileExplorerState(
 
     // Cache for current archive structure: Path -> List of Files
     var archiveCache: Map<String, List<UniversalFile>>? = null
+
+    // Network provider state
+    var currentNetworkProvider by mutableStateOf<StorageProvider?>(null)
+    var currentNetworkId by mutableStateOf<String?>(null)
+    var networkError by mutableStateOf<String?>(null)
 
     // The processed and sorted list of files to display
     var files by mutableStateOf(emptyList<UniversalFile>())
@@ -181,6 +187,9 @@ class FileExplorerState(
 
     val currentName: String
         get() {
+            if (currentNetworkProvider != null && currentNetworkId != null) {
+                return currentNetworkProvider!!.displayName(currentNetworkId!!)
+            }
             return if (libraryItem == LibraryItem.RecycleBin) {
                 context.getString(R.string.nav_recycle_bin)
             } else if (libraryItem == LibraryItem.Recent) {
@@ -243,7 +252,9 @@ class FileExplorerState(
         }
 
     val canGoUp: Boolean
-        get() = if (currentArchiveFile != null || currentArchiveUri != null) {
+        get() = if (currentNetworkProvider != null && currentNetworkId != null) {
+            currentNetworkProvider!!.parentId(currentNetworkId!!) != null
+        } else if (currentArchiveFile != null || currentArchiveUri != null) {
             true
         } else if (libraryItem != LibraryItem.None) {
             libraryItem == LibraryItem.Gallery && currentPath != null
@@ -413,6 +424,15 @@ class FileExplorerState(
                             archiveCache = ZipUtils.parseArchive(context, source)
                         }
                         archiveCache?.get(currentArchivePath) ?: emptyList()
+                    } else if (currentNetworkProvider != null && currentNetworkId != null) {
+                        try {
+                            val result = currentNetworkProvider!!.listChildren(currentNetworkId!!)
+                            withContext(Dispatchers.Main) { networkError = null }
+                            result
+                        } catch (e: Exception) {
+                            withContext(Dispatchers.Main) { networkError = e.message ?: "Network error" }
+                            emptyList()
+                        }
                     } else if (currentPath != null) {
                         val rawFiles = currentPath!!.listFiles()?.toList() ?: emptyList()
                         rawFiles.filter { it.name != ".metadata" }.map { it.toUniversal() }
@@ -514,6 +534,7 @@ class FileExplorerState(
 
     fun getCurrentStorageKey(): String? {
         if (isSearchMode) return context.getString(R.string.msg_search_results)
+        if (currentNetworkProvider != null && currentNetworkId != null) return currentNetworkId
         return if (currentArchiveFile != null || currentArchiveUri != null) {
             val base = currentArchiveFile?.absolutePath ?: currentArchiveUri.toString()
             "archive:$base:${currentArchivePath.removeSuffix("/")}"

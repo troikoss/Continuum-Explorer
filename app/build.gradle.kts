@@ -69,6 +69,11 @@ dependencies {
     implementation(libs.androidx.ui)
     implementation(libs.androidx.appcompat)
     implementation(libs.androidx.security.crypto)
+    implementation(libs.commons.net)
+    implementation(libs.dav4jvm) {
+        exclude(group = "org.ogce", module = "xpp3")
+    }
+    implementation(libs.okhttp)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
