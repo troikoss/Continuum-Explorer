@@ -417,4 +417,9 @@
     <string name="details_header_type">Type</string>
     <string name="menu_by_type">By Type</string>
 
+    <!-- Network file operations -->
+    <string name="msg_remote_permanent_warning">Network files will be deleted permanently (cannot be moved to trash).</string>
+    <string name="msg_archive_remote_unsupported">Archiving is not yet supported for network locations.</string>
+    <string name="msg_remote_trash_skipped">Can\'t move network files to trash. They will be deleted permanently.</string>
+
 </resources>

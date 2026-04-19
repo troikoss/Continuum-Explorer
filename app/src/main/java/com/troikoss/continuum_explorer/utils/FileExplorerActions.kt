@@ -15,7 +15,6 @@ import com.troikoss.continuum_explorer.ui.activities.PopUpActivity
 import com.troikoss.continuum_explorer.model.LibraryItem
 import com.troikoss.continuum_explorer.model.UniversalFile
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -130,7 +129,7 @@ fun FileExplorerState.paste() {
     context.startActivity(intent)
 
     scope.launch {
-        val pastedNames = pasteFromClipboard(context, currentPath, currentSafUri, clipData)
+        val pastedNames = pasteFromClipboard(context, currentPath, currentSafUri, currentNetworkProvider, currentNetworkId, clipData)
         refresh()
         if (pastedNames.isNotEmpty()) {
             val pastedFiles = files.filter { pastedNames.contains(it.name) }
@@ -204,6 +203,10 @@ fun FileExplorerState.redo() {
 }
 
 fun FileExplorerState.extractSelection() {
+    if (currentNetworkProvider != null || selectionManager.selectedItems.any { it.provider.capabilities.isRemote }) {
+        Toast.makeText(context, context.getString(R.string.msg_archive_remote_unsupported), Toast.LENGTH_SHORT).show()
+        return
+    }
     val selectedArchives = selectionManager.selectedItems.filter { ZipUtils.isArchive(it) && it.fileRef != null }
     if (selectedArchives.isEmpty()) return
 
@@ -234,6 +237,10 @@ fun FileExplorerState.extractSelection() {
 fun FileExplorerState.compressSelection() {
     val selected = selectionManager.selectedItems.toList()
     if (selected.isEmpty()) return
+    if (currentNetworkProvider != null || selected.any { it.provider.capabilities.isRemote }) {
+        Toast.makeText(context, context.getString(R.string.msg_archive_remote_unsupported), Toast.LENGTH_SHORT).show()
+        return
+    }
     val targetFolder = currentPath ?: return
     val folderName = targetFolder.name.ifEmpty { context.getString(R.string.archive) }
     val defaultName = if (selected.size == 1) "${selected[0].name}.zip" else "$folderName.zip"
@@ -282,14 +289,10 @@ fun FileExplorerState.confirmRename(target: UniversalFile, newName: String) {
     FileOperationsManager.start()
     FileOperationsManager.update(0, 1, operationType = OperationType.RENAME)
     FileOperationsManager.currentFileName.value = target.name
-
-    val intent = Intent(context, PopUpActivity::class.java).apply {
-        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-    }
-    context.startActivity(intent)
+    // Don't start a new PopUpActivity here — the existing one (showing INPUT_TEXT) stays alive
+    // and transitions to PROGRESS via the state change above, then to COLLISION if needed.
 
     scope.launch {
-        delay(500)
         val success = renameFile(target, newName, context)
         withContext(Dispatchers.Main) {
             if (success) {
@@ -309,7 +312,7 @@ fun FileExplorerState.confirmRename(target: UniversalFile, newName: String) {
 fun FileExplorerState.createNewFolder() {
     FileOperationsManager.openCreateFolder(context) { name ->
         scope.launch {
-            val success = createDirectory(context, currentPath, currentSafUri, name)
+            val success = createDirectory(context, currentPath, currentSafUri, currentNetworkProvider, currentNetworkId, name)
             withContext(Dispatchers.Main) {
                 if (success) {
                     refresh()
@@ -331,7 +334,7 @@ fun FileExplorerState.createNewFolder() {
 fun FileExplorerState.createNewFile() {
     FileOperationsManager.openCreateFile(context) { name ->
         scope.launch {
-            val success = createFile(context, currentPath, currentSafUri, name)
+            val success = createFile(context, currentPath, currentSafUri, currentNetworkProvider, currentNetworkId, name)
             withContext(Dispatchers.Main) {
                 if (success) {
                     refresh()

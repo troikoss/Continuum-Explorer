@@ -14,6 +14,7 @@ import com.troikoss.continuum_explorer.managers.FileOperationsManager
 import com.troikoss.continuum_explorer.managers.OperationType
 import com.troikoss.continuum_explorer.managers.UndoAction
 import com.troikoss.continuum_explorer.managers.UndoManager
+import com.troikoss.continuum_explorer.model.StorageProvider
 import com.troikoss.continuum_explorer.model.UniversalFile
 import com.troikoss.continuum_explorer.providers.LocalProvider
 import com.troikoss.continuum_explorer.providers.SafProvider
@@ -94,6 +95,8 @@ suspend fun pasteFromClipboard(
     context: Context,
     currentPath: File?,
     currentSafUri: Uri?,
+    destProvider: StorageProvider? = null,
+    destParentId: String? = null,
     preloadedClipData: ClipData? = null
 ): List<String> {
     val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
@@ -226,7 +229,9 @@ suspend fun pasteFromClipboard(
                     context = context,
                     source = sourceFile,
                     destLocal = currentPath,
-                    destSaf = destSafDoc
+                    destSaf = destSafDoc,
+                    destProvider = destProvider,
+                    destParentId = destParentId,
                 ) { src, outputStream ->
                     val inputStream = if (src.isArchiveEntry) {
                         val parts = src.absolutePath.split("::")
@@ -235,14 +240,12 @@ suspend fun pasteFromClipboard(
                             val archiveSource: Any = if (rootId.startsWith("/")) File(rootId) else Uri.parse(rootId)
                             ZipUtils.getArchiveInputStream(context, archiveSource, src.archivePath ?: "")
                         } else null
+                    } else if (src.fileRef != null) {
+                        src.fileRef!!.inputStream()
+                    } else if (src.documentFileRef != null) {
+                        context.contentResolver.openInputStream(src.documentFileRef!!.uri)
                     } else {
-                        val srcFileRef = src.fileRef
-                        if (srcFileRef != null) {
-                            srcFileRef.inputStream()
-                        } else {
-                            val uri = src.documentFileRef?.uri ?: sourceUri
-                            context.contentResolver.openInputStream(uri)
-                        }
+                        try { src.provider.openInput(src.providerId) } catch (_: Exception) { null }
                     }
 
                     if (inputStream != null) {
@@ -290,9 +293,11 @@ suspend fun pasteFromClipboard(
                         if (destFileUri != null) {
                             pasteLog.add(sourceFile.absolutePath to destFileUri)
                         }
+                    } else if (destProvider != null) {
+                        pasteLog.add(sourceFile.absolutePath to finalTargetName)
                     }
                     val sourceFileRef = sourceFile.fileRef
-                    if (isPasteToTrash && sourceFileRef != null) {
+                    if (isPasteToTrash && sourceFileRef != null && !sourceFile.provider.capabilities.isRemote) {
                         saveTrashMetadata(finalTargetName, sourceFileRef.absolutePath)
                     }
                 }
@@ -308,14 +313,7 @@ suspend fun pasteFromClipboard(
             PendingCut.files
                 .filter { it.absolutePath in successfullyCopiedPaths }
                 .forEach { file ->
-                    try {
-                        val cutFileRef = file.fileRef
-                        if (cutFileRef != null) {
-                            if (cutFileRef.isDirectory) cutFileRef.deleteRecursively() else cutFileRef.delete()
-                        } else {
-                            file.documentFileRef?.delete()
-                        }
-                    } catch (_: Exception) {}
+                    try { file.provider.delete(file.providerId) } catch (_: Exception) {}
                 }
             PendingCut.clear()
         }

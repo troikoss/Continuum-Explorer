@@ -313,6 +313,8 @@ class FileExplorerState(
                     query = query,
                     currentPath = currentPath,
                     currentSafUri = currentSafUri,
+                    currentNetworkProvider = currentNetworkProvider,
+                    currentNetworkId = currentNetworkId,
                     searchSubfolders = searchSubfolders,
                     archiveCache = archiveCache,
                     currentArchivePath = currentArchivePath

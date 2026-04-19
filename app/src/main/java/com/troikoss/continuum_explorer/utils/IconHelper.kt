@@ -177,18 +177,27 @@ object IconHelper {
         thumbSize: Dp,
         modifier: Modifier = Modifier,
     ) {
+        val cacheKey = "${folder.provider.kind}:${folder.absolutePath}"
         var previewFile by remember(folder) {
-            mutableStateOf(folderPreviewCache[folder.absolutePath]?.orElse(null))
+            mutableStateOf(folderPreviewCache[cacheKey]?.orElse(null))
         }
 
         LaunchedEffect(folder) {
-            val key = folder.absolutePath
-            if (folderPreviewCache[key] != null) return@LaunchedEffect
+            if (folderPreviewCache[cacheKey] != null) return@LaunchedEffect
             withContext(Dispatchers.IO) {
-                val found = (folder.fileRef?.listFiles()?.asSequence()?.map { it.toUniversal() }
-                    ?: folder.documentFileRef?.listFiles()?.asSequence()?.map { it.toUniversal() })
-                    ?.find { !it.isDirectory && isMimeTypePreviewable(it) && !it.name.lowercase().endsWith(".txt") }
-                folderPreviewCache.put(key, java.util.Optional.ofNullable(found))
+                val found = when {
+                    folder.fileRef != null ->
+                        folder.fileRef!!.listFiles()?.asSequence()?.map { it.toUniversal() }
+                            ?.find { !it.isDirectory && isMimeTypePreviewable(it) && !it.name.lowercase().endsWith(".txt") }
+                    folder.documentFileRef != null ->
+                        folder.documentFileRef!!.listFiles().asSequence().map { it.toUniversal() }
+                            .find { !it.isDirectory && isMimeTypePreviewable(it) && !it.name.lowercase().endsWith(".txt") }
+                    else -> try {
+                        folder.provider.listChildren(folder.providerId)
+                            .find { !it.isDirectory && isMimeTypePreviewable(it) && !it.name.lowercase().endsWith(".txt") }
+                    } catch (_: Exception) { null }
+                }
+                folderPreviewCache.put(cacheKey, java.util.Optional.ofNullable(found))
                 previewFile = found
             }
         }

@@ -105,15 +105,14 @@ suspend fun deleteRecursivelyWithProgress(
         val fileRef = file.fileRef
         val docRef = file.documentFileRef
         val children = try {
-            if (file.isArchiveEntry) {
-                emptyList()
-            } else if (fileRef != null) {
-                fileRef.listFiles()?.map { it.toUniversal() }
-            } else if (docRef != null) {
-                docRef.listFiles().map { it.toUniversal() }
-            } else emptyList()
+            when {
+                file.isArchiveEntry -> emptyList()
+                fileRef != null -> fileRef.listFiles()?.map { it.toUniversal() } ?: emptyList()
+                docRef != null -> docRef.listFiles().map { it.toUniversal() }
+                else -> file.provider.listChildren(file.providerId)
+            }
         } catch (_: Exception) { emptyList() }
-        children?.forEach { child ->
+        children.forEach { child ->
             if (FileOperationsManager.isCancelled.value) return@forEach
             deleteRecursivelyWithProgress(context, child, onProgress)
         }
@@ -122,10 +121,12 @@ suspend fun deleteRecursivelyWithProgress(
     if (FileOperationsManager.isCancelled.value) return false
     val fileRef2 = file.fileRef
     val success = try {
-        if (file.isArchiveEntry) {
-            false // Deleting archive entries not supported
-        } else if (fileRef2 != null) fileRef2.delete()
-        else file.documentFileRef?.delete() == true
+        when {
+            file.isArchiveEntry -> false
+            fileRef2 != null -> fileRef2.delete()
+            file.documentFileRef != null -> file.documentFileRef!!.delete()
+            else -> file.provider.delete(file.providerId)
+        }
     } catch (_: Exception) { false }
     if (success) onProgress(file, length)
     return success
@@ -142,14 +143,16 @@ suspend fun deleteFiles(
 ) {
     if (files.isEmpty()) return
 
+    val anyRemote = files.any { it.provider.capabilities.isRemote }
+    val effectivePermanent = forcePermanent || anyRemote
     val behavior = SettingsManager.deleteBehavior.value
 
     val result = if (silent) {
-        if (forcePermanent) DeleteResult.PERMANENT else DeleteResult.RECYCLE
+        if (effectivePermanent) DeleteResult.PERMANENT else DeleteResult.RECYCLE
     } else {
         when (behavior) {
-            DeleteBehavior.ASK -> FileOperationsManager.confirmDelete(files.size, permanentOnly = forcePermanent)
-            DeleteBehavior.RECYCLE -> if (forcePermanent) DeleteResult.PERMANENT else DeleteResult.RECYCLE
+            DeleteBehavior.ASK -> FileOperationsManager.confirmDelete(files.size, permanentOnly = effectivePermanent)
+            DeleteBehavior.RECYCLE -> if (effectivePermanent) DeleteResult.PERMANENT else DeleteResult.RECYCLE
             DeleteBehavior.PERMANENT -> DeleteResult.PERMANENT
         }
     }
@@ -230,6 +233,15 @@ suspend fun deleteFiles(
  * Moves files to a hidden .Trash folder in the root of the storage.
  */
 suspend fun moveToRecycleBin(context: Context, files: List<UniversalFile>) {
+    val (remote, trashable) = files.partition { it.provider.capabilities.isRemote }
+    if (remote.isNotEmpty()) {
+        withContext(Dispatchers.Main) {
+            Toast.makeText(context, context.getString(R.string.msg_remote_trash_skipped), Toast.LENGTH_SHORT).show()
+        }
+    }
+    if (trashable.isEmpty()) return
+    @Suppress("NAME_SHADOWING") val files = trashable
+
     val trashDir = File(Environment.getExternalStorageDirectory(), ".Trash")
     if (!trashDir.exists()) trashDir.mkdirs()
 

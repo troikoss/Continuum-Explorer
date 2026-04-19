@@ -89,7 +89,13 @@ fun ItemContextMenu(
 ) {
     val context = LocalContext.current
     val clipboard = remember { context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager }
-    var hasClipboardItems by remember { mutableStateOf(clipboard.hasPrimaryClip()) }
+    var hasClipboardItems by remember { mutableStateOf(false) }
+
+    LaunchedEffect(expanded) {
+        if (expanded) {
+            hasClipboardItems = clipboard.hasPrimaryClip()
+        }
+    }
     val selectionManager = appState.selectionManager
     val virtualStorage = listOf(LibraryItem.RecycleBin, LibraryItem.Gallery, LibraryItem.Recent)
     val isInVirtualStorage = appState.libraryItem in virtualStorage
@@ -350,7 +356,13 @@ fun BackgroundContextMenu(
 ) {
     val context = LocalContext.current
     val clipboard = remember { context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager }
-    var hasClipboardItems by remember { mutableStateOf(clipboard.hasPrimaryClip()) }
+    var hasClipboardItems by remember { mutableStateOf(false) }
+
+    LaunchedEffect(expanded) {
+        if (expanded) {
+            hasClipboardItems = clipboard.hasPrimaryClip()
+        }
+    }
 
     var currentScreen by remember { mutableStateOf("MAIN") }
     val virtualStorage = listOf(LibraryItem.RecycleBin, LibraryItem.Gallery, LibraryItem.Recent)

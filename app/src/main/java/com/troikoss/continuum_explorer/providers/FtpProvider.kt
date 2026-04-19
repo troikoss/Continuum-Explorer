@@ -193,6 +193,44 @@ class FtpProvider(
         return uf to FtpManagedOutputStream(c, mutex, stream)
     }
 
+    override suspend fun copyFrom(
+        source: UniversalFile,
+        destParentId: String,
+        destName: String,
+        onProgress: (Long) -> Unit,
+    ): UniversalFile {
+        // 'this' check must happen OUTSIDE withContext — inside a lambda 'this' is the CoroutineScope.
+        if (source.provider !== this) {
+            return super.copyFrom(source, destParentId, destName, onProgress)
+        }
+        // Same FTP connection: FTP allows only one data transfer at a time per control connection.
+        // Buffer the source entirely before opening the upload stream.
+        val bytes = withContext(Dispatchers.IO) {
+            mutex.withLock {
+                val c = ensureConnected()
+                val stream = c.retrieveFileStream(pathOf(source.providerId))
+                    ?: throw NetworkProviderException("Cannot read ${source.name}")
+                stream.readBytes().also {
+                    stream.close()
+                    try { c.completePendingCommand() } catch (_: Exception) {}
+                }
+            }
+        }
+        val path = joinPath(pathOf(destParentId), destName)
+        withContext(Dispatchers.IO) {
+            mutex.withLock {
+                val c = ensureConnected()
+                c.storeFile(path, bytes.inputStream())
+            }
+        }
+        onProgress(bytes.size.toLong())
+        return UniversalFile(
+            name = destName, isDirectory = false,
+            lastModified = System.currentTimeMillis(), length = bytes.size.toLong(),
+            provider = this, providerId = makeId(path), parentId = destParentId,
+        )
+    }
+
     override fun delete(id: String): Boolean = runBlocking(Dispatchers.IO) {
         mutex.withLock {
             val c = ensureConnected()

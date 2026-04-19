@@ -10,6 +10,7 @@ import com.troikoss.continuum_explorer.managers.CollisionResult
 import com.troikoss.continuum_explorer.managers.FileOperationsManager
 import com.troikoss.continuum_explorer.managers.UndoAction
 import com.troikoss.continuum_explorer.managers.UndoManager
+import com.troikoss.continuum_explorer.model.StorageProvider
 import com.troikoss.continuum_explorer.model.UniversalFile
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -48,6 +49,13 @@ suspend fun calculateSizeRecursively(context: Context, file: UniversalFile): Lon
                         if (FileOperationsManager.isCancelled.value) return 0L
                         size += calculateSizeRecursively(context, it.toUniversal())
                     }
+                } else {
+                    try {
+                        file.provider.listChildren(file.providerId).forEach { child ->
+                            if (FileOperationsManager.isCancelled.value) return 0L
+                            size += calculateSizeRecursively(context, child)
+                        }
+                    } catch (_: Exception) {}
                 }
             }
         } catch (e: Exception) {
@@ -92,6 +100,8 @@ suspend fun copyRecursively(
     source: UniversalFile,
     destLocal: File?,
     destSaf: DocumentFile?,
+    destProvider: StorageProvider? = null,
+    destParentId: String? = null,
     onCopyFile: suspend (UniversalFile, OutputStream) -> Unit
 ): String? {
     if (FileOperationsManager.isCancelled.value) return null
@@ -102,6 +112,8 @@ suspend fun copyRecursively(
         File(destLocal, targetName).exists()
     } else if (destSaf != null) {
         destSaf.findFile(targetName) != null
+    } else if (destProvider != null && destParentId != null) {
+        destProvider.findChild(destParentId, targetName) != null
     } else false
 
     if (alreadyExists) {
@@ -117,12 +129,16 @@ suspend fun copyRecursively(
                     if (existing.isDirectory) existing.deleteRecursively() else existing.delete()
                 } else if (destSaf != null) {
                     destSaf.findFile(targetName)?.delete()
+                } else if (destProvider != null && destParentId != null) {
+                    destProvider.findChild(destParentId, targetName)?.let { destProvider.delete(it.providerId) }
                 }
             }
             CollisionResult.KEEP_BOTH -> {
                 targetName = getUniqueName(targetName) { name ->
                     if (destLocal != null) File(destLocal, name).exists()
-                    else destSaf?.findFile(name) != null
+                    else if (destSaf != null) destSaf.findFile(name) != null
+                    else if (destProvider != null && destParentId != null) destProvider.findChild(destParentId, name) != null
+                    else false
                 }
             }
             CollisionResult.MERGE -> {
@@ -134,6 +150,7 @@ suspend fun copyRecursively(
     if (source.isDirectory) {
         var newDestLocal: File? = null
         var newDestSaf: DocumentFile? = null
+        var newDestParentId: String? = null
 
         if (destLocal != null) {
             newDestLocal = File(destLocal, targetName)
@@ -143,6 +160,15 @@ suspend fun copyRecursively(
         } else if (destSaf != null) {
             newDestSaf = destSaf.findFile(targetName) ?: destSaf.createDirectory(targetName)
             if (newDestSaf == null) return null
+        } else if (destProvider != null && destParentId != null) {
+            val existing = destProvider.findChild(destParentId, targetName)
+            newDestParentId = if (existing != null) {
+                existing.providerId
+            } else {
+                try {
+                    destProvider.createChild(destParentId, targetName, isDirectory = true).providerId
+                } catch (_: Exception) { return null }
+            }
         }
 
         if (source.isArchiveEntry) {
@@ -152,7 +178,7 @@ suspend fun copyRecursively(
                 val archiveSource: Any = if (rootId.startsWith("/")) File(rootId) else Uri.parse(rootId)
                 ZipUtils.getArchiveChildren(context, archiveSource, source.archivePath ?: "").forEach { child ->
                     if (FileOperationsManager.isCancelled.value) return@forEach
-                    copyRecursively(context, child, newDestLocal, newDestSaf, onCopyFile)
+                    copyRecursively(context, child, newDestLocal, newDestSaf, destProvider, newDestParentId, onCopyFile)
                 }
             }
         } else {
@@ -161,14 +187,29 @@ suspend fun copyRecursively(
             if (fileRef != null) {
                 fileRef.listFiles()?.forEach { child ->
                     if (FileOperationsManager.isCancelled.value) return@forEach
-                    copyRecursively(context, child.toUniversal(), newDestLocal, newDestSaf, onCopyFile)
+                    copyRecursively(context, child.toUniversal(), newDestLocal, newDestSaf, destProvider, newDestParentId, onCopyFile)
                 }
             } else if (docRef != null) {
                 docRef.listFiles().forEach { child ->
                     if (FileOperationsManager.isCancelled.value) return@forEach
-                    copyRecursively(context, child.toUniversal(), newDestLocal, newDestSaf, onCopyFile)
+                    copyRecursively(context, child.toUniversal(), newDestLocal, newDestSaf, destProvider, newDestParentId, onCopyFile)
                 }
+            } else {
+                try {
+                    source.provider.listChildren(source.providerId).forEach { child ->
+                        if (FileOperationsManager.isCancelled.value) return@forEach
+                        copyRecursively(context, child, newDestLocal, newDestSaf, destProvider, newDestParentId, onCopyFile)
+                    }
+                } catch (_: Exception) {}
             }
+        }
+    } else if (destProvider != null && destParentId != null && source.provider === destProvider) {
+        // Same-provider copy: delegate to the provider so it can handle single-connection
+        // constraints (e.g. FTP must buffer between RETR and STOR on one channel).
+        try {
+            destProvider.copyFrom(source, destParentId, targetName) {}
+        } catch (_: Exception) {
+            return null
         }
     } else {
         val outputStream: OutputStream? = if (destLocal != null) {
@@ -181,6 +222,11 @@ suspend fun copyRecursively(
                 ?: "application/octet-stream"
             val newFile = destSaf.createFile(mime, targetName)
             if (newFile != null) context.contentResolver.openOutputStream(newFile.uri) else null
+        } else if (destProvider != null && destParentId != null) {
+            try {
+                val (_, out) = destProvider.createAndOpenOutput(destParentId, targetName)
+                out
+            } catch (_: Exception) { null }
         } else null
 
         if (outputStream != null) {
@@ -264,7 +310,7 @@ suspend fun renameFile(file: UniversalFile, newName: String, context: Context? =
 
                 var targetName = newName
                 if (File(fileRef.parentFile, newName).exists()) {
-                    val result = FileOperationsManager.resolveCollision(newName)
+                    val result = FileOperationsManager.resolveCollision(newName, file.isDirectory)
                     when (result) {
                         CollisionResult.CANCEL -> return@withContext false
                         CollisionResult.REPLACE -> {
@@ -289,19 +335,38 @@ suspend fun renameFile(file: UniversalFile, newName: String, context: Context? =
                 val oldName = documentFileRef.name ?: file.name
                 if (oldName == newName) return@withContext true
 
+                // documentFileRef is reconstructed from the child URI, so parentFile may be null.
+                // Fall back to provider.findChild via the stored parentId.
                 val parent = documentFileRef.parentFile
+                val safParentId = parent?.uri?.toString() ?: file.parentId
+
                 var targetName = newName
-                if (parent?.findFile(newName) != null) {
-                    val result = FileOperationsManager.resolveCollision(newName)
+                val hasCollision = if (parent != null) {
+                    parent.findFile(newName) != null
+                } else {
+                    safParentId?.let { file.provider.findChild(it, newName) } != null
+                }
+
+                if (hasCollision) {
+                    val result = FileOperationsManager.resolveCollision(newName, file.isDirectory)
                     when (result) {
                         CollisionResult.CANCEL -> return@withContext false
                         CollisionResult.REPLACE -> {
-                            parent.findFile(newName)?.delete()
+                            if (parent != null) {
+                                parent.findFile(newName)?.delete()
+                            } else {
+                                safParentId?.let { file.provider.findChild(it, newName) }
+                                    ?.let { file.provider.delete(it.providerId) }
+                            }
                         }
                         CollisionResult.KEEP_BOTH -> {
                             targetName = if (parent != null) {
                                 getUniqueName(newName) { parent.findFile(it) != null }
-                            } else newName
+                            } else {
+                                safParentId?.let { pid ->
+                                    getUniqueName(newName) { n -> file.provider.findChild(pid, n) != null }
+                                } ?: newName
+                            }
                         }
                         CollisionResult.MERGE -> {
                             // No-op
@@ -337,7 +402,24 @@ suspend fun renameFile(file: UniversalFile, newName: String, context: Context? =
                     ))
                 }
                 success
-            } else false
+            } else {
+                val oldName = file.name
+                if (oldName == newName) return@withContext true
+                val pId = file.parentId ?: file.provider.parentId(file.providerId)
+                val collision = pId?.let { file.provider.findChild(it, newName) }
+                val targetName = if (collision != null) {
+                    when (FileOperationsManager.resolveCollision(newName, file.isDirectory)) {
+                        CollisionResult.CANCEL -> return@withContext false
+                        CollisionResult.REPLACE -> { file.provider.delete(collision.providerId); newName }
+                        CollisionResult.KEEP_BOTH -> getUniqueName(newName) { n ->
+                            @Suppress("UNNECESSARY_SAFE_CALL")
+                            pId?.let { file.provider.findChild(it, n) } != null
+                        }
+                        CollisionResult.MERGE -> newName
+                    }
+                } else newName
+                file.provider.rename(file.providerId, targetName) != null
+            }
         } catch (e: Exception) { e.printStackTrace(); false }
     }
 }
@@ -345,7 +427,14 @@ suspend fun renameFile(file: UniversalFile, newName: String, context: Context? =
 /**
  * Creates a new directory, auto-renaming on collision.
  */
-suspend fun createDirectory(context: Context, parentPath: File?, parentSafUri: Uri?, name: String): Boolean {
+suspend fun createDirectory(
+    context: Context,
+    parentPath: File?,
+    parentSafUri: Uri?,
+    parentProvider: StorageProvider? = null,
+    parentId: String? = null,
+    name: String,
+): Boolean {
     return withContext(Dispatchers.IO) {
         try {
             var targetName = name
@@ -360,6 +449,12 @@ suspend fun createDirectory(context: Context, parentPath: File?, parentSafUri: U
                     targetName = getUniqueName(targetName) { parentDoc.findFile(it) != null }
                 }
                 parentDoc.createDirectory(targetName) != null
+            } else if (parentProvider != null && parentId != null) {
+                if (parentProvider.findChild(parentId, targetName) != null) {
+                    targetName = getUniqueName(targetName) { parentProvider.findChild(parentId, it) != null }
+                }
+                parentProvider.createChild(parentId, targetName, isDirectory = true)
+                true
             } else false
         } catch (e: Exception) { e.printStackTrace(); false }
     }
@@ -368,7 +463,14 @@ suspend fun createDirectory(context: Context, parentPath: File?, parentSafUri: U
 /**
  * Creates a new empty file, auto-renaming on collision.
  */
-suspend fun createFile(context: Context, parentPath: File?, parentSafUri: Uri?, name: String): Boolean {
+suspend fun createFile(
+    context: Context,
+    parentPath: File?,
+    parentSafUri: Uri?,
+    parentProvider: StorageProvider? = null,
+    parentId: String? = null,
+    name: String,
+): Boolean {
     return withContext(Dispatchers.IO) {
         try {
             var targetName = name
@@ -383,6 +485,12 @@ suspend fun createFile(context: Context, parentPath: File?, parentSafUri: Uri?, 
                     targetName = getUniqueName(targetName) { parentDoc.findFile(it) != null }
                 }
                 parentDoc.createFile("text/plain", targetName) != null
+            } else if (parentProvider != null && parentId != null) {
+                if (parentProvider.findChild(parentId, targetName) != null) {
+                    targetName = getUniqueName(targetName) { parentProvider.findChild(parentId, it) != null }
+                }
+                parentProvider.createChild(parentId, targetName, isDirectory = false)
+                true
             } else false
         } catch (e: Exception) { e.printStackTrace(); false }
     }

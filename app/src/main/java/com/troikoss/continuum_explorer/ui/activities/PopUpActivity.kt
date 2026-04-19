@@ -851,7 +851,12 @@ fun InputContent(onClose: () -> Unit) {
     val onConfirm = {
         if (textState.text.isNotBlank()) {
             onConfirmAction?.invoke(textState.text)
-            onClose()
+            // If the action started an operation (e.g. rename), keep the popup alive so it
+            // can transition to PROGRESS / COLLISION. For non-operation confirms (create
+            // folder/file), isOperating stays false and we close normally.
+            if (!FileOperationsManager.isOperating.value) {
+                onClose()
+            }
         }
     }
 
