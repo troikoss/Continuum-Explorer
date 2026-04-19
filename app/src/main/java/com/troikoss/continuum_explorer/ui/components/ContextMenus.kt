@@ -133,7 +133,7 @@ fun ItemContextMenu(
                     text = { Text(stringResource(R.string.menu_open_with)) },
                     onClick = {
                         onDismiss()
-                        openWith(context, selectedItems.first())
+                        openWith(context, appState.scope, selectedItems.first())
                     },
                     leadingIcon = { Icon(Icons.Default.FolderOpen, null) }
                 )
@@ -291,7 +291,7 @@ fun ItemContextMenu(
             DropdownMenuItem(
                 text = { Text(stringResource(R.string.menu_share)) },
                 onClick = {
-                    shareFiles(context, selectedItems)
+                    shareFiles(context, appState.scope, selectedItems)
                     onDismiss()
                 },
                 leadingIcon = { Icon(Icons.Default.Share, null) }

@@ -13,6 +13,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import coil.ImageLoader
 import coil.decode.VideoFrameDecoder
+import com.troikoss.continuum_explorer.providers.UniversalFileFetcher
 import com.troikoss.continuum_explorer.model.LibraryItem
 import com.troikoss.continuum_explorer.ui.FileExplorer
 import com.troikoss.continuum_explorer.ui.theme.FileExplorerTheme
@@ -97,6 +98,7 @@ class MainActivity : AppCompatActivity() {
         lifecycleScope.launch(Dispatchers.IO) {
             val videoImageLoader = ImageLoader.Builder(this@MainActivity)
                 .components {
+                    add(UniversalFileFetcher.Factory())
                     add(VideoFrameDecoder.Factory())
                 }
                 .crossfade(true)

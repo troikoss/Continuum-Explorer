@@ -64,6 +64,7 @@ class FileExplorerState(
     // Network provider state
     var currentNetworkProvider by mutableStateOf<StorageProvider?>(null)
     var currentNetworkId by mutableStateOf<String?>(null)
+    var currentNetworkConnectionId by mutableStateOf<String?>(null)
     var networkError by mutableStateOf<String?>(null)
 
     // The processed and sorted list of files to display
@@ -222,6 +223,15 @@ class FileExplorerState(
     val currentUniversalPath: UniversalFile?
         get() = when {
             currentArchiveFile != null -> currentArchiveFile?.toUniversal()
+
+            currentNetworkProvider != null && currentNetworkId != null -> UniversalFile(
+                name = currentNetworkProvider!!.displayName(currentNetworkId!!),
+                isDirectory = true,
+                lastModified = 0L,
+                length = 0L,
+                provider = currentNetworkProvider!!,
+                providerId = currentNetworkId!!,
+            )
 
             currentSafUri != null -> {
                 val doc = DocumentFile.fromTreeUri(context, currentSafUri!!)

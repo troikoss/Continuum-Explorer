@@ -20,8 +20,44 @@ import kotlinx.coroutines.withContext
 /**
  * Shares one or more files via the system share sheet.
  */
-fun shareFiles(context: Context, files: List<UniversalFile>) {
+fun shareFiles(context: Context, scope: CoroutineScope, files: List<UniversalFile>) {
     if (files.isEmpty()) return
+    if (files.any { it.provider.capabilities.isRemote }) {
+        scope.launch {
+            try {
+                FileOperationsManager.start()
+                withContext(Dispatchers.Main) {
+                    FileOperationsManager.update(0, files.size, operationType = OperationType.COPY)
+                }
+                val uris = ArrayList<Uri>()
+                withContext(Dispatchers.IO) {
+                    files.forEach { file ->
+                        val uri = if (file.provider.capabilities.isRemote) {
+                            val cached = RemoteCache.cache(context, file)
+                            FileProvider.getUriForFile(context, context.packageName + ".provider", cached)
+                        } else {
+                            getUriForUniversalFile(context, file)
+                        }
+                        if (uri != null) uris.add(uri)
+                    }
+                }
+                withContext(Dispatchers.Main) {
+                    FileOperationsManager.finish()
+                    if (uris.isEmpty()) {
+                        Toast.makeText(context, context.getString(R.string.msg_share_failed_prepare), Toast.LENGTH_SHORT).show()
+                    } else {
+                        launchShareIntent(context, uris)
+                    }
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    FileOperationsManager.finish()
+                    Toast.makeText(context, context.getString(R.string.msg_share_failed_prepare), Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+        return
+    }
     val uris = ArrayList<Uri>()
     files.forEach { file ->
         val uri = getUriForUniversalFile(context, file)
@@ -31,6 +67,10 @@ fun shareFiles(context: Context, files: List<UniversalFile>) {
         Toast.makeText(context, context.getString(R.string.msg_share_failed_prepare), Toast.LENGTH_SHORT).show()
         return
     }
+    launchShareIntent(context, uris)
+}
+
+private fun launchShareIntent(context: Context, uris: ArrayList<Uri>) {
     val shareIntent = Intent().apply {
         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         if (uris.size == 1) {
@@ -53,22 +93,47 @@ fun shareFiles(context: Context, files: List<UniversalFile>) {
 /**
  * Opens a file using the system "Open with" chooser.
  */
-fun openWith(context: Context, file: UniversalFile) {
-    val uri = getUriForUniversalFile(context, file) ?: return
+fun openWith(context: Context, scope: CoroutineScope, file: UniversalFile) {
+    if (file.provider.capabilities.isRemote) {
+        scope.launch {
+            try {
+                FileOperationsManager.start()
+                withContext(Dispatchers.Main) {
+                    FileOperationsManager.update(0, 1, operationType = OperationType.COPY)
+                    FileOperationsManager.currentFileName.value = file.name
+                }
+                val cached = RemoteCache.cache(context, file)
+                withContext(Dispatchers.Main) {
+                    FileOperationsManager.finish()
+                    val cachedUri = FileProvider.getUriForFile(context, context.packageName + ".provider", cached)
+                    launchOpenWithIntent(context, cachedUri)
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    FileOperationsManager.finish()
+                    Toast.makeText(context, context.getString(R.string.msg_no_app_open), Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+        return
+    }
 
+    val uri = getUriForUniversalFile(context, file) ?: return
+    launchOpenWithIntent(context, uri)
+}
+
+private fun launchOpenWithIntent(context: Context, uri: Uri) {
     val extension = MimeTypeMap.getFileExtensionFromUrl(uri.toString())
     val mimeType = if (extension != null) {
         MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension.lowercase())
     } else {
         context.contentResolver.getType(uri)
     } ?: "*/*"
-
     val intent = Intent(Intent.ACTION_VIEW).apply {
         setDataAndType(uri, mimeType)
         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
     }
-
     try {
         context.startActivity(Intent.createChooser(intent, context.getString(R.string.menu_open_with_no_dots)))
     } catch (_: Exception) {
@@ -162,6 +227,6 @@ fun openFile(context: Context, file: UniversalFile) {
     try {
         context.startActivity(intent)
     } catch (_: Exception) {
-        openWith(context, file)
+        launchOpenWithIntent(context, uri)
     }
 }

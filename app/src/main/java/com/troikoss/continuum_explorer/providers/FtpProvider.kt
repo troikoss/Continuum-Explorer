@@ -26,6 +26,7 @@ class FtpProvider(
 ) : StorageProvider, Closeable {
 
     override val kind = ProviderKind.NETWORK_FTP
+    override val connectionId: String get() = connection.id
     override val capabilities = ProviderCapabilities(
         canWrite = true,
         canRename = true,

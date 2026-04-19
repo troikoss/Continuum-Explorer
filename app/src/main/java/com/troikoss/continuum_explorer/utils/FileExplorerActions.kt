@@ -22,7 +22,7 @@ import java.io.File
 fun FileExplorerState.open(item: UniversalFile) {
     if (item.isDirectory) {
         if (item.provider.capabilities.isRemote) {
-            navigateTo(null, null, networkProvider = item.provider, networkId = item.providerId)
+            navigateTo(null, null, networkProvider = item.provider, networkId = item.providerId, networkConnectionId = currentNetworkConnectionId)
             return
         }
         if (item.isArchiveEntry) {

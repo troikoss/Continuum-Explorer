@@ -206,7 +206,7 @@ fun CommandBar(
                         text = stringResource(R.string.menu_open_with_no_dots),
                         icon = Icons.Default.FolderOpen,
                         onClick = { isTouch ->
-                            openWith(context, selectedList[0])
+                            openWith(context, appState.scope, selectedList[0])
                             if (isTouch) selectionManager.clear()
                         },
                     )
@@ -340,7 +340,7 @@ fun CommandBar(
                     CommandButton(
                         text = stringResource(R.string.menu_share),
                         icon = Icons.Default.Share,
-                        onClick = { isTouch -> shareFiles(context, selectionManager.selectedItems.toList()); if (isTouch) selectionManager.clear() }
+                        onClick = { isTouch -> shareFiles(context, appState.scope, selectionManager.selectedItems.toList()); if (isTouch) selectionManager.clear() }
                     )
                 }
 

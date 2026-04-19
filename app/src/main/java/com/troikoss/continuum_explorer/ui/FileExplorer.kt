@@ -88,7 +88,8 @@ fun FileExplorer(
                 when {
                     item.provider.capabilities.isRemote -> newState.navigateTo(
                         null, null, addToHistory = false,
-                        networkProvider = item.provider, networkId = item.providerId
+                        networkProvider = item.provider, networkId = item.providerId,
+                        networkConnectionId = item.provider.connectionId.ifEmpty { null }
                     )
                     item.absolutePath == "recent://" -> newState.navigateTo(null, null, addToHistory = false, libraryItem = LibraryItem.Recent)
                     item.absolutePath == "gallery://" -> newState.navigateTo(null, null, addToHistory = false, libraryItem = LibraryItem.Gallery)
@@ -403,6 +404,7 @@ private fun navigateToSection(appState: FileExplorerState, context: Context, sec
             appState.navigateTo(
                 newPath = null, newUri = null,
                 networkProvider = provider, networkId = provider.rootId(),
+                networkConnectionId = conn.id,
                 addToHistory = true,
             )
         }

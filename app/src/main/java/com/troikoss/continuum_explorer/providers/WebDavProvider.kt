@@ -47,6 +47,7 @@ class WebDavProvider(
 ) : StorageProvider, Closeable {
 
     override val kind = ProviderKind.NETWORK_WEBDAV
+    override val connectionId: String get() = connection.id
     override val capabilities = ProviderCapabilities(
         canWrite = true,
         canRename = true,

@@ -31,6 +31,7 @@ data class FileMetadata(
 interface StorageProvider {
     val kind: ProviderKind
     val capabilities: ProviderCapabilities
+    val connectionId: String get() = ""
 
     fun rootId(): String
     fun parentId(childId: String): String?

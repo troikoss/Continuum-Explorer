@@ -87,7 +87,7 @@ object IconHelper {
                 name.endsWith(".txt") -> TextFilePreview(file, fallbackIcon, modifier, tint, isDetailView)
                 else -> {
                     SubcomposeAsyncImage(
-                        model = file.documentFileRef?.uri ?: file.fileRef?.absolutePath,
+                        model = if (file.provider.capabilities.isRemote) file else (file.documentFileRef?.uri ?: file.fileRef?.absolutePath),
                         contentDescription = null,
                         modifier = modifier,
                         contentScale = contentScale,
@@ -177,6 +177,7 @@ object IconHelper {
         thumbSize: Dp,
         modifier: Modifier = Modifier,
     ) {
+        if (!folder.isDirectory) return
         val cacheKey = "${folder.provider.kind}:${folder.absolutePath}"
         var previewFile by remember(folder) {
             mutableStateOf(folderPreviewCache[cacheKey]?.orElse(null))
@@ -291,11 +292,7 @@ object IconHelper {
         LaunchedEffect(file) {
             textSnippet = withContext(Dispatchers.IO) {
                 try {
-                    val stream = if (file.documentFileRef != null) {
-                        context.contentResolver.openInputStream(file.documentFileRef!!.uri)
-                    } else {
-                        file.fileRef?.inputStream()
-                    }
+                    val stream = try { file.provider.openInput(file.providerId) } catch (_: Exception) { null }
                     stream?.use { it.bufferedReader().use { reader ->
                         val buffer = CharArray(300)
                         val length = reader.read(buffer)
@@ -322,12 +319,17 @@ object IconHelper {
     }
 
     // --- Rendering Logic ---
-    private fun renderPdfThumbnail(context: Context, file: UniversalFile, thumbFile: File) {
+    private suspend fun renderPdfThumbnail(context: Context, file: UniversalFile, thumbFile: File) {
         try {
-            val pfd = if (file.documentFileRef != null) {
-                context.contentResolver.openFileDescriptor(file.documentFileRef!!.uri, "r")
-            } else {
-                ParcelFileDescriptor.open(file.fileRef, ParcelFileDescriptor.MODE_READ_ONLY)
+            val pfd = when {
+                file.documentFileRef != null ->
+                    context.contentResolver.openFileDescriptor(file.documentFileRef!!.uri, "r")
+                file.fileRef != null ->
+                    ParcelFileDescriptor.open(file.fileRef, ParcelFileDescriptor.MODE_READ_ONLY)
+                else -> {
+                    val cached = RemoteCache.cache(context, file)
+                    ParcelFileDescriptor.open(cached, ParcelFileDescriptor.MODE_READ_ONLY)
+                }
             }
             pfd?.use { descriptor ->
                 PdfRenderer(descriptor).use { renderer ->
@@ -345,9 +347,13 @@ object IconHelper {
         } catch (e: Exception) { e.printStackTrace() }
     }
 
-    private fun renderApkThumbnail(context: Context, file: UniversalFile, thumbFile: File) {
+    private suspend fun renderApkThumbnail(context: Context, file: UniversalFile, thumbFile: File) {
         try {
-            val apkPath = file.fileRef?.absolutePath ?: return
+            val apkPath = when {
+                file.fileRef != null -> file.fileRef!!.absolutePath
+                file.provider.capabilities.isRemote -> RemoteCache.cache(context, file).absolutePath
+                else -> return
+            }
             val pm = context.packageManager
             val info = pm.getPackageArchiveInfo(apkPath, 0)
             info?.applicationInfo?.let { appInfo ->
@@ -391,8 +397,9 @@ object IconHelper {
             // Images and videos — load via Coil, no disk cache needed
             isMimeTypePreviewable(file) && !name.endsWith(".txt") -> {
                 val loader = Coil.imageLoader(context)
+                val data: Any = file.documentFileRef?.uri ?: file.fileRef?.absolutePath ?: file
                 val request = ImageRequest.Builder(context)
-                    .data(file.documentFileRef?.uri ?: file.fileRef?.absolutePath)
+                    .data(data)
                     .allowHardware(false)
                     .build()
                 val result = loader.execute(request)
@@ -451,9 +458,9 @@ object DiskCache {
     }
 
     fun getCacheFile(context: Context, file: UniversalFile): File {
-        val size = file.documentFileRef?.length() ?: file.fileRef?.length() ?: 0L
-        val lastModified = file.documentFileRef?.lastModified() ?: file.fileRef?.lastModified() ?: 0L
-        val key = "${file.absolutePath}_${size}_${lastModified}"
+        val size = file.length
+        val lastModified = file.lastModified
+        val key = "${file.providerId}_${size}_${lastModified}"
         val hash = java.security.MessageDigest.getInstance("MD5")
             .digest(key.toByteArray())
             .joinToString("") { "%02x".format(it) }

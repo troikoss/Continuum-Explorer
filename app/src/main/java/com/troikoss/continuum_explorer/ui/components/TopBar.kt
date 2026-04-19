@@ -99,8 +99,10 @@ fun TopBar(
     }
 
     // Logic to determine what to show in the address bar text field
-    val currentPathString = remember(appState.currentPath, appState.currentSafUri, appState.currentArchiveFile, appState.currentArchiveUri, appState.currentArchivePath) {
-        if (appState.currentArchiveFile != null) {
+    val currentPathString = remember(appState.currentPath, appState.currentSafUri, appState.currentArchiveFile, appState.currentArchiveUri, appState.currentArchivePath, appState.currentNetworkId) {
+        if (appState.currentNetworkId != null) {
+            appState.currentNetworkId ?: ""
+        } else if (appState.currentArchiveFile != null) {
             val base = appState.currentArchiveFile?.absolutePath ?: ""
             if (appState.currentArchivePath.isEmpty()) base else "$base/${appState.currentArchivePath}"
         } else if (appState.currentArchiveUri != null) {
@@ -158,8 +160,8 @@ fun TopBar(
 
     val breadcrumbScrollState = rememberScrollState()
 
-    // Auto-scroll to end when path changes
-    LaunchedEffect(currentPathString) {
+    // Auto-scroll to end when path changes (includes network navigation)
+    LaunchedEffect(currentPathString, appState.currentNetworkId) {
         breadcrumbScrollState.animateScrollTo(breadcrumbScrollState.maxValue)
     }
 
@@ -262,7 +264,9 @@ fun TopBar(
                                 archiveFile = appState.currentArchiveFile,
                                 archiveUri = appState.currentArchiveUri,
                                 archivePath = appState.currentArchivePath,
-                                safStack = ArrayList(appState.safStack)
+                                safStack = ArrayList(appState.safStack),
+                                networkConnectionId = appState.currentNetworkConnectionId,
+                                networkPath = appState.currentNetworkId
                             )
                             DropdownMenuItem(
                                 text = {
@@ -626,6 +630,44 @@ fun TopBar(
                                     Text(text = displayName, style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp), color = MaterialTheme.colorScheme.onSurface)
                                 }
                                 if (index < safItems.size - 1) {
+                                    Icon(Icons.Default.ChevronRight, null, modifier = Modifier.size(16.dp))
+                                }
+                            }
+                        } else if (appState.currentNetworkProvider != null && appState.currentNetworkId != null) {
+                            val provider = appState.currentNetworkProvider!!
+                            val networkId = appState.currentNetworkId!!
+                            val breadcrumbIds = remember(networkId) {
+                                buildList {
+                                    var id: String? = networkId
+                                    val root = provider.rootId()
+                                    while (id != null) {
+                                        add(id)
+                                        if (id == root) break
+                                        id = provider.parentId(id)
+                                    }
+                                }.reversed()
+                            }
+                            breadcrumbIds.forEachIndexed { index, id ->
+                                TextButton(
+                                    onClick = {
+                                        if (id != networkId) {
+                                            appState.navigateTo(
+                                                null, null,
+                                                networkProvider = provider,
+                                                networkId = id,
+                                                networkConnectionId = appState.currentNetworkConnectionId
+                                            )
+                                        }
+                                    },
+                                    contentPadding = PaddingValues(horizontal = 12.dp)
+                                ) {
+                                    Text(
+                                        text = provider.displayName(id),
+                                        style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp),
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
+                                if (index < breadcrumbIds.lastIndex) {
                                     Icon(Icons.Default.ChevronRight, null, modifier = Modifier.size(16.dp))
                                 }
                             }
