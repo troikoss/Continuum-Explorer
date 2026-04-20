@@ -427,8 +427,15 @@ class FileExplorerState(
                         else -> GalleryManager.getGalleryFiles(context)
                     }
                     LibraryItem.RecycleBin -> if (currentPath != null) {
-                        val rawFiles = currentPath!!.listFiles()?.toList() ?: emptyList()
-                        rawFiles.filter { it.name != ".metadata" }.map { it.toUniversal() }
+                        val trashRoot = File(Environment.getExternalStorageDirectory(), ".Trash")
+                        if (currentPath!!.absolutePath == trashRoot.absolutePath) {
+                            migrateLegacyTrash(trashRoot)
+                            val uuidDirs = trashRoot.listFiles()?.filter { it.name != ".metadata" && it.isDirectory } ?: emptyList()
+                            uuidDirs.mapNotNull { it.listFiles()?.firstOrNull()?.toUniversal() }
+                        } else {
+                            val rawFiles = currentPath!!.listFiles()?.toList() ?: emptyList()
+                            rawFiles.filter { it.name != ".metadata" }.map { it.toUniversal() }
+                        }
                     } else emptyList()
                     LibraryItem.None -> if (currentArchiveFile != null || currentArchiveUri != null) {
                         if (archiveCache == null) {
@@ -459,9 +466,10 @@ class FileExplorerState(
 
                 val meta: Map<String, RecycleBinMetadata> = if (libraryItem == LibraryItem.RecycleBin) {
                     universalList.associate { file ->
-                        file.name to RecycleBinMetadata(
-                            deletedAt = getDeletedAt(file.name),
-                            deletedFrom = getDeletedFrom(file.name)
+                        val uuidKey = file.fileRef?.parentFile?.name ?: file.name
+                        uuidKey to RecycleBinMetadata(
+                            deletedAt = getDeletedAt(uuidKey),
+                            deletedFrom = getDeletedFrom(uuidKey)
                         )
                     }
                 } else emptyMap()
@@ -534,8 +542,16 @@ class FileExplorerState(
                     val type2 = getFileType(f2, context)
                     type1.compareTo(type2)
                 }
-                FileColumnType.DATE_DELETED -> (meta[f1.name]?.deletedAt ?: 0L).compareTo(meta[f2.name]?.deletedAt ?: 0L)
-                FileColumnType.DELETED_FROM -> (meta[f1.name]?.deletedFrom ?: "").compareTo(meta[f2.name]?.deletedFrom ?: "")
+                FileColumnType.DATE_DELETED -> {
+                    val key1 = f1.fileRef?.parentFile?.name ?: f1.name
+                    val key2 = f2.fileRef?.parentFile?.name ?: f2.name
+                    (meta[key1]?.deletedAt ?: 0L).compareTo(meta[key2]?.deletedAt ?: 0L)
+                }
+                FileColumnType.DELETED_FROM -> {
+                    val key1 = f1.fileRef?.parentFile?.name ?: f1.name
+                    val key2 = f2.fileRef?.parentFile?.name ?: f2.name
+                    (meta[key1]?.deletedFrom ?: "").compareTo(meta[key2]?.deletedFrom ?: "")
+                }
             }
             if (params.order == SortOrder.Ascending) result else -result
         }

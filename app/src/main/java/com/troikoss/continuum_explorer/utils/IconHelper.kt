@@ -84,7 +84,7 @@ object IconHelper {
             when {
                 name.endsWith(".pdf") -> PdfThumbnail(file, fallbackIcon, modifier, iconSize, tint)
                 name.endsWith(".apk") -> ApkThumbnail(file, fallbackIcon, modifier, iconSize, tint)
-                name.endsWith(".txt") -> TextFilePreview(file, fallbackIcon, modifier, tint, isDetailView)
+                name.endsWith(".txt") -> TextFilePreview(file, fallbackIcon, modifier, iconSize, tint, isDetailView)
                 else -> {
                     SubcomposeAsyncImage(
                         model = if (file.provider.capabilities.isRemote) file else (file.documentFileRef?.uri ?: file.fileRef?.absolutePath),
@@ -283,10 +283,10 @@ object IconHelper {
         file: UniversalFile,
         fallbackIcon: ImageVector,
         modifier: Modifier,
+        iconSize: Dp,
         tint: Color,
         isDetailView: Boolean
     ) {
-        val context = LocalContext.current
         var textSnippet by remember(file) { mutableStateOf("") }
 
         LaunchedEffect(file) {
@@ -314,7 +314,7 @@ object IconHelper {
                 )
             }
         } else {
-            Icon(imageVector = fallbackIcon, contentDescription = null, modifier = modifier, tint = tint)
+            Icon(imageVector = fallbackIcon, contentDescription = null, modifier = modifier.size(iconSize), tint = tint)
         }
     }
 

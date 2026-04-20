@@ -206,6 +206,7 @@ object FileOperationsManager {
         isCancelled.value = false // Reset cancellation
         progress.value = 0f
         popupType.value = PopupType.PROGRESS
+        currentOperationType.value = OperationType.NONE
         
         totalSize.longValue = 0L
         processedSize.longValue = 0L
@@ -292,7 +293,9 @@ object FileOperationsManager {
         notifyListeners()
         
         val result = deferred.await()
-        popupType.value = PopupType.PROGRESS
+        if (result != DeleteResult.CANCEL) {
+            popupType.value = PopupType.PROGRESS
+        }
         notifyListeners()
         return result
     }
@@ -330,7 +333,9 @@ object FileOperationsManager {
         notifyListeners()
         
         val result = deferred.await()
-        popupType.value = PopupType.PROGRESS
+        if (!result.isCancelled) {
+            popupType.value = PopupType.PROGRESS
+        }
         notifyListeners()
         return result
     }
@@ -349,7 +354,9 @@ object FileOperationsManager {
         notifyListeners()
         
         val result = deferred.await()
-        popupType.value = PopupType.PROGRESS
+        if (!result.isCancelled) {
+            popupType.value = PopupType.PROGRESS
+        }
         notifyListeners()
         return result
     }

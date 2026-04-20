@@ -425,7 +425,8 @@ private fun FileDetailsView(
 
                 appState.folderConfigs.visibleColumns.forEach { column ->
                     val width = appState.folderConfigs.columnWidths[column.type] ?: column.minWidth
-                    val meta = appState.recycleBinMetadata[file.name]
+                    val uuidKey = file.fileRef?.parentFile?.name
+                    val meta = uuidKey?.let { appState.recycleBinMetadata[it] }
                     val text = when (column.type) {
                         FileColumnType.DATE -> remember(file) { appState.formatDate(file.lastModified) }
                         FileColumnType.SIZE -> if (file.isDirectory) "--" else remember(file) { appState.formatSize(file.length) }

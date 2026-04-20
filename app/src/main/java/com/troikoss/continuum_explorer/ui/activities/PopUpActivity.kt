@@ -122,8 +122,8 @@ class PopUpActivity : ComponentActivity() {
                             PopupType.INPUT_TEXT -> InputContent(onClose = { finish() })
                             PopupType.COLLISION -> CollisionContent()
                             PopupType.MOVE_COPY_CHOICE -> MoveCopyContent(onClose = { finish() })
-                            PopupType.DELETE_CONFIRM -> DeleteConfirmContent()
-                            PopupType.DELETE_PERMANENT_CONFIRM -> DeletePermanentConfirmContent()
+                            PopupType.DELETE_CONFIRM -> DeleteConfirmContent(onClose = { finish() })
+                            PopupType.DELETE_PERMANENT_CONFIRM -> DeletePermanentConfirmContent(onClose = { finish() })
                             PopupType.PASSWORD_INPUT -> PasswordInputContent(onClose = { finish() })
                             PopupType.EXTRACT_OPTIONS -> ExtractOptionsContent(onClose = { finish() })
                             PopupType.ARCHIVE_OPTIONS -> ArchiveOptionsContent(onClose = { finish() })
@@ -191,10 +191,12 @@ fun PropertiesContent(onClose: () -> Unit) {
             var deletedFrom by remember { mutableStateOf<String?>(null) }
 
             LaunchedEffect(file) {
-                if (file.fileRef?.parentFile?.name == ".Trash") {
+                val parent = file.fileRef?.parentFile
+                if (parent?.parentFile?.name == ".Trash") {
+                    val uuid = parent.name
                     withContext(Dispatchers.IO) {
-                        val at = getDeletedAt(file.name)
-                        val from = getDeletedFrom(file.name)
+                        val at = getDeletedAt(uuid)
+                        val from = getDeletedFrom(uuid)
                         withContext(Dispatchers.Main) {
                             deletedAt = at
                             deletedFrom = from
@@ -980,7 +982,7 @@ fun MoveCopyContent(onClose: () -> Unit) {
 }
 
 @Composable
-fun DeleteConfirmContent() {
+fun DeleteConfirmContent(onClose: () -> Unit) {
     val count = FileOperationsManager.deleteItemCount.intValue
     val focusRequester = remember { FocusRequester() }
 
@@ -1001,7 +1003,10 @@ fun DeleteConfirmContent() {
             verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             TextButton(
-                onClick = { FileOperationsManager.onDeleteChoice(DeleteResult.CANCEL) },
+                onClick = { 
+                    FileOperationsManager.onDeleteChoice(DeleteResult.CANCEL)
+                    onClose()
+                },
                 contentPadding = PaddingValues(horizontal = 8.dp)
             ) {
                 Text(stringResource(R.string.cancel), maxLines = 1)
@@ -1026,7 +1031,7 @@ fun DeleteConfirmContent() {
 }
 
 @Composable
-fun DeletePermanentConfirmContent() {
+fun DeletePermanentConfirmContent(onClose: () -> Unit) {
     val count = FileOperationsManager.deleteItemCount.intValue
     val focusRequester = remember { FocusRequester() }
 
@@ -1041,7 +1046,10 @@ fun DeletePermanentConfirmContent() {
         Text(text = stringResource(R.string.delete_permanent_message, itemText), style = MaterialTheme.typography.bodyMedium)
         Spacer(modifier = Modifier.height(24.dp))
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-            TextButton(onClick = { FileOperationsManager.onDeleteChoice(DeleteResult.CANCEL) }) { Text(stringResource(R.string.no)) }
+            TextButton(onClick = { 
+                FileOperationsManager.onDeleteChoice(DeleteResult.CANCEL)
+                onClose()
+            }) { Text(stringResource(R.string.no)) }
             Spacer(modifier = Modifier.width(8.dp))
             Button(
                 onClick = { FileOperationsManager.onDeleteChoice(DeleteResult.PERMANENT) },
@@ -1085,7 +1093,7 @@ fun ProgressContent (onClose: () -> Unit) {
     LaunchedEffect(isRunning) { 
         if (!isRunning) { 
             focusRequester.requestFocus()
-            delay(1500)
+            delay(500)
             onClose() 
         } 
     }

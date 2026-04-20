@@ -14,7 +14,7 @@ import java.util.Stack
 sealed class UndoAction {
     data class Rename(val parentDir: File, val oldName: String, val newName: String) : UndoAction()
     data class RenameSaf(val parentUri: String, val oldName: String, val newName: String) : UndoAction()
-    data class Recycle(val recycledItems: List<Pair<String, String>>) : UndoAction() // RecycledName to OriginalPath
+    data class Recycle(var recycledItems: List<Triple<String, String, String>>) : UndoAction() // (uuid, originalPath, innerName)
     data class Paste(val isMove: Boolean, val items: List<Pair<String, String>>) : UndoAction() // SourcePath to DestPath
 }
 
@@ -104,30 +104,30 @@ object UndoManager {
             is UndoAction.Recycle -> {
                 val trashDir = File(Environment.getExternalStorageDirectory(), ".Trash")
                 var success = true
-                action.recycledItems.forEach { (recycledName, originalPath) ->
-                    val recycledFile = File(trashDir, recycledName)
+                action.recycledItems.forEach { (uuid, originalPath, innerName) ->
+                    val wrapper = File(trashDir, uuid)
+                    val recycledFile = File(wrapper, innerName)
                     var target = File(originalPath)
                     if (recycledFile.exists()) {
                         if (target.exists()) {
                             val result = FileOperationsManager.resolveCollision(target.name)
                             when (result) {
-                            CollisionResult.CANCEL -> { success = false; return@forEach }
-                            CollisionResult.REPLACE -> {
-                            if (target.isDirectory) target.deleteRecursively() else target.delete()
-                            }
-                            CollisionResult.KEEP_BOTH -> {
-                            val parent = target.parentFile
-                            val newName = getUniqueName(target.name) { File(parent, it).exists() }
-                            target = File(parent, newName)
-                            }
-                                CollisionResult.MERGE -> {
-                                        // No-op: fall through to recurse into existing directory
-                                    }
+                                CollisionResult.CANCEL -> { success = false; return@forEach }
+                                CollisionResult.REPLACE -> {
+                                    if (target.isDirectory) target.deleteRecursively() else target.delete()
                                 }
+                                CollisionResult.KEEP_BOTH -> {
+                                    val parent = target.parentFile
+                                    val newName = getUniqueName(target.name) { File(parent, it).exists() }
+                                    target = File(parent, newName)
+                                }
+                                CollisionResult.MERGE -> {}
+                            }
                         }
                         target.parentFile?.mkdirs()
                         if (recycledFile.renameTo(target)) {
-                            removeTrashMetadata(recycledName)
+                            removeTrashMetadata(uuid)
+                            wrapper.delete()
                         } else success = false
                     } else success = false
                 }
@@ -226,32 +226,20 @@ object UndoManager {
             is UndoAction.Recycle -> {
                 val trashDir = File(Environment.getExternalStorageDirectory(), ".Trash")
                 var success = true
-                action.recycledItems.forEach { (recycledName, originalPath) ->
+                val rewritten = mutableListOf<Triple<String, String, String>>()
+                action.recycledItems.forEach { (_, originalPath, innerName) ->
                     val originalFile = File(originalPath)
-                    var target = File(trashDir, recycledName)
-                    
                     if (originalFile.exists()) {
-                        if (target.exists()) {
-                            val result = FileOperationsManager.resolveCollision(target.name)
-                            when (result) {
-                            CollisionResult.CANCEL -> { success = false; return@forEach }
-                            CollisionResult.REPLACE -> {
-                            if (target.isDirectory) target.deleteRecursively() else target.delete()
-                            }
-                            CollisionResult.KEEP_BOTH -> {
-                            val newName = getUniqueName(target.name) { File(trashDir, it).exists() }
-                            target = File(trashDir, newName)
-                            }
-                                CollisionResult.MERGE -> {
-                                        // No-op: fall through to recurse into existing directory
-                                    }
-                                }
-                        }
+                        val newUuid = java.util.UUID.randomUUID().toString()
+                        val wrapper = File(trashDir, newUuid).apply { mkdirs() }
+                        val target = File(wrapper, innerName)
                         if (originalFile.renameTo(target)) {
-                            saveTrashMetadata(recycledName, originalPath)
-                        } else success = false
+                            saveTrashMetadata(newUuid, originalPath)
+                            rewritten.add(Triple(newUuid, originalPath, innerName))
+                        } else { wrapper.delete(); success = false }
                     } else success = false
                 }
+                if (rewritten.isNotEmpty()) action.recycledItems = rewritten
                 success
             }
             is UndoAction.Paste -> {

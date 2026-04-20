@@ -24,6 +24,43 @@ import java.io.FileOutputStream
 import java.util.ArrayDeque
 import java.util.Properties
 
+// region Trash Helpers
+
+private val UUID_REGEX = Regex("^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$")
+
+internal fun isUuidDir(f: File): Boolean = f.isDirectory && UUID_REGEX.matches(f.name)
+
+fun migrateLegacyTrash(trashDir: File) {
+    if (!trashDir.exists() || !trashDir.isDirectory) return
+    val children = trashDir.listFiles() ?: return
+    val legacy = children.filter { it.name != ".metadata" && !isUuidDir(it) }
+    val orphanUuids = children.filter { isUuidDir(it) && (it.listFiles()?.isEmpty() == true) }
+    if (legacy.isEmpty() && orphanUuids.isEmpty()) return
+
+    val metadataFile = File(trashDir, ".metadata")
+    val props = Properties()
+    if (metadataFile.exists()) metadataFile.inputStream().use { props.load(it) }
+
+    for (entry in legacy) {
+        val uuid = java.util.UUID.randomUUID().toString()
+        val wrapper = File(trashDir, uuid)
+        if (!wrapper.mkdirs()) continue
+        val moved = File(wrapper, entry.name)
+        if (!entry.renameTo(moved)) { wrapper.delete(); continue }
+        props.getProperty(entry.name)?.let { props.setProperty(uuid, it); props.remove(entry.name) }
+        props.getProperty("${entry.name}.deletedAt")?.let {
+            props.setProperty("$uuid.deletedAt", it); props.remove("${entry.name}.deletedAt")
+        }
+    }
+    for (orphan in orphanUuids) {
+        orphan.delete()
+        props.remove(orphan.name); props.remove("${orphan.name}.deletedAt")
+    }
+    try { metadataFile.outputStream().use { props.store(it, null) } } catch (e: Exception) { e.printStackTrace() }
+}
+
+// endregion
+
 // region Trash Metadata
 
 private fun getTrashMetadataFile(): File {
@@ -32,40 +69,40 @@ private fun getTrashMetadataFile(): File {
     return File(trashDir, ".metadata")
 }
 
-fun saveTrashMetadata(recycledName: String, originalPath: String, parentUri: String? = null) {
+fun saveTrashMetadata(uuid: String, originalPath: String, parentUri: String? = null) {
     try {
         val metadataFile = getTrashMetadataFile()
         val props = Properties()
         if (metadataFile.exists()) { metadataFile.inputStream().use { props.load(it) } }
         val entryValue = if (parentUri != null) "$originalPath|$parentUri" else originalPath
-        props.setProperty(recycledName, entryValue)
-        props.setProperty("$recycledName.deletedAt", System.currentTimeMillis().toString())
+        props.setProperty(uuid, entryValue)
+        props.setProperty("$uuid.deletedAt", System.currentTimeMillis().toString())
         metadataFile.outputStream().use { props.store(it, null) }
     } catch (e: Exception) { e.printStackTrace() }
 }
 
-fun getDeletedAt(recycledName: String): Long? {
+fun getDeletedAt(uuid: String): Long? {
     return try {
         val metadataFile = getTrashMetadataFile()
         if (!metadataFile.exists()) return null
         val props = Properties()
         metadataFile.inputStream().use { props.load(it) }
-        props.getProperty("$recycledName.deletedAt")?.toLongOrNull()
+        props.getProperty("$uuid.deletedAt")?.toLongOrNull()
     } catch (_: Exception) { null }
 }
 
-fun getOriginalPath(recycledName: String): String? {
+fun getOriginalPath(uuid: String): String? {
     return try {
         val metadataFile = getTrashMetadataFile()
         if (!metadataFile.exists()) return null
         val props = Properties()
         metadataFile.inputStream().use { props.load(it) }
-        props.getProperty(recycledName)
+        props.getProperty(uuid)
     } catch (_: Exception) { null }
 }
 
-fun getDeletedFrom(recycledName: String): String? {
-    val rawMetadata = getOriginalPath(recycledName) ?: return null
+fun getDeletedFrom(uuid: String): String? {
+    val rawMetadata = getOriginalPath(uuid) ?: return null
     val parts = rawMetadata.split("|", limit = 2)
     val originalPath = parts[0]
     return if (originalPath.startsWith("content://")) {
@@ -75,14 +112,14 @@ fun getDeletedFrom(recycledName: String): String? {
     }
 }
 
-fun removeTrashMetadata(recycledName: String) {
+fun removeTrashMetadata(uuid: String) {
     try {
         val metadataFile = getTrashMetadataFile()
         if (!metadataFile.exists()) return
         val props = Properties()
         metadataFile.inputStream().use { props.load(it) }
-        props.remove(recycledName)
-        props.remove("$recycledName.deletedAt")
+        props.remove(uuid)
+        props.remove("$uuid.deletedAt")
         metadataFile.outputStream().use { props.store(it, null) }
     } catch (e: Exception) { e.printStackTrace() }
 }
@@ -210,7 +247,11 @@ suspend fun deleteFiles(
             }
             if (success) {
                 deletedCount++
-                removeTrashMetadata(file.name)
+                val parent = file.fileRef?.parentFile
+                if (parent != null && isUuidDir(parent) && parent.parentFile?.name == ".Trash") {
+                    parent.deleteRecursively()
+                    removeTrashMetadata(parent.name)
+                }
             }
         }
         withContext(Dispatchers.Main) {
@@ -244,6 +285,7 @@ suspend fun moveToRecycleBin(context: Context, files: List<UniversalFile>) {
 
     val trashDir = File(Environment.getExternalStorageDirectory(), ".Trash")
     if (!trashDir.exists()) trashDir.mkdirs()
+    migrateLegacyTrash(trashDir)
 
     var totalBytesToMove = 0L
     withContext(Dispatchers.IO) { totalBytesToMove = files.sumOf { calculateSizeRecursively(context, it) } }
@@ -255,7 +297,7 @@ suspend fun moveToRecycleBin(context: Context, files: List<UniversalFile>) {
     }
 
     var movedCount = 0
-    val recycleLog = mutableListOf<Pair<String, String>>() // RecycledName to OriginalPath
+    val recycleLog = mutableListOf<Triple<String, String, String>>() // (uuid, originalPath, innerName)
 
     withContext(Dispatchers.IO) {
         for ((index, file) in files.withIndex()) {
@@ -267,13 +309,14 @@ suspend fun moveToRecycleBin(context: Context, files: List<UniversalFile>) {
             val fileRef = file.fileRef
             val documentFileRef = file.documentFileRef
             if (fileRef != null) {
-                val recycledName = getUniqueName(file.name) { name -> File(trashDir, name).exists() }
-                val tempTarget = File(trashDir, recycledName)
+                val uuid = java.util.UUID.randomUUID().toString()
+                val wrapper = File(trashDir, uuid).apply { mkdirs() }
+                val tempTarget = File(wrapper, fileRef.name)
                 try {
                     if (fileRef.isDirectory) {
                         val copied = fileRef.copyRecursively(tempTarget, overwrite = false)
                         if (!copied) {
-                            tempTarget.deleteRecursively()
+                            wrapper.deleteRecursively()
                             throw Exception("copyRecursively returned false for ${fileRef.absolutePath}")
                         }
                         fileRef.deleteRecursively()
@@ -284,16 +327,18 @@ suspend fun moveToRecycleBin(context: Context, files: List<UniversalFile>) {
                             fileRef.delete()
                         }
                     }
-                    saveTrashMetadata(recycledName, fileRef.absolutePath)
-                    recycleLog.add(recycledName to fileRef.absolutePath)
+                    saveTrashMetadata(uuid, fileRef.absolutePath)
+                    recycleLog.add(Triple(uuid, fileRef.absolutePath, fileRef.name))
                     movedCount++
                 } catch (e: Exception) {
                     e.printStackTrace()
-                    tempTarget.deleteRecursively()
+                    wrapper.deleteRecursively()
                 }
             } else if (documentFileRef != null) {
-                val recycledName = getUniqueName(file.name) { name -> File(trashDir, name).exists() }
-                val target = File(trashDir, recycledName)
+                val uuid = java.util.UUID.randomUUID().toString()
+                val innerName = documentFileRef.name ?: "unnamed"
+                val wrapper = File(trashDir, uuid).apply { mkdirs() }
+                val target = File(wrapper, innerName)
                 try {
                     if (documentFileRef.isDirectory) {
                         fun copyDocDirToLocal(srcDoc: DocumentFile, destDir: File) {
@@ -312,12 +357,12 @@ suspend fun moveToRecycleBin(context: Context, files: List<UniversalFile>) {
                         copyDocDirToLocal(documentFileRef, target)
                         if (target.exists()) {
                             documentFileRef.delete()
-                            val parentUri = documentFileRef.parentFile?.uri?.toString()
-                            saveTrashMetadata(recycledName, documentFileRef.uri.toString(), parentUri)
-                            recycleLog.add(recycledName to documentFileRef.uri.toString())
+                            val parentUri = file.parentId ?: documentFileRef.parentFile?.uri?.toString()
+                            saveTrashMetadata(uuid, documentFileRef.uri.toString(), parentUri)
+                            recycleLog.add(Triple(uuid, documentFileRef.uri.toString(), innerName))
                             movedCount++
                         } else {
-                            target.deleteRecursively()
+                            wrapper.deleteRecursively()
                         }
                     } else {
                         context.contentResolver.openInputStream(documentFileRef.uri)?.use { input ->
@@ -325,17 +370,17 @@ suspend fun moveToRecycleBin(context: Context, files: List<UniversalFile>) {
                         }
                         if (target.exists() && target.length() == file.length) {
                             documentFileRef.delete()
-                            val parentUri = documentFileRef.parentFile?.uri?.toString()
-                            saveTrashMetadata(recycledName, documentFileRef.uri.toString(), parentUri)
-                            recycleLog.add(recycledName to documentFileRef.uri.toString())
+                            val parentUri = file.parentId ?: documentFileRef.parentFile?.uri?.toString()
+                            saveTrashMetadata(uuid, documentFileRef.uri.toString(), parentUri)
+                            recycleLog.add(Triple(uuid, documentFileRef.uri.toString(), innerName))
                             movedCount++
                         } else {
-                            target.delete()
+                            wrapper.deleteRecursively()
                         }
                     }
                 } catch (e: Exception) {
                     e.printStackTrace()
-                    target.deleteRecursively()
+                    wrapper.deleteRecursively()
                 }
             }
         }
@@ -369,7 +414,10 @@ suspend fun restoreFiles(context: Context, files: List<UniversalFile>) {
         for ((index, file) in files.withIndex()) {
             if (FileOperationsManager.isCancelled.value) break
 
-            val rawMetadata = getOriginalPath(file.name) ?: continue
+            val parentDir = file.fileRef?.parentFile
+            val uuid = parentDir?.name
+            if (uuid == null || !UUID_REGEX.matches(uuid) || parentDir.parentFile?.name != ".Trash") continue
+            val rawMetadata = getOriginalPath(uuid) ?: continue
             val metadataParts = rawMetadata.split("|", limit = 2)
             val originalPath = metadataParts[0]
             val parentUriStr = if (metadataParts.size > 1) metadataParts[1] else null
@@ -383,23 +431,50 @@ suspend fun restoreFiles(context: Context, files: List<UniversalFile>) {
                 val sourceFile = file.fileRef ?: continue
 
                 try {
-                    if (parentUriStr == null) continue
-                    val parentDoc = DocumentFile.fromTreeUri(context, Uri.parse(parentUriStr)) ?: continue
+                    // Original filename is preserved as the inner file's name in the UUID wrapper.
+                    val originalFileName = sourceFile.name
 
-                    val originalUri = Uri.parse(originalPath)
-                    val originalFileName = try {
-                        val docId = DocumentsContract.getDocumentId(originalUri)
-                        docId.substringAfterLast('/')
-                    } catch (e: Exception) {
-                        Uri.decode(originalUri.lastPathSegment)
-                            ?.substringAfterLast('/')
-                            ?: file.name
+                    if (parentUriStr == null) {
+                        // No tree URI stored (file was opened via single-file picker).
+                        // Attempt a local path fallback for ExternalStorageProvider files.
+                        val originalUri = Uri.parse(originalPath)
+                        val docId = try { DocumentsContract.getDocumentId(originalUri) } catch (_: Exception) { null }
+                        if (docId != null && docId.startsWith("primary:")) {
+                            val relativePath = docId.removePrefix("primary:")
+                            var localTarget = File(Environment.getExternalStorageDirectory(), relativePath)
+                            if (localTarget.exists()) {
+                                val result = FileOperationsManager.resolveCollision(localTarget.name, localTarget.isDirectory)
+                                when (result) {
+                                    CollisionResult.CANCEL -> break
+                                    CollisionResult.REPLACE -> {
+                                        if (localTarget.isDirectory) localTarget.deleteRecursively() else localTarget.delete()
+                                    }
+                                    CollisionResult.KEEP_BOTH -> {
+                                        val parent = localTarget.parentFile
+                                        val newName = getUniqueName(localTarget.name) { File(parent, it).exists() }
+                                        localTarget = File(parent, newName)
+                                    }
+                                    CollisionResult.MERGE -> {}
+                                }
+                            }
+                            localTarget.parentFile?.mkdirs()
+                            val moved = sourceFile.renameTo(localTarget)
+                            if (!moved) {
+                                sourceFile.copyTo(localTarget, overwrite = false)
+                                sourceFile.delete()
+                            }
+                            removeTrashMetadata(uuid)
+                            parentDir.delete()
+                            restoredCount++
+                        }
+                        continue
                     }
 
-                    val mimeType = MimeTypeMap.getSingleton()
-                        .getMimeTypeFromExtension(
-                            MimeTypeMap.getFileExtensionFromUrl(originalFileName)?.lowercase()
-                        ) ?: "application/octet-stream"
+                    val parentDoc = DocumentFile.fromTreeUri(context, Uri.parse(parentUriStr)) ?: continue
+
+                    val ext = originalFileName.substringAfterLast('.', "").lowercase().ifEmpty { null }
+                    val mimeType = ext?.let { MimeTypeMap.getSingleton().getMimeTypeFromExtension(it) }
+                        ?: "application/octet-stream"
 
                     val existingFile = parentDoc.findFile(originalFileName)
                     val targetDoc: DocumentFile? = if (existingFile != null) {
@@ -424,12 +499,16 @@ suspend fun restoreFiles(context: Context, files: List<UniversalFile>) {
                     }
 
                     if (targetDoc != null) {
-                        context.contentResolver.openOutputStream(targetDoc.uri)?.use { output ->
-                            sourceFile.inputStream().use { input -> input.copyTo(output) }
+                        val outputStream = context.contentResolver.openOutputStream(targetDoc.uri)
+                        if (outputStream != null) {
+                            outputStream.use { output ->
+                                sourceFile.inputStream().use { input -> input.copyTo(output) }
+                            }
+                            sourceFile.delete()
+                            removeTrashMetadata(uuid)
+                            parentDir.delete()
+                            restoredCount++
                         }
-                        sourceFile.delete()
-                        removeTrashMetadata(file.name)
-                        restoredCount++
                     }
                 } catch (e: Exception) {
                     e.printStackTrace()
@@ -458,7 +537,8 @@ suspend fun restoreFiles(context: Context, files: List<UniversalFile>) {
                 target.parentFile?.mkdirs()
                 val fileRef = file.fileRef
                 if (fileRef != null && fileRef.renameTo(target)) {
-                    removeTrashMetadata(file.name)
+                    removeTrashMetadata(uuid)
+                    parentDir.delete()
                     restoredCount++
                 } else if (fileRef != null) {
                     try {
@@ -468,7 +548,8 @@ suspend fun restoreFiles(context: Context, files: List<UniversalFile>) {
                             fileRef.copyTo(target, overwrite = false)
                         }
                         fileRef.deleteRecursively()
-                        removeTrashMetadata(file.name)
+                        removeTrashMetadata(uuid)
+                        parentDir.delete()
                         restoredCount++
                     } catch (e: Exception) {
                         e.printStackTrace()

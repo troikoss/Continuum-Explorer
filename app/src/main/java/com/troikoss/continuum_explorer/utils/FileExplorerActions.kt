@@ -367,7 +367,7 @@ fun FileExplorerState.showProperties(items: List<UniversalFile>? = null) {
 fun FileExplorerState.emptyRecycleBin() {
     scope.launch {
         val trashDir = File(Environment.getExternalStorageDirectory(), ".Trash")
-        val filesToDelete = trashDir.listFiles()?.map { it.toUniversal() } ?: emptyList()
+        val filesToDelete = trashDir.listFiles()?.filter { it.name != ".metadata" }?.map { it.toUniversal() } ?: emptyList()
         if (filesToDelete.isNotEmpty()) {
             FileOperationsManager.start()
             val intent = Intent(context, PopUpActivity::class.java).apply {
@@ -376,6 +376,8 @@ fun FileExplorerState.emptyRecycleBin() {
             context.startActivity(intent)
 
             deleteFiles(context, filesToDelete, forcePermanent = true)
+            val metaFile = File(trashDir, ".metadata")
+            if (metaFile.exists()) metaFile.delete()
             refresh()
             GlobalEvents.triggerRefresh()
         } else {
