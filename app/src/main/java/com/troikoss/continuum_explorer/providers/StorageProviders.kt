@@ -52,6 +52,7 @@ object StorageProviders {
             when (connection.protocol) {
                 NetworkProtocol.FTP -> FtpProvider(connection, appContext)
                 NetworkProtocol.WEBDAV -> WebDavProvider(connection, appContext)
+                NetworkProtocol.SMB -> SmbProvider(connection, appContext)
                 else -> throw UnsupportedOperationException("Protocol ${connection.protocol} not implemented")
             }
         }

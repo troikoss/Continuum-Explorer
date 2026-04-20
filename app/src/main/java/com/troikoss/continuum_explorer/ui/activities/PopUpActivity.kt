@@ -59,7 +59,13 @@ import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -1150,14 +1156,30 @@ fun NetworkConnectionContent(onClose: () -> Unit) {
     var ftpPassiveMode by remember { mutableStateOf(existing?.ftpPassiveMode ?: true) }
     var rootUrl by remember { mutableStateOf(existing?.rootUrl ?: "") }
     var acceptUntrustedCerts by remember { mutableStateOf(existing?.acceptUntrustedCerts ?: false) }
+    var smbDomain by remember { mutableStateOf(existing?.smbDomain ?: "") }
+    var showPassword by remember { mutableStateOf(false) }
+    var displayNameEdited by remember { mutableStateOf(existing != null) }
     var testResult by remember { mutableStateOf<String?>(null) }
     var isTesting by remember { mutableStateOf(false) }
 
     val isGoogleDrive = protocol == NetworkProtocol.GOOGLE_DRIVE
     val isFtp = protocol == NetworkProtocol.FTP
     val isWebDav = protocol == NetworkProtocol.WEBDAV
+    val isSmb = protocol == NetworkProtocol.SMB
     val focusRequester = remember { FocusRequester() }
     val scope = rememberCoroutineScope()
+
+    val remotePathPlaceholder = when {
+        isSmb -> "/ShareName  or  /ShareName/subfolder"
+        isFtp -> "/"
+        isWebDav -> "/remote.php/dav/files/username"
+        else -> "/"
+    }
+    val remotePathHint = when {
+        isSmb -> "First segment is the share name (e.g. /Documents)"
+        isWebDav -> "Path prefix on the server. Leave / for root."
+        else -> null
+    }
 
     LaunchedEffect(Unit) { focusRequester.requestFocus() }
 
@@ -1174,7 +1196,8 @@ fun NetworkConnectionContent(onClose: () -> Unit) {
             useTls = useTls,
             ftpPassiveMode = ftpPassiveMode,
             rootUrl = rootUrl.trim(),
-            acceptUntrustedCerts = acceptUntrustedCerts
+            acceptUntrustedCerts = acceptUntrustedCerts,
+            smbDomain = smbDomain.trim()
         )
         FileOperationsManager.onNetworkConnectionResult(connection)
         onClose()
@@ -1227,8 +1250,9 @@ fun NetworkConnectionContent(onClose: () -> Unit) {
 
         OutlinedTextField(
             value = displayName,
-            onValueChange = { displayName = it },
+            onValueChange = { displayName = it; displayNameEdited = true },
             label = { Text(stringResource(R.string.nav_network_display_name)) },
+            placeholder = { Text("My NAS", color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)) },
             singleLine = true,
             modifier = Modifier.fillMaxWidth().focusRequester(focusRequester),
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
@@ -1238,8 +1262,12 @@ fun NetworkConnectionContent(onClose: () -> Unit) {
             Spacer(modifier = Modifier.height(12.dp))
             OutlinedTextField(
                 value = host,
-                onValueChange = { host = it },
+                onValueChange = {
+                    host = it
+                    if (!displayNameEdited) displayName = it
+                },
                 label = { Text(stringResource(R.string.nav_network_host)) },
+                placeholder = { Text("192.168.1.x  or  nas.local", color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
@@ -1258,6 +1286,7 @@ fun NetworkConnectionContent(onClose: () -> Unit) {
                 value = username,
                 onValueChange = { username = it },
                 label = { Text(stringResource(R.string.nav_network_username)) },
+                placeholder = { Text(if (isFtp) "Leave blank for anonymous" else "username", color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
@@ -1268,15 +1297,36 @@ fun NetworkConnectionContent(onClose: () -> Unit) {
                 onValueChange = { password = it },
                 label = { Text(stringResource(R.string.nav_network_password)) },
                 singleLine = true,
-                visualTransformation = PasswordVisualTransformation(),
+                visualTransformation = if (showPassword) VisualTransformation.None else PasswordVisualTransformation(),
+                trailingIcon = {
+                    IconButton(onClick = { showPassword = !showPassword }) {
+                        Icon(
+                            imageVector = if (showPassword) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                            contentDescription = if (showPassword) "Hide password" else "Show password"
+                        )
+                    }
+                },
                 modifier = Modifier.fillMaxWidth(),
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
             )
+            if (isSmb) {
+                Spacer(modifier = Modifier.height(12.dp))
+                OutlinedTextField(
+                    value = smbDomain,
+                    onValueChange = { smbDomain = it },
+                    label = { Text("Domain / Workgroup (optional)") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
+                )
+            }
             Spacer(modifier = Modifier.height(12.dp))
             OutlinedTextField(
                 value = remotePath,
                 onValueChange = { remotePath = it },
                 label = { Text(stringResource(R.string.nav_network_remote_path)) },
+                placeholder = { Text(remotePathPlaceholder, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)) },
+                supportingText = remotePathHint?.let { hint -> { Text(hint, style = MaterialTheme.typography.bodySmall) } },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
@@ -1319,7 +1369,7 @@ fun NetworkConnectionContent(onClose: () -> Unit) {
             )
         }
 
-        if (!isGoogleDrive && (isFtp || isWebDav)) {
+        if (!isGoogleDrive && (isFtp || isWebDav || isSmb)) {
             Spacer(modifier = Modifier.height(8.dp))
             val canTest = (host.isNotBlank() || rootUrl.isNotBlank()) && !isTesting
             Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
@@ -1337,7 +1387,8 @@ fun NetworkConnectionContent(onClose: () -> Unit) {
                             password = password,
                             remotePath = remotePath.trim().ifEmpty { "/" },
                             useTls = useTls, ftpPassiveMode = ftpPassiveMode,
-                            rootUrl = rootUrl.trim(), acceptUntrustedCerts = acceptUntrustedCerts
+                            rootUrl = rootUrl.trim(), acceptUntrustedCerts = acceptUntrustedCerts,
+                            smbDomain = smbDomain.trim()
                         )
                         scope.launch {
                             val result = FileOperationsManager.testNetworkConnection(conn)

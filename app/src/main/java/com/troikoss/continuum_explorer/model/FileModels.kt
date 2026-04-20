@@ -136,5 +136,6 @@ data class NetworkConnection(
     val useTls: Boolean = false,
     val ftpPassiveMode: Boolean = true,
     val rootUrl: String = "",
-    val acceptUntrustedCerts: Boolean = false
+    val acceptUntrustedCerts: Boolean = false,
+    val smbDomain: String = ""
 )

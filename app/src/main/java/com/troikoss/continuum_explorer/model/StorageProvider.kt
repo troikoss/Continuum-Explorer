@@ -51,6 +51,8 @@ interface StorageProvider {
     fun delete(id: String): Boolean
     fun rename(id: String, newName: String): UniversalFile?
 
+    fun getDiskInfo(): Pair<Long, Long>? = null  // Pair(totalBytes, freeBytes)
+
     suspend fun copyFrom(
         source: UniversalFile,
         destParentId: String,

@@ -37,3 +37,9 @@
 -dontwarn org.bouncycastle.**
 -dontwarn org.conscrypt.**
 -dontwarn org.openjsse.**
+
+# smbj — SMB2/3 client
+-keep class com.hierynomus.** { *; }
+-keep class com.rapid7.** { *; }
+-dontwarn com.hierynomus.**
+-dontwarn com.rapid7.**

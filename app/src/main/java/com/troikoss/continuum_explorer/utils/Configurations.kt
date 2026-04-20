@@ -428,7 +428,8 @@ class AppConfigurations(private val context: Context) {
                         useTls = obj.optBoolean("useTls", false),
                         ftpPassiveMode = obj.optBoolean("ftpPassiveMode", true),
                         rootUrl = obj.optString("rootUrl", ""),
-                        acceptUntrustedCerts = obj.optBoolean("acceptUntrustedCerts", false)
+                        acceptUntrustedCerts = obj.optBoolean("acceptUntrustedCerts", false),
+                        smbDomain = obj.optString("smbDomain", "")
                     )
                 )
             }
@@ -451,6 +452,7 @@ class AppConfigurations(private val context: Context) {
                 put("ftpPassiveMode", conn.ftpPassiveMode)
                 put("rootUrl", conn.rootUrl)
                 put("acceptUntrustedCerts", conn.acceptUntrustedCerts)
+                put("smbDomain", conn.smbDomain)
             })
         }
         try {

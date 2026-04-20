@@ -95,6 +95,7 @@ import com.troikoss.continuum_explorer.model.NetworkConnection
 import com.troikoss.continuum_explorer.model.NetworkProtocol
 import com.troikoss.continuum_explorer.model.UniversalFile
 import com.troikoss.continuum_explorer.providers.LocalProvider
+import com.troikoss.continuum_explorer.providers.StorageProviders
 import com.troikoss.continuum_explorer.utils.FileExplorerState
 import com.troikoss.continuum_explorer.managers.SettingsManager
 import com.troikoss.continuum_explorer.utils.contextMenuDetector
@@ -898,23 +899,77 @@ private fun NavNetworkItem(
     var expanded by remember { mutableStateOf(false) }
     var menuOffset by remember { mutableStateOf(DpOffset.Zero) }
     val density = LocalDensity.current
+    val context = LocalContext.current
 
     val icon = when (connection.protocol) {
-        NetworkProtocol.FTP -> Icons.Default.Cloud
-        NetworkProtocol.WEBDAV -> Icons.Default.CloudQueue
+        NetworkProtocol.FTP -> Icons.Default.Lan
+        NetworkProtocol.WEBDAV -> Icons.Default.Lan
         NetworkProtocol.SMB -> Icons.Default.Lan
-        NetworkProtocol.GOOGLE_DRIVE -> Icons.Default.CloudCircle
+        NetworkProtocol.GOOGLE_DRIVE -> Icons.Default.Cloud
+    }
+
+    // Fetch disk info for SMB connections only
+    var diskInfo by remember(connection.id) { mutableStateOf<Pair<Long, Long>?>(null) }
+    val isSmb = connection.protocol == NetworkProtocol.SMB
+    LaunchedEffect(connection.id) {
+        if (isSmb) {
+            withContext(Dispatchers.IO) {
+                runCatching {
+                    val provider = StorageProviders.network(connection)
+                    provider.getDiskInfo()
+                }.getOrNull()?.let { diskInfo = it }
+            }
+        }
     }
 
     Box(modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)) {
         NavigationDrawerItem(
-            label = { Text(connection.displayName, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+            label = {
+                if (isSmb && diskInfo != null) {
+                    val (totalSpace, freeSpace) = diskInfo!!
+                    val usedSpace = totalSpace - freeSpace
+                    val progress = if (totalSpace > 0) usedSpace.toFloat() / totalSpace.toFloat() else 0f
+                    val totalFormatted = Formatter.formatFileSize(context, totalSpace)
+                    val freeFormatted = Formatter.formatFileSize(context, freeSpace)
+                    Column(modifier = Modifier.padding(vertical = 12.dp)) {
+                        Text(
+                            text = connection.displayName,
+                            fontWeight = FontWeight.Medium,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(4.dp)
+                                .clip(MaterialTheme.shapes.small)
+                                .background(MaterialTheme.colorScheme.surfaceVariant)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth(progress)
+                                    .fillMaxHeight()
+                                    .background(MaterialTheme.colorScheme.primary)
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = stringResource(R.string.nav_storage_usage_label, freeFormatted, totalFormatted),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                } else {
+                    Text(connection.displayName, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
+            },
             selected = false,
             onClick = onClick,
             icon = { Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.secondary) },
             shape = MaterialTheme.shapes.small,
             modifier = Modifier
-                .height(40.dp)
+                .then(if (!isSmb || diskInfo == null) Modifier.height(40.dp) else Modifier)
                 .contextMenuDetector(enableLongPress = true, aggressive = true) { offset ->
                     menuOffset = with(density) { DpOffset(offset.x.toDp(), offset.y.toDp()) }
                     expanded = true

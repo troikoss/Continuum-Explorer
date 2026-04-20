@@ -41,6 +41,8 @@ android {
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
+            excludes += "/META-INF/LICENSE"
+            excludes += "/META-INF/INDEX.LIST"
         }
     }
 }
@@ -74,6 +76,7 @@ dependencies {
         exclude(group = "org.ogce", module = "xpp3")
     }
     implementation(libs.okhttp)
+    implementation("com.hierynomus:smbj:0.13.0")
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
