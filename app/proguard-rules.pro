@@ -43,3 +43,12 @@
 -keep class com.rapid7.** { *; }
 -dontwarn com.hierynomus.**
 -dontwarn com.rapid7.**
+
+# javax.el (often used by dependencies like Hibernate Validator or some network libs)
+-dontwarn javax.el.BeanELResolver
+-dontwarn javax.el.ELContext
+-dontwarn javax.el.ELResolver
+-dontwarn javax.el.ExpressionFactory
+-dontwarn javax.el.FunctionMapper
+-dontwarn javax.el.ValueExpression
+-dontwarn javax.el.VariableMapper
