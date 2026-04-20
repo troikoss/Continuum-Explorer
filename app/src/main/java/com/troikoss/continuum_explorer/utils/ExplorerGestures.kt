@@ -836,8 +836,7 @@ fun Modifier.fileDropTarget(
 @Composable
 fun VerticalResizeHandle(
     onResize: (Dp) -> Unit,
-    modifier: Modifier = Modifier,
-    isPill: Boolean = false
+    modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
     val density = LocalDensity.current
@@ -858,22 +857,11 @@ fun VerticalResizeHandle(
         contentAlignment = Alignment.Center
     ) {
         // Visible divider line
-        if (isPill){
-            Box(
-                modifier = Modifier
-                    .width(4.dp)
-                    .height(60.dp)
-                    .background(
-                        color = MaterialTheme.colorScheme.outlineVariant,
-                        shape = androidx.compose.foundation.shape.CircleShape
-                    )
-            )
-        } else VerticalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+        VerticalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
         Box(
-            modifier = Modifier.then(
-                if (isPill) Modifier.height(80.dp) else Modifier.fillMaxHeight()
-                )
+            modifier = Modifier
+                .fillMaxHeight()
                 .requiredWidth(30.dp)
                 .pointerHoverIcon(resizeIcon)
                 .pointerInput(Unit) {

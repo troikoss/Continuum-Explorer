@@ -339,9 +339,7 @@ private fun ExplorerBody(
                 Box (modifier = Modifier.padding(vertical = 8.dp)) {
                     PermanentDrawerSheet(
                         modifier = Modifier.width(navPaneWidth),
-                        windowInsets = WindowInsets(0, 0, 0, 0),
-                        drawerShape = RoundedCornerShape(topEnd = 32.dp, bottomEnd = 32.dp),
-                        drawerContainerColor = MaterialTheme.colorScheme.surfaceContainer
+                        windowInsets = WindowInsets(0, 0, 0, 0)
                     ) {
                         NavigationPane(
                             appState = appState,
@@ -359,15 +357,11 @@ private fun ExplorerBody(
                         )
                     }
                 }
-
-                Spacer(modifier = Modifier.size(16.dp))
-
                 VerticalResizeHandle(
                     onResize = { delta ->
                         appState.appConfigs.navPaneWidth = (appState.appConfigs.navPaneWidth + delta).coerceIn(200.dp, 300.dp)
                         appState.appConfigs.savePaneWidths()
                     },
-                    isPill = true
                 )
             }
 
@@ -383,23 +377,12 @@ private fun ExplorerBody(
                         appState.appConfigs.detailsPaneWidth =
                             (appState.appConfigs.detailsPaneWidth - delta).coerceIn(200.dp, 300.dp)
                         appState.appConfigs.savePaneWidths()
-                    },
-                    isPill = true
+                    }
                 )
-
-                Spacer(modifier = Modifier.size(16.dp))
-
-                Box(
-                    modifier = Modifier
-                        .padding(vertical = 8.dp)
-                        .clip(RoundedCornerShape(topStart = 32.dp, bottomStart = 32.dp))
-                        .background(MaterialTheme.colorScheme.surfaceContainer)
-                ) {
-                    DetailsPane(
-                        appState = appState,
-                        modifier = Modifier.width(detailsPaneWidth)
-                    )
-                }
+                DetailsPane(
+                    appState = appState,
+                    modifier = Modifier.width(detailsPaneWidth)
+                )
             }
         }
 
