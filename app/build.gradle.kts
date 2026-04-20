@@ -72,6 +72,7 @@ dependencies {
     implementation(libs.androidx.appcompat)
     implementation(libs.androidx.security.crypto)
     implementation(libs.commons.net)
+    implementation(libs.jsch)
     implementation(libs.dav4jvm) {
         exclude(group = "org.ogce", module = "xpp3")
     }

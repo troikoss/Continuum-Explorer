@@ -121,7 +121,7 @@ data class RecycleBinMetadata(
 )
 
 enum class NetworkProtocol(val defaultPort: Int) {
-    FTP(21), WEBDAV(443), SMB(445), GOOGLE_DRIVE(0)
+    FTP(21), SFTP(22), WEBDAV(443), SMB(445)
 }
 
 data class NetworkConnection(
@@ -137,5 +137,8 @@ data class NetworkConnection(
     val ftpPassiveMode: Boolean = true,
     val rootUrl: String = "",
     val acceptUntrustedCerts: Boolean = false,
-    val smbDomain: String = ""
+    val smbDomain: String = "",
+    val sftpPrivateKeyUri: String = "",
+    val sftpPrivateKeyPassphrase: String = "",
+    val sftpPrivateKey: String = "",
 )

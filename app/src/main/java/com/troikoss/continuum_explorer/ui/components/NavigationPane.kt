@@ -1045,9 +1045,9 @@ private fun NavNetworkItem(
 
     val icon = when (connection.protocol) {
         NetworkProtocol.FTP -> Icons.Default.Lan
+        NetworkProtocol.SFTP -> Icons.Default.Lan
         NetworkProtocol.WEBDAV -> Icons.Default.Lan
         NetworkProtocol.SMB -> Icons.Default.Lan
-        NetworkProtocol.GOOGLE_DRIVE -> Icons.Default.Cloud
     }
 
     // Fetch disk info for SMB connections only

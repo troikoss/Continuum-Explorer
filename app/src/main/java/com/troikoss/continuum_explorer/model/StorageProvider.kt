@@ -7,7 +7,7 @@ import java.io.OutputStream
 
 enum class ProviderKind {
     LOCAL, SAF, ARCHIVE,
-    NETWORK_FTP, NETWORK_WEBDAV, NETWORK_SMB, CLOUD_GDRIVE
+    NETWORK_FTP, NETWORK_SFTP, NETWORK_WEBDAV, NETWORK_SMB
 }
 
 data class ProviderCapabilities(

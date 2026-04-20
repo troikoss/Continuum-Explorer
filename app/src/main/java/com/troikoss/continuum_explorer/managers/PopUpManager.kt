@@ -10,6 +10,7 @@ import com.troikoss.continuum_explorer.model.NetworkProtocol
 import com.troikoss.continuum_explorer.model.UniversalFile
 import com.troikoss.continuum_explorer.providers.FtpProvider
 import com.troikoss.continuum_explorer.providers.SafProvider
+import com.troikoss.continuum_explorer.providers.SftpProvider
 import com.troikoss.continuum_explorer.providers.SmbProvider
 import com.troikoss.continuum_explorer.providers.WebDavProvider
 import com.troikoss.continuum_explorer.R
@@ -396,6 +397,7 @@ object FileOperationsManager {
             runCatching {
                 val provider = when (connection.protocol) {
                     NetworkProtocol.FTP -> FtpProvider(connection, SafProvider.appContext())
+                    NetworkProtocol.SFTP -> SftpProvider(connection, SafProvider.appContext())
                     NetworkProtocol.WEBDAV -> WebDavProvider(connection, SafProvider.appContext())
                     NetworkProtocol.SMB -> SmbProvider(connection, SafProvider.appContext())
                     else -> throw UnsupportedOperationException("Protocol not supported for testing")

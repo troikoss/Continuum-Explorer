@@ -443,7 +443,10 @@ class AppConfigurations(private val context: Context) {
                         ftpPassiveMode = obj.optBoolean("ftpPassiveMode", true),
                         rootUrl = obj.optString("rootUrl", ""),
                         acceptUntrustedCerts = obj.optBoolean("acceptUntrustedCerts", false),
-                        smbDomain = obj.optString("smbDomain", "")
+                        smbDomain = obj.optString("smbDomain", ""),
+                        sftpPrivateKeyUri = obj.optString("sftpPrivateKeyUri", ""),
+                        sftpPrivateKeyPassphrase = obj.optString("sftpPrivateKeyPassphrase", ""),
+                        sftpPrivateKey = obj.optString("sftpPrivateKey", ""),
                     )
                 )
             }
@@ -467,6 +470,9 @@ class AppConfigurations(private val context: Context) {
                 put("rootUrl", conn.rootUrl)
                 put("acceptUntrustedCerts", conn.acceptUntrustedCerts)
                 put("smbDomain", conn.smbDomain)
+                put("sftpPrivateKeyUri", conn.sftpPrivateKeyUri)
+                put("sftpPrivateKeyPassphrase", conn.sftpPrivateKeyPassphrase)
+                put("sftpPrivateKey", conn.sftpPrivateKey)
             })
         }
         try {

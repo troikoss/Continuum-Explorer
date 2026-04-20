@@ -1157,13 +1157,18 @@ fun NetworkConnectionContent(onClose: () -> Unit) {
     var rootUrl by remember { mutableStateOf(existing?.rootUrl ?: "") }
     var acceptUntrustedCerts by remember { mutableStateOf(existing?.acceptUntrustedCerts ?: false) }
     var smbDomain by remember { mutableStateOf(existing?.smbDomain ?: "") }
+    var sftpPrivateKeyUri by remember { mutableStateOf(existing?.sftpPrivateKeyUri ?: "") }
+    var sftpPrivateKeyPassphrase by remember { mutableStateOf(existing?.sftpPrivateKeyPassphrase ?: "") }
+    var sftpPrivateKey by remember { mutableStateOf(existing?.sftpPrivateKey ?: "") }
     var showPassword by remember { mutableStateOf(false) }
+    var showSftpKeyPassphrase by remember { mutableStateOf(false) }
+    var showPastedPrivateKey by remember { mutableStateOf(false) }
     var displayNameEdited by remember { mutableStateOf(existing != null) }
     var testResult by remember { mutableStateOf<String?>(null) }
     var isTesting by remember { mutableStateOf(false) }
 
-    val isGoogleDrive = protocol == NetworkProtocol.GOOGLE_DRIVE
     val isFtp = protocol == NetworkProtocol.FTP
+    val isSftp = protocol == NetworkProtocol.SFTP
     val isWebDav = protocol == NetworkProtocol.WEBDAV
     val isSmb = protocol == NetworkProtocol.SMB
     val focusRequester = remember { FocusRequester() }
@@ -1172,11 +1177,13 @@ fun NetworkConnectionContent(onClose: () -> Unit) {
     val remotePathPlaceholder = when {
         isSmb -> "/ShareName  or  /ShareName/subfolder"
         isFtp -> "/"
+        isSftp -> "/"
         isWebDav -> "/remote.php/dav/files/username"
         else -> "/"
     }
     val remotePathHint = when {
         isSmb -> "First segment is the share name (e.g. /Documents)"
+        isSftp -> "Absolute path on the server. Leave / for home or root depending on server config."
         isWebDav -> "Path prefix on the server. Leave / for root."
         else -> null
     }
@@ -1197,7 +1204,10 @@ fun NetworkConnectionContent(onClose: () -> Unit) {
             ftpPassiveMode = ftpPassiveMode,
             rootUrl = rootUrl.trim(),
             acceptUntrustedCerts = acceptUntrustedCerts,
-            smbDomain = smbDomain.trim()
+            smbDomain = smbDomain.trim(),
+            sftpPrivateKeyUri = sftpPrivateKeyUri.trim(),
+            sftpPrivateKeyPassphrase = sftpPrivateKeyPassphrase,
+            sftpPrivateKey = sftpPrivateKey.trim(),
         )
         FileOperationsManager.onNetworkConnectionResult(connection)
         onClose()
@@ -1258,118 +1268,159 @@ fun NetworkConnectionContent(onClose: () -> Unit) {
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
         )
 
-        if (!isGoogleDrive) {
-            Spacer(modifier = Modifier.height(12.dp))
-            OutlinedTextField(
-                value = host,
-                onValueChange = {
-                    host = it
-                    if (!displayNameEdited) displayName = it
-                },
-                label = { Text(stringResource(R.string.nav_network_host)) },
-                placeholder = { Text("192.168.1.x  or  nas.local", color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)) },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
-            )
-            Spacer(modifier = Modifier.height(12.dp))
-            OutlinedTextField(
-                value = port,
-                onValueChange = { port = it },
-                label = { Text(stringResource(R.string.nav_network_port)) },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next)
-            )
-            Spacer(modifier = Modifier.height(12.dp))
-            OutlinedTextField(
-                value = username,
-                onValueChange = { username = it },
-                label = { Text(stringResource(R.string.nav_network_username)) },
+        Spacer(modifier = Modifier.height(12.dp))
+        OutlinedTextField(
+            value = host,
+            onValueChange = {
+                host = it
+                if (!displayNameEdited) displayName = it
+            },
+            label = { Text(stringResource(R.string.nav_network_host)) },
+            placeholder = { Text("192.168.1.x  or  nas.local", color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)) },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+        OutlinedTextField(
+            value = port,
+            onValueChange = { port = it },
+            label = { Text(stringResource(R.string.nav_network_port)) },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next)
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+        OutlinedTextField(
+            value = username,
+            onValueChange = { username = it },
+            label = { Text(stringResource(R.string.nav_network_username)) },
                 placeholder = { Text(if (isFtp) "Leave blank for anonymous" else "username", color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)) },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+        OutlinedTextField(
+            value = password,
+            onValueChange = { password = it },
+            label = { Text(stringResource(R.string.nav_network_password)) },
+            singleLine = true,
+            visualTransformation = if (showPassword) VisualTransformation.None else PasswordVisualTransformation(),
+            trailingIcon = {
+                IconButton(onClick = { showPassword = !showPassword }) {
+                    Icon(
+                        imageVector = if (showPassword) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                        contentDescription = if (showPassword) "Hide password" else "Show password"
+                    )
+                }
+            },
+            modifier = Modifier.fillMaxWidth(),
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
+        )
+        if (isSftp) {
+            Spacer(modifier = Modifier.height(12.dp))
+            OutlinedTextField(
+                value = sftpPrivateKeyUri,
+                onValueChange = { sftpPrivateKeyUri = it },
+                label = { Text("Private key URI (optional)") },
+                placeholder = { Text("content://...", color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
             )
             Spacer(modifier = Modifier.height(12.dp))
             OutlinedTextField(
-                value = password,
-                onValueChange = { password = it },
-                label = { Text(stringResource(R.string.nav_network_password)) },
+                value = sftpPrivateKeyPassphrase,
+                onValueChange = { sftpPrivateKeyPassphrase = it },
+                label = { Text("Private key passphrase (optional)") },
                 singleLine = true,
-                visualTransformation = if (showPassword) VisualTransformation.None else PasswordVisualTransformation(),
+                visualTransformation = if (showSftpKeyPassphrase) VisualTransformation.None else PasswordVisualTransformation(),
                 trailingIcon = {
-                    IconButton(onClick = { showPassword = !showPassword }) {
+                    IconButton(onClick = { showSftpKeyPassphrase = !showSftpKeyPassphrase }) {
                         Icon(
-                            imageVector = if (showPassword) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                            contentDescription = if (showPassword) "Hide password" else "Show password"
+                            imageVector = if (showSftpKeyPassphrase) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                            contentDescription = if (showSftpKeyPassphrase) "Hide passphrase" else "Show passphrase"
                         )
                     }
                 },
                 modifier = Modifier.fillMaxWidth(),
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
             )
-            if (isSmb) {
-                Spacer(modifier = Modifier.height(12.dp))
-                OutlinedTextField(
-                    value = smbDomain,
-                    onValueChange = { smbDomain = it },
-                    label = { Text("Domain / Workgroup (optional)") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
-                )
-            }
             Spacer(modifier = Modifier.height(12.dp))
             OutlinedTextField(
-                value = remotePath,
-                onValueChange = { remotePath = it },
-                label = { Text(stringResource(R.string.nav_network_remote_path)) },
-                placeholder = { Text(remotePathPlaceholder, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)) },
-                supportingText = remotePathHint?.let { hint -> { Text(hint, style = MaterialTheme.typography.bodySmall) } },
-                singleLine = true,
+                value = sftpPrivateKey,
+                onValueChange = { sftpPrivateKey = it },
+                label = { Text("Private key text fallback (optional)") },
+                placeholder = { Text("-----BEGIN OPENSSH PRIVATE KEY-----", color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)) },
+                singleLine = false,
+                minLines = 4,
+                visualTransformation = if (showPastedPrivateKey) VisualTransformation.None else PasswordVisualTransformation(),
+                trailingIcon = {
+                    IconButton(onClick = { showPastedPrivateKey = !showPastedPrivateKey }) {
+                        Icon(
+                            imageVector = if (showPastedPrivateKey) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                            contentDescription = if (showPastedPrivateKey) "Hide key" else "Show key"
+                        )
+                    }
+                },
                 modifier = Modifier.fillMaxWidth(),
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                keyboardActions = KeyboardActions(onDone = { if (displayName.isNotBlank()) onSave() })
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            if (isFtp) {
-                Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-                    androidx.compose.material3.Checkbox(checked = useTls, onCheckedChange = { useTls = it })
-                    Text(stringResource(R.string.nav_network_use_tls))
-                }
-                Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-                    androidx.compose.material3.Checkbox(checked = ftpPassiveMode, onCheckedChange = { ftpPassiveMode = it })
-                    Text(stringResource(R.string.nav_network_passive_mode))
-                }
-            }
-            if (isWebDav) {
-                OutlinedTextField(
-                    value = rootUrl,
-                    onValueChange = { rootUrl = it },
-                    label = { Text(stringResource(R.string.nav_network_root_url)) },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-            }
-            if ((isFtp && useTls) || isWebDav) {
-                Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-                    androidx.compose.material3.Checkbox(checked = acceptUntrustedCerts, onCheckedChange = { acceptUntrustedCerts = it })
-                    Text(stringResource(R.string.nav_network_accept_untrusted))
-                }
-            }
-        } else {
-            Spacer(modifier = Modifier.height(12.dp))
-            Text(
-                text = stringResource(R.string.nav_network_google_drive_note),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
             )
         }
+        if (isSmb) {
+            Spacer(modifier = Modifier.height(12.dp))
+            OutlinedTextField(
+                value = smbDomain,
+                onValueChange = { smbDomain = it },
+                label = { Text("Domain / Workgroup (optional)") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
+            )
+        }
+        Spacer(modifier = Modifier.height(12.dp))
+        OutlinedTextField(
+            value = remotePath,
+            onValueChange = { remotePath = it },
+            label = { Text(stringResource(R.string.nav_network_remote_path)) },
+            placeholder = { Text(remotePathPlaceholder, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)) },
+            supportingText = remotePathHint?.let { hint -> { Text(hint, style = MaterialTheme.typography.bodySmall) } },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+            keyboardActions = KeyboardActions(onDone = { if (displayName.isNotBlank()) onSave() })
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        if (isFtp) {
+            Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                androidx.compose.material3.Checkbox(checked = useTls, onCheckedChange = { useTls = it })
+                Text(stringResource(R.string.nav_network_use_tls))
+            }
+            Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                androidx.compose.material3.Checkbox(checked = ftpPassiveMode, onCheckedChange = { ftpPassiveMode = it })
+                Text(stringResource(R.string.nav_network_passive_mode))
+            }
+        }
+        if (isWebDav) {
+            OutlinedTextField(
+                value = rootUrl,
+                onValueChange = { rootUrl = it },
+                label = { Text(stringResource(R.string.nav_network_root_url)) },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+        }
+        if ((isFtp && useTls) || isWebDav) {
+            Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                androidx.compose.material3.Checkbox(checked = acceptUntrustedCerts, onCheckedChange = { acceptUntrustedCerts = it })
+                Text(stringResource(R.string.nav_network_accept_untrusted))
+            }
+        }
 
-        if (!isGoogleDrive && (isFtp || isWebDav || isSmb)) {
+        if (isFtp || isSftp || isWebDav || isSmb) {
             Spacer(modifier = Modifier.height(8.dp))
             val canTest = (host.isNotBlank() || rootUrl.isNotBlank()) && !isTesting
             Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
@@ -1388,7 +1439,10 @@ fun NetworkConnectionContent(onClose: () -> Unit) {
                             remotePath = remotePath.trim().ifEmpty { "/" },
                             useTls = useTls, ftpPassiveMode = ftpPassiveMode,
                             rootUrl = rootUrl.trim(), acceptUntrustedCerts = acceptUntrustedCerts,
-                            smbDomain = smbDomain.trim()
+                            smbDomain = smbDomain.trim(),
+                            sftpPrivateKeyUri = sftpPrivateKeyUri.trim(),
+                            sftpPrivateKeyPassphrase = sftpPrivateKeyPassphrase,
+                            sftpPrivateKey = sftpPrivateKey.trim(),
                         )
                         scope.launch {
                             val result = FileOperationsManager.testNetworkConnection(conn)
@@ -1423,7 +1477,7 @@ fun NetworkConnectionContent(onClose: () -> Unit) {
             Spacer(modifier = Modifier.width(8.dp))
             Button(
                 onClick = onSave,
-                enabled = displayName.isNotBlank() && (isGoogleDrive || host.isNotBlank())
+                enabled = displayName.isNotBlank() && (host.isNotBlank())
             ) {
                 Text(stringResource(R.string.nav_network_save))
             }
