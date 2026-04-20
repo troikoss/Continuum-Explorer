@@ -390,4 +390,27 @@
     <string name="menu_gallery_albums">Álbumes</string>
     <string name="details_header_type">Tipo</string>
     <string name="menu_by_type">Por tipo</string>
+    <string name="nav_network">Red</string>
+    <string name="nav_add_local_storage">Añadir almacenamiento local</string>
+    <string name="nav_add_network_storage">Añadir almacenamiento de red</string>
+    <string name="nav_network_protocol">Protocolo</string>
+    <string name="nav_network_display_name">Nombre para mostrar</string>
+    <string name="nav_network_host">Host</string>
+    <string name="nav_network_port">Puerto</string>
+    <string name="nav_network_username">Nombre de usuario</string>
+    <string name="nav_network_password">Contraseña</string>
+    <string name="nav_network_remote_path">Ruta remota</string>
+    <string name="nav_network_save">Guardar</string>
+    <string name="nav_network_edit">Editar conexión</string>
+    <string name="nav_network_use_tls">Usar FTPS (TLS)</string>
+    <string name="nav_network_passive_mode">Modo pasivo</string>
+    <string name="nav_network_root_url">URL completa (anulación opcional)</string>
+    <string name="nav_network_accept_untrusted">Aceptar certificados autofirmados</string>
+    <string name="nav_network_test">Probar conexión</string>
+    <string name="settings_colorful_bars">Barras superior y de pestañas coloridas</string>
+    <string name="settings_colorful_bars_desc">Activar colores de acento para la barra superior y la barra de pestañas.</string>
+    <string name="msg_remote_permanent_warning">Los archivos de red se eliminarán permanentemente (no se pueden mover a la papelera).</string>
+    <string name="msg_archive_remote_unsupported">El archivado aún no es compatible con ubicaciones de red.</string>
+    <string name="msg_remote_trash_skipped">No se pueden mover los archivos de red a la papelera. Se eliminarán permanentemente.</string>
+    <string name="settings_about">Acerca de</string>
 </resources>

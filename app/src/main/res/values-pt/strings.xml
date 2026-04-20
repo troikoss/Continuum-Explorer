@@ -391,4 +391,27 @@
     <string name="menu_gallery_albums">Álbuns</string>
     <string name="details_header_type">Tipo</string>
     <string name="menu_by_type">Por tipo</string>
+    <string name="nav_network">Rede</string>
+    <string name="nav_add_local_storage">Adicionar armazenamento local</string>
+    <string name="nav_add_network_storage">Adicionar armazenamento de rede</string>
+    <string name="nav_network_protocol">Protocolo</string>
+    <string name="nav_network_display_name">Nome de exibição</string>
+    <string name="nav_network_host">Host</string>
+    <string name="nav_network_port">Porta</string>
+    <string name="nav_network_username">Nome de usuário</string>
+    <string name="nav_network_password">Senha</string>
+    <string name="nav_network_remote_path">Caminho remoto</string>
+    <string name="nav_network_save">Salvar</string>
+    <string name="nav_network_edit">Editar conexão</string>
+    <string name="nav_network_use_tls">Usar FTPS (TLS)</string>
+    <string name="nav_network_passive_mode">Modo passivo</string>
+    <string name="nav_network_root_url">URL completa (substituição opcional)</string>
+    <string name="nav_network_accept_untrusted">Aceitar certificados autoassinados</string>
+    <string name="nav_network_test">Testar conexão</string>
+    <string name="settings_colorful_bars">Barras superior e de abas coloridas</string>
+    <string name="settings_colorful_bars_desc">Ativar cores de destaque para a barra superior e a barra de abas.</string>
+    <string name="msg_remote_permanent_warning">Os arquivos de rede serão excluídos permanentemente (não podem ser movidos para a lixeira).</string>
+    <string name="msg_archive_remote_unsupported">O arquivamento ainda não é suportado para locais de rede.</string>
+    <string name="msg_remote_trash_skipped">Não é possível mover arquivos de rede para a lixeira. Eles serão excluídos permanentemente.</string>
+    <string name="settings_about">Sobre</string>
 </resources>

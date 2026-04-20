@@ -392,4 +392,27 @@
     <string name="menu_gallery_albums">Albums</string>
     <string name="details_header_type">Type</string>
     <string name="menu_by_type">Par type</string>
+    <string name="nav_network">Réseau</string>
+    <string name="nav_add_local_storage">Ajouter un stockage local</string>
+    <string name="nav_add_network_storage">Ajouter un stockage réseau</string>
+    <string name="nav_network_protocol">Protocole</string>
+    <string name="nav_network_display_name">Nom d\'affichage</string>
+    <string name="nav_network_host">Hôte</string>
+    <string name="nav_network_port">Port</string>
+    <string name="nav_network_username">Nom d\'utilisateur</string>
+    <string name="nav_network_password">Mot de passe</string>
+    <string name="nav_network_remote_path">Chemin distant</string>
+    <string name="nav_network_save">Enregistrer</string>
+    <string name="nav_network_edit">Modifier la connexion</string>
+    <string name="nav_network_use_tls">Utiliser FTPS (TLS)</string>
+    <string name="nav_network_passive_mode">Mode passif</string>
+    <string name="nav_network_root_url">URL complète (remplacement optionnel)</string>
+    <string name="nav_network_accept_untrusted">Accepter les certificats auto-signés</string>
+    <string name="nav_network_test">Tester la connexion</string>
+    <string name="settings_colorful_bars">Barres supérieure et d\'onglets colorées</string>
+    <string name="settings_colorful_bars_desc">Activer les couleurs d\'accentuation pour la barre supérieure et la barre d\'onglets.</string>
+    <string name="msg_remote_permanent_warning">Les fichiers réseau seront supprimés définitivement (impossible de les déplacer vers la corbeille).</string>
+    <string name="msg_archive_remote_unsupported">L\'archivage n\'est pas encore pris en charge pour les emplacements réseau.</string>
+    <string name="msg_remote_trash_skipped">Impossible de déplacer les fichiers réseau vers la corbeille. Ils seront supprimés définitivement.</string>
+    <string name="settings_about">À propos</string>
 </resources>

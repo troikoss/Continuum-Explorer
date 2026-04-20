@@ -359,4 +359,27 @@
     <string name="menu_gallery_albums">Albümler</string>
     <string name="details_header_type">Tür</string>
     <string name="menu_by_type">Türe Göre</string>
+    <string name="nav_network">Ağ</string>
+    <string name="nav_add_local_storage">Yerel Depolama Ekle</string>
+    <string name="nav_add_network_storage">Ağ Depolama Ekle</string>
+    <string name="nav_network_protocol">Protokol</string>
+    <string name="nav_network_display_name">Görünen Ad</string>
+    <string name="nav_network_host">Ana Bilgisayar</string>
+    <string name="nav_network_port">Port</string>
+    <string name="nav_network_username">Kullanıcı Adı</string>
+    <string name="nav_network_password">Şifre</string>
+    <string name="nav_network_remote_path">Uzak Yol</string>
+    <string name="nav_network_save">Kaydet</string>
+    <string name="nav_network_edit">Bağlantıyı Düzenle</string>
+    <string name="nav_network_use_tls">FTPS (TLS) Kullan</string>
+    <string name="nav_network_passive_mode">Pasif mod</string>
+    <string name="nav_network_root_url">Tam URL (isteğe bağlı geçersiz kılma)</string>
+    <string name="nav_network_accept_untrusted">Otomatik imzalı sertifikaları kabul et</string>
+    <string name="nav_network_test">Bağlantıyı Test Et</string>
+    <string name="settings_colorful_bars">Renkli üst ve sekme çubukları</string>
+    <string name="settings_colorful_bars_desc">Üst çubuk ve sekme çubuğu için vurgu renklerini etkinleştirin.</string>
+    <string name="msg_remote_permanent_warning">Ağ dosyaları kalıcı olarak silinecek (çöp kutusuna taşınamaz).</string>
+    <string name="msg_archive_remote_unsupported">Arşivleme henüz ağ konumları için desteklenmiyor.</string>
+    <string name="msg_remote_trash_skipped">Ağ dosyaları çöp kutusuna taşınamaz. Kalıcı olarak silinecekler.</string>
+    <string name="settings_about">Hakkında</string>
 </resources>

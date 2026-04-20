@@ -12,8 +12,8 @@ android {
         applicationId = "com.troikoss.continuum_explorer"
         minSdk = 26
         targetSdk = 36
-        versionCode = 36
-        versionName = "0.3.6-beta"
+        versionCode = 40
+        versionName = "0.4.0-beta"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
