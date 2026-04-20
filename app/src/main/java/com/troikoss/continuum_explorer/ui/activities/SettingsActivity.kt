@@ -2,14 +2,17 @@ package com.troikoss.continuum_explorer.ui.activities
 
 import android.content.Intent
 import android.os.Bundle
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Keyboard
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -17,10 +20,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import coil.compose.rememberAsyncImagePainter
 import com.troikoss.continuum_explorer.R
 import com.troikoss.continuum_explorer.ui.theme.FileExplorerTheme
 import com.troikoss.continuum_explorer.managers.DeleteBehavior
@@ -46,6 +52,7 @@ class SettingsActivity : ComponentActivity() {
 @Composable
 fun SettingsScreen(onBack: () -> Unit) {
     val context = LocalContext.current
+    val uriHandler = LocalUriHandler.current
     val deleteBehavior = SettingsManager.deleteBehavior.value
     val touchDragBehavior = SettingsManager.touchDragBehavior.value
     val isDefaultArchiveViewerEnabled = SettingsManager.isDefaultArchiveViewerEnabled.value
@@ -65,6 +72,7 @@ fun SettingsScreen(onBack: () -> Unit) {
     var showShortcutsDialog by remember { mutableStateOf(false) }
     var showDetailsDialog by remember { mutableStateOf(false) }
     var showDefaultViewModeDialog by remember { mutableStateOf(false) }
+    var showAboutDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -244,6 +252,13 @@ fun SettingsScreen(onBack: () -> Unit) {
                 supportingContent = { Text(stringResource(R.string.settings_shortcuts_desc)) },
                 leadingContent = { Icon(Icons.Default.Keyboard, contentDescription = null) },
                 modifier = Modifier.clickable { showShortcutsDialog = true }
+            )
+
+
+            ListItem(
+                headlineContent = { Text(stringResource(R.string.settings_about)) },
+                leadingContent = { Icon(Icons.Default.Info, contentDescription = null) },
+                modifier = Modifier.clickable { showAboutDialog = true }
             )
 
             if (showDeleteDialog) {
@@ -527,6 +542,62 @@ fun SettingsScreen(onBack: () -> Unit) {
                     context.startActivity(intent)
                     showShortcutsDialog = false
                 }
+            }
+
+
+            if (showAboutDialog) {
+                val uriHandler = androidx.compose.ui.platform.LocalUriHandler.current
+
+                // This part safely loads your app icon so it doesn't crash
+                val context = LocalContext.current
+                val appIcon = remember {
+                    context.packageManager.getApplicationIcon(context.packageName)
+                }
+
+                val version = try {
+                    context.packageManager.getPackageInfo(context.packageName, 0).versionName
+                } catch (e: Exception) {
+                    "1.0"
+                }
+
+                AlertDialog(
+                    onDismissRequest = { showAboutDialog = false },
+                    text = {
+                        Row {
+                            Image(
+                                painter = rememberAsyncImagePainter(appIcon),
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .size(64.dp)
+                                    .clip(MaterialTheme.shapes.small)
+                            )
+                            Spacer(modifier = Modifier.width(16.dp))
+
+                            // App Name and Version
+                            Column {
+                                Text(stringResource(R.string.app_name), style = MaterialTheme.typography.titleMedium)
+                                Text("$version", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+                                Text(
+                                    text = "GitHub",
+                                    color = MaterialTheme.colorScheme.primary,
+                                    style = MaterialTheme.typography.bodyMedium.copy(
+                                        textDecoration = androidx.compose.ui.text.style.TextDecoration.Underline // Adds the underline
+                                    ),
+                                    modifier = Modifier
+                                        .clickable {
+                                            uriHandler.openUri("https://github.com/troikoss/Continuum-Explorer")
+                                        }
+                                        .padding(top = 4.dp)
+                                )
+                            }
+                        }
+                    },
+                    confirmButton = {
+                        TextButton(onClick = { showAboutDialog = false }) {
+                            Text("OK")
+                        }
+                    }
+                )
             }
         }
     }
