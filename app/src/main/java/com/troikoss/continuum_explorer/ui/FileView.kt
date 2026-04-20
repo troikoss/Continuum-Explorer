@@ -120,10 +120,13 @@ fun FileView(
                     )
                     .then(
                         if (file.isDirectory) {
+                            val isRemote = file.provider.capabilities.isRemote
                             Modifier.fileDropTarget(
                                 appState = appState,
                                 destPath = file.fileRef,
-                                destSafUri = file.documentFileRef?.uri
+                                destSafUri = file.documentFileRef?.uri,
+                                destNetworkProvider = if (isRemote) file.provider else null,
+                                destNetworkId = if (isRemote) file.providerId else null
                             )
                         } else Modifier
                     )

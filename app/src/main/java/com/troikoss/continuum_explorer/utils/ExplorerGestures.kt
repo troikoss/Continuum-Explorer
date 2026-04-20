@@ -67,6 +67,7 @@ import com.troikoss.continuum_explorer.managers.TouchDragBehavior
 import com.troikoss.continuum_explorer.ui.activities.PopUpActivity
 import com.troikoss.continuum_explorer.model.UniversalFile
 import com.troikoss.continuum_explorer.model.ViewMode
+import com.troikoss.continuum_explorer.model.StorageProvider
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.io.File
@@ -684,12 +685,14 @@ private fun createDragTransferData(
 fun Modifier.fileDropTarget(
     appState: FileExplorerState,
     destPath: File? = null,
-    destSafUri: android.net.Uri? = null
+    destSafUri: android.net.Uri? = null,
+    destNetworkProvider: StorageProvider? = null,
+    destNetworkId: String? = null
 ): Modifier = composed {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
-    val target = remember(appState, destPath, destSafUri) {
+    val target = remember(appState, destPath, destSafUri, destNetworkProvider, destNetworkId) {
         object : DragAndDropTarget {
             // Track drag position so FileContent can auto-scroll during drags.
             // DragEvent.y is always in ComposeView coordinates regardless of which item received it.
@@ -714,9 +717,11 @@ fun Modifier.fileDropTarget(
                 if (clipData != null) {
                     // Determine actual destination:
                     // If target is explicitly provided, only use that and ignore defaults
-                    val isTargeted = destPath != null || destSafUri != null
+                    val isTargeted = destPath != null || destSafUri != null || destNetworkProvider != null
                     val actualPath = if (isTargeted) destPath else appState.currentPath
                     val actualSafUri = if (isTargeted) destSafUri else appState.currentSafUri
+                    val actualNetworkProvider = if (isTargeted) destNetworkProvider else appState.currentNetworkProvider
+                    val actualNetworkId = if (isTargeted) destNetworkId else appState.currentNetworkId
 
                     val trashPath = File(Environment.getExternalStorageDirectory(), ".Trash").absolutePath
                     val isTrash = actualPath?.absolutePath == trashPath
@@ -781,6 +786,8 @@ fun Modifier.fileDropTarget(
                             context = context,
                             currentPath = actualPath,
                             currentSafUri = actualSafUri,
+                            destProvider = actualNetworkProvider,
+                            destParentId = actualNetworkId,
                             preloadedClipData = clipData
                         )
                         appState.refresh()
@@ -797,7 +804,11 @@ fun Modifier.fileDropTarget(
                         }
 
                         // Optionally select the newly dropped files if we are currently viewing the destination
-                        if (pastedNames.isNotEmpty() && actualPath == appState.currentPath && actualSafUri == appState.currentSafUri) {
+                        val isCurrentDest = actualPath == appState.currentPath &&
+                                actualSafUri == appState.currentSafUri &&
+                                actualNetworkProvider == appState.currentNetworkProvider &&
+                                actualNetworkId == appState.currentNetworkId
+                        if (pastedNames.isNotEmpty() && isCurrentDest) {
                             val pastedFiles = appState.files.filter { pastedNames.contains(it.name) }
                             if (pastedFiles.isNotEmpty()) {
                                 appState.selectionManager.clear()

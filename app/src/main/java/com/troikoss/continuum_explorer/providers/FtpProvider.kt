@@ -12,18 +12,30 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import org.apache.commons.net.ftp.FTP
 import org.apache.commons.net.ftp.FTPClient
+import org.apache.commons.net.ftp.FTPClientConfig
+import org.apache.commons.net.ftp.FTPConnectionClosedException
 import org.apache.commons.net.ftp.FTPFile
+import org.apache.commons.net.ftp.FTPReply
 import org.apache.commons.net.ftp.FTPSClient
 import java.io.Closeable
 import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
 import java.net.SocketTimeoutException
+import java.util.concurrent.atomic.AtomicBoolean
 
 class FtpProvider(
     private val connection: NetworkConnection,
     @Suppress("UNUSED_PARAMETER") appContext: Context,
 ) : StorageProvider, Closeable {
+
+    companion object {
+        private const val CONNECT_TIMEOUT_MS = 15_000
+        private const val CONTROL_TIMEOUT_MS = 120_000
+        private const val DATA_TIMEOUT_SECONDS = 120L
+        private const val CONTROL_KEEP_ALIVE_SECONDS = 15L
+        private const val CONTROL_KEEP_ALIVE_REPLY_TIMEOUT_MS = 5_000
+    }
 
     override val kind = ProviderKind.NETWORK_FTP
     override val connectionId: String get() = connection.id
@@ -43,12 +55,27 @@ class FtpProvider(
 
     private fun ensureConnected(): FTPClient {
         val existing = client
-        if (existing != null && existing.isConnected) return existing
+        if (existing != null && existing.isConnected) {
+            try {
+                if (existing.sendNoOp()) return existing
+            } catch (_: Exception) {}
+            existing.runCatching { logout(); disconnect() }
+            client = null
+        }
 
         val ftpClient = if (connection.useTls) FTPSClient(true) else FTPClient()
-        ftpClient.connectTimeout = 15_000
-        ftpClient.defaultTimeout = 60_000
-        ftpClient.dataTimeout = java.time.Duration.ofSeconds(60)
+
+        // Force UNIX parser to avoid "unknown parser type: ok" errors on non-compliant servers
+        ftpClient.configure(FTPClientConfig(FTPClientConfig.SYST_UNIX))
+
+        ftpClient.connectTimeout = CONNECT_TIMEOUT_MS
+        ftpClient.defaultTimeout = CONTROL_TIMEOUT_MS
+        ftpClient.dataTimeout = java.time.Duration.ofSeconds(DATA_TIMEOUT_SECONDS)
+        // Keep control connection alive while data socket is busy on long transfers.
+        @Suppress("DEPRECATION")
+        ftpClient.setControlKeepAliveTimeout(CONTROL_KEEP_ALIVE_SECONDS)
+        @Suppress("DEPRECATION")
+        ftpClient.setControlKeepAliveReplyTimeout(CONTROL_KEEP_ALIVE_REPLY_TIMEOUT_MS)
 
         val port = if (connection.port == 0) connection.protocol.defaultPort else connection.port
         try {
@@ -58,6 +85,13 @@ class FtpProvider(
         } catch (e: IOException) {
             throw NetworkProviderException("Cannot reach ${connection.host}: ${e.message}", NetworkProviderException.Kind.UNREACHABLE, e)
         }
+        if (!FTPReply.isPositiveCompletion(ftpClient.replyCode)) {
+            ftpClient.runCatching { disconnect() }
+            throw NetworkProviderException(
+                "FTP server rejected connection (reply ${ftpClient.replyCode})",
+                NetworkProviderException.Kind.UNREACHABLE,
+            )
+        }
 
         val loggedIn = if (connection.username.isNotEmpty()) {
             ftpClient.login(connection.username, connection.password)
@@ -65,11 +99,25 @@ class FtpProvider(
             ftpClient.login("anonymous", "anonymous@")
         }
         if (!loggedIn) {
+            ftpClient.runCatching { disconnect() }
             throw NetworkProviderException("Authentication failed", NetworkProviderException.Kind.AUTH)
         }
 
+        if (ftpClient is FTPSClient) {
+            ftpClient.runCatching {
+                execPBSZ(0)
+                execPROT("P")
+            }
+        }
+
         ftpClient.setFileType(FTP.BINARY_FILE_TYPE)
-        if (connection.ftpPassiveMode) ftpClient.enterLocalPassiveMode() else ftpClient.enterLocalActiveMode()
+        if (connection.ftpPassiveMode) {
+            ftpClient.enterLocalPassiveMode()
+            @Suppress("DEPRECATION")
+            ftpClient.setPassiveNatWorkaround(true)
+        } else {
+            ftpClient.enterLocalActiveMode()
+        }
 
         client = ftpClient
         return ftpClient
@@ -90,6 +138,27 @@ class FtpProvider(
         return path.substringAfterLast('/').ifEmpty { connection.displayName }
     }
 
+    private fun forceReconnect() {
+        client?.runCatching { abort(); logout(); disconnect() }
+        client = null
+    }
+
+    private fun isRecoverableConnectionError(error: Throwable): Boolean {
+        return error is SocketTimeoutException ||
+            error is FTPConnectionClosedException ||
+            error is IOException
+    }
+
+    private fun <T> withDataConnection(block: (FTPClient) -> T): T {
+        return try {
+            block(ensureConnected())
+        } catch (e: Exception) {
+            if (!isRecoverableConnectionError(e)) throw e
+            forceReconnect()
+            block(ensureConnected())
+        }
+    }
+
     override fun exists(id: String): Boolean = runBlocking(Dispatchers.IO) {
         mutex.withLock {
             try {
@@ -103,9 +172,8 @@ class FtpProvider(
     override suspend fun listChildren(id: String): List<UniversalFile> = withContext(Dispatchers.IO) {
         mutex.withLock {
             try {
-                val c = ensureConnected()
                 val path = pathOf(id)
-                c.listFiles(path).filter { it.name != "." && it.name != ".." }.map { it.toUniversalFile(id) }
+                withDataConnection { c -> c.listFiles(path).filter { it.name != "." && it.name != ".." }.map { it.toUniversalFile(id) } }
             } catch (e: NetworkProviderException) {
                 throw e
             } catch (e: SocketTimeoutException) {
@@ -118,11 +186,10 @@ class FtpProvider(
 
     override fun getMetadata(id: String): FileMetadata = runBlocking(Dispatchers.IO) {
         mutex.withLock {
-            val c = ensureConnected()
             val path = pathOf(id)
             val parent = path.substringBeforeLast('/').ifEmpty { "/" }
             val name = path.substringAfterLast('/')
-            val file = c.listFiles(parent).firstOrNull { it.name == name }
+            val file = withDataConnection { c -> c.listFiles(parent).firstOrNull { it.name == name } }
                 ?: throw NetworkProviderException("Not found: $path")
             FileMetadata(
                 size = file.size,
@@ -136,28 +203,35 @@ class FtpProvider(
     override fun findChild(parentId: String, name: String): UniversalFile? = runBlocking(Dispatchers.IO) {
         mutex.withLock {
             try {
-                val c = ensureConnected()
-                c.listFiles(pathOf(parentId)).firstOrNull { it.name == name }?.toUniversalFile(parentId)
+                withDataConnection { c -> c.listFiles(pathOf(parentId)).firstOrNull { it.name == name }?.toUniversalFile(parentId) }
             } catch (_: Exception) { null }
         }
     }
 
     override fun openInput(id: String): InputStream = runBlocking(Dispatchers.IO) {
-        mutex.withLock {
-            val c = ensureConnected()
-            val stream = c.retrieveFileStream(pathOf(id))
-                ?: throw NetworkProviderException("Cannot open stream for ${pathOf(id)}")
-            FtpManagedInputStream(c, mutex, stream)
+        mutex.lock()
+        try {
+            val stream = withDataConnection { c ->
+                c.retrieveFileStream(pathOf(id)) ?: throw NetworkProviderException("Cannot open stream for ${pathOf(id)}")
+            }
+            FtpManagedInputStream(client!!, mutex, stream, lockHeld = true)
+        } catch (e: Exception) {
+            mutex.unlock()
+            throw e
         }
     }
 
     fun openRangeInput(id: String, offset: Long): InputStream = runBlocking(Dispatchers.IO) {
-        mutex.withLock {
-            val c = ensureConnected()
-            c.restartOffset = offset
-            val stream = c.retrieveFileStream(pathOf(id))
-                ?: throw NetworkProviderException("Cannot open range stream for ${pathOf(id)}")
-            FtpManagedInputStream(c, mutex, stream)
+        mutex.lock()
+        try {
+            val stream = withDataConnection { c ->
+                c.restartOffset = offset
+                c.retrieveFileStream(pathOf(id)) ?: throw NetworkProviderException("Cannot open range stream for ${pathOf(id)}")
+            }
+            FtpManagedInputStream(client!!, mutex, stream, lockHeld = true)
+        } catch (e: Exception) {
+            mutex.unlock()
+            throw e
         }
     }
 
@@ -166,12 +240,9 @@ class FtpProvider(
 
     override fun createChild(parentId: String, name: String, isDirectory: Boolean): UniversalFile = runBlocking(Dispatchers.IO) {
         mutex.withLock {
-            val c = ensureConnected()
             val path = joinPath(pathOf(parentId), name)
-            if (isDirectory) {
-                c.makeDirectory(path)
-            } else {
-                c.storeFile(path, "".byteInputStream())
+            withDataConnection { c ->
+                if (isDirectory) c.makeDirectory(path) else c.storeFile(path, "".byteInputStream())
             }
             UniversalFile(
                 name = name, isDirectory = isDirectory,
@@ -182,16 +253,22 @@ class FtpProvider(
     }
 
     override fun createAndOpenOutput(parentId: String, name: String): Pair<UniversalFile, OutputStream> {
-        val c = runBlocking(Dispatchers.IO) { mutex.runBlocking { ensureConnected() } }
         val path = joinPath(pathOf(parentId), name)
-        val stream = c.storeFileStream(path)
-            ?: throw NetworkProviderException("Cannot open output stream for $path")
+        val stream = runBlocking(Dispatchers.IO) {
+            mutex.lock()
+            try {
+                withDataConnection { c -> c.storeFileStream(path) }
+            } catch (e: Exception) {
+                mutex.unlock()
+                throw e
+            }
+        } ?: throw NetworkProviderException("Cannot open output stream for $path")
         val uf = UniversalFile(
             name = name, isDirectory = false,
             lastModified = System.currentTimeMillis(), length = 0,
             provider = this, providerId = makeId(path), parentId = parentId
         )
-        return uf to FtpManagedOutputStream(c, mutex, stream)
+        return uf to FtpManagedOutputStream(client!!, mutex, stream, lockHeld = true)
     }
 
     override suspend fun copyFrom(
@@ -213,7 +290,13 @@ class FtpProvider(
                     ?: throw NetworkProviderException("Cannot read ${source.name}")
                 stream.readBytes().also {
                     stream.close()
-                    try { c.completePendingCommand() } catch (_: Exception) {}
+                    try {
+                        if (!c.completePendingCommand()) {
+                            c.disconnect()
+                        }
+                    } catch (_: Exception) {
+                        try { c.disconnect() } catch (_: Exception) {}
+                    }
                 }
             }
         }
@@ -282,20 +365,30 @@ class FtpProvider(
     )
 }
 
-private suspend fun <T> Mutex.runBlocking(block: suspend () -> T): T = withLock { block() }
-
 class FtpManagedInputStream(
     private val client: FTPClient,
     private val mutex: Mutex,
     private val delegate: InputStream,
+    private val lockHeld: Boolean,
 ) : InputStream() {
+    private val closed = AtomicBoolean(false)
+
     override fun read(): Int = delegate.read()
     override fun read(b: ByteArray, off: Int, len: Int): Int = delegate.read(b, off, len)
     override fun close() {
+        if (!closed.compareAndSet(false, true)) return
         try { delegate.close() } catch (_: Exception) {}
         runBlocking(Dispatchers.IO) {
-            mutex.withLock {
-                try { client.completePendingCommand() } catch (_: Exception) {}
+            try {
+                if (!client.completePendingCommand()) {
+                    client.disconnect()
+                }
+            } catch (_: Exception) {
+                try { client.disconnect() } catch (_: Exception) {}
+            } finally {
+                if (lockHeld) {
+                    mutex.unlock()
+                }
             }
         }
     }
@@ -305,15 +398,27 @@ class FtpManagedOutputStream(
     private val client: FTPClient,
     private val mutex: Mutex,
     private val delegate: OutputStream,
+    private val lockHeld: Boolean,
 ) : OutputStream() {
+    private val closed = AtomicBoolean(false)
+
     override fun write(b: Int) = delegate.write(b)
     override fun write(b: ByteArray, off: Int, len: Int) = delegate.write(b, off, len)
     override fun flush() = delegate.flush()
     override fun close() {
+        if (!closed.compareAndSet(false, true)) return
         try { delegate.close() } catch (_: Exception) {}
         runBlocking(Dispatchers.IO) {
-            mutex.withLock {
-                try { client.completePendingCommand() } catch (_: Exception) {}
+            try {
+                if (!client.completePendingCommand()) {
+                    client.disconnect()
+                }
+            } catch (_: Exception) {
+                try { client.disconnect() } catch (_: Exception) {}
+            } finally {
+                if (lockHeld) {
+                    mutex.unlock()
+                }
             }
         }
     }

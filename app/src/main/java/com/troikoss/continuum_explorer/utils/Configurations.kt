@@ -274,17 +274,31 @@ class AppConfigurations(private val context: Context) {
 
     private fun loadAddedSafUris() {
         val prefs = context.getSharedPreferences("saf_storage", Context.MODE_PRIVATE)
-        val uris = prefs.getStringSet("uris", emptySet()) ?: emptySet()
         addedSafUris.clear()
-        uris.forEach { uriString ->
-            addedSafUris.add(Uri.parse(uriString))
+        val ordered = prefs.getString("ordered_uris", null)
+        if (ordered != null) {
+            if (ordered.isNotEmpty()) {
+                ordered.split("|").forEach { addedSafUris.add(Uri.parse(it)) }
+            }
+        } else {
+            // Legacy: migrate from unordered Set
+            val uris = prefs.getStringSet("uris", emptySet()) ?: emptySet()
+            uris.forEach { addedSafUris.add(Uri.parse(it)) }
+            saveAddedSafUris()
         }
     }
 
     fun saveAddedSafUris() {
         val prefs = context.getSharedPreferences("saf_storage", Context.MODE_PRIVATE)
-        val uriStrings = addedSafUris.map { it.toString() }.toSet()
-        prefs.edit().putStringSet("uris", uriStrings).apply()
+        prefs.edit().putString("ordered_uris", addedSafUris.joinToString("|") { it.toString() }).apply()
+    }
+
+    fun moveSafUri(fromIndex: Int, toIndex: Int) {
+        if (fromIndex == toIndex) return
+        val item = addedSafUris.removeAt(fromIndex)
+        addedSafUris.add(toIndex, item)
+        saveAddedSafUris()
+        GlobalEvents.triggerConfigUpdate()
     }
 
     private fun loadFavorites() {
@@ -476,6 +490,14 @@ class AppConfigurations(private val context: Context) {
             saveNetworkConnections()
             GlobalEvents.triggerConfigUpdate()
         }
+    }
+
+    fun moveNetworkConnection(fromIndex: Int, toIndex: Int) {
+        if (fromIndex == toIndex) return
+        val item = networkConnections.removeAt(fromIndex)
+        networkConnections.add(toIndex, item)
+        saveNetworkConnections()
+        GlobalEvents.triggerConfigUpdate()
     }
 
     fun updateNetworkConnection(connection: NetworkConnection) {

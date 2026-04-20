@@ -221,7 +221,12 @@ class SmbProvider(
             SMB2CreateDisposition.FILE_OPEN,
             null
         )
-        return file.inputStream
+        val delegate = file.inputStream
+        return object : InputStream() {
+            override fun read() = delegate.read()
+            override fun read(b: ByteArray, off: Int, len: Int) = delegate.read(b, off, len)
+            override fun close() { delegate.close(); file.close() }
+        }
     }
 
     override fun openReadFd(id: String): ParcelFileDescriptor? = null
@@ -276,7 +281,14 @@ class SmbProvider(
             providerId = pathToId(childPath.replace('\\', '/')),
             parentId = parentId,
         )
-        return Pair(universalFile, file.outputStream)
+        val delegate = file.outputStream
+        val stream = object : OutputStream() {
+            override fun write(b: Int) = delegate.write(b)
+            override fun write(b: ByteArray, off: Int, len: Int) = delegate.write(b, off, len)
+            override fun flush() = delegate.flush()
+            override fun close() { delegate.close(); file.close() }
+        }
+        return Pair(universalFile, stream)
     }
 
     override fun delete(id: String): Boolean {

@@ -93,6 +93,7 @@ class MainActivity : AppCompatActivity() {
             intent.getBooleanExtra("isRecycleBin", false) -> LibraryItem.RecycleBin
             else -> LibraryItem.None
         }
+        val initialNetworkConnectionId = intent.getStringExtra("networkConnectionId")
 
         // Build ImageLoader asynchronously to prevent main thread lag on startup
         lifecycleScope.launch(Dispatchers.IO) {
@@ -110,7 +111,7 @@ class MainActivity : AppCompatActivity() {
 
         setContent {
             FileExplorerTheme {
-                FileExplorer(initialPath = initialPath, initialUri = initialUri, initialArchive = initialArchive, initialLibraryItem = initialLibraryItem)
+                FileExplorer(initialPath = initialPath, initialUri = initialUri, initialArchive = initialArchive, initialLibraryItem = initialLibraryItem, initialNetworkConnectionId = initialNetworkConnectionId)
             }
         }
     }

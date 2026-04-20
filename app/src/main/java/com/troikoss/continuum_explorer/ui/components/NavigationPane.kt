@@ -40,6 +40,7 @@ import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.FolderSpecial
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.SdCard
@@ -133,6 +134,7 @@ fun NavigationPane(
     onSafItemSelected: (Uri) -> Unit,
     onAddStorageClick: () -> Unit,
     onAddNetworkClick: () -> Unit = {},
+    onEditNetworkClick: (NetworkConnection) -> Unit = {},
     onNavigate: () -> Unit = {}
 ) {
     val context = LocalContext.current
@@ -482,17 +484,72 @@ fun NavigationPane(
                     NavSectionHeader(stringResource(R.string.nav_added_locations))
                 }
 
-                itemsIndexed(appState.appConfigs.addedSafUris) { _, uri ->
+                itemsIndexed(
+                    items = appState.appConfigs.addedSafUris,
+                    key = { _, uri -> uri.toString() }
+                ) { _, uri ->
                     val label = appState.getSafDisplayName(uri)
+                    val uriKey = uri.toString()
+                    val isDragging = draggedItemId == uriKey
+                    val elevation by animateDpAsState(if (isDragging) 8.dp else 0.dp, label = "SafElevation")
 
-                    NavSafItem(
-                        label = label,
-                        uri = uri,
-                        onClick = { onSafItemSelected(uri) },
-                        onRemove = { appState.removeSafUri(uri) },
-                        modifier = Modifier.fileDropTarget(appState, destSafUri = uri),
-                        appState = appState
-                    )
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .then(if (isDragging) Modifier else Modifier.animateItem())
+                            .zIndex(if (isDragging) 1f else 0f)
+                            .offset { IntOffset(0, if (isDragging) draggingOffset.roundToInt() else 0) }
+                            .shadow(elevation)
+                            .background(if (isDragging) MaterialTheme.colorScheme.surfaceVariant else Color.Transparent)
+                            .pointerInput(uriKey) {
+                                awaitEachGesture {
+                                    val down = awaitFirstDown(requireUnconsumed = false)
+                                    if (down.type == PointerType.Mouse || down.position.x <= handleWidthPx) {
+                                        val pointerId = down.id
+                                        var triggerDrag = false
+                                        var distance = 0f
+                                        while (true) {
+                                            val event = awaitPointerEvent()
+                                            val move = event.changes.firstOrNull { it.id == pointerId } ?: break
+                                            if (!move.pressed) break
+                                            distance += (move.position - down.position).getDistance()
+                                            if (distance > 5f) { triggerDrag = true; break }
+                                        }
+                                        if (triggerDrag) {
+                                            draggedItemId = uriKey
+                                            draggingOffset = 0f
+                                            drag(down.id) { change ->
+                                                draggingOffset += change.positionChange().y
+                                                val currentIndex = appState.appConfigs.addedSafUris.indexOfFirst { it.toString() == uriKey }
+                                                if (currentIndex != -1) {
+                                                    val itemHeight = 40.dp.toPx()
+                                                    val threshold = itemHeight * 0.6f
+                                                    if (draggingOffset > threshold && currentIndex < appState.appConfigs.addedSafUris.size - 1) {
+                                                        appState.appConfigs.moveSafUri(currentIndex, currentIndex + 1)
+                                                        draggingOffset -= itemHeight
+                                                    } else if (draggingOffset < -threshold && currentIndex > 0) {
+                                                        appState.appConfigs.moveSafUri(currentIndex, currentIndex - 1)
+                                                        draggingOffset += itemHeight
+                                                    }
+                                                }
+                                                change.consume()
+                                            }
+                                            draggedItemId = null
+                                            draggingOffset = 0f
+                                        }
+                                    }
+                                }
+                            }
+                    ) {
+                        NavSafItem(
+                            label = label,
+                            uri = uri,
+                            onClick = { onSafItemSelected(uri) },
+                            onRemove = { appState.removeSafUri(uri) },
+                            modifier = Modifier.fileDropTarget(appState, destSafUri = uri),
+                            appState = appState
+                        )
+                    }
                 }
             }
 
@@ -509,12 +566,65 @@ fun NavigationPane(
                     items = appState.appConfigs.networkConnections,
                     key = { _, conn -> conn.id }
                 ) { _, connection ->
-                    NavNetworkItem(
-                        connection = connection,
-                        onClick = { onItemSelected(NavSection.NetworkStorage(connection.id)) },
-                        onRemove = { appState.appConfigs.removeNetworkConnection(connection.id) },
-                        appState = appState
-                    )
+                    val isDragging = draggedItemId == connection.id
+                    val elevation by animateDpAsState(if (isDragging) 8.dp else 0.dp, label = "NetworkElevation")
+
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .then(if (isDragging) Modifier else Modifier.animateItem())
+                            .zIndex(if (isDragging) 1f else 0f)
+                            .offset { IntOffset(0, if (isDragging) draggingOffset.roundToInt() else 0) }
+                            .shadow(elevation)
+                            .background(if (isDragging) MaterialTheme.colorScheme.surfaceVariant else Color.Transparent)
+                            .pointerInput(connection.id) {
+                                awaitEachGesture {
+                                    val down = awaitFirstDown(requireUnconsumed = false)
+                                    if (down.type == PointerType.Mouse || down.position.x <= handleWidthPx) {
+                                        val pointerId = down.id
+                                        var triggerDrag = false
+                                        var distance = 0f
+                                        while (true) {
+                                            val event = awaitPointerEvent()
+                                            val move = event.changes.firstOrNull { it.id == pointerId } ?: break
+                                            if (!move.pressed) break
+                                            distance += (move.position - down.position).getDistance()
+                                            if (distance > 5f) { triggerDrag = true; break }
+                                        }
+                                        if (triggerDrag) {
+                                            draggedItemId = connection.id
+                                            draggingOffset = 0f
+                                            drag(down.id) { change ->
+                                                draggingOffset += change.positionChange().y
+                                                val currentIndex = appState.appConfigs.networkConnections.indexOfFirst { it.id == connection.id }
+                                                if (currentIndex != -1) {
+                                                    val itemHeight = 40.dp.toPx()
+                                                    val threshold = itemHeight * 0.6f
+                                                    if (draggingOffset > threshold && currentIndex < appState.appConfigs.networkConnections.size - 1) {
+                                                        appState.appConfigs.moveNetworkConnection(currentIndex, currentIndex + 1)
+                                                        draggingOffset -= itemHeight
+                                                    } else if (draggingOffset < -threshold && currentIndex > 0) {
+                                                        appState.appConfigs.moveNetworkConnection(currentIndex, currentIndex - 1)
+                                                        draggingOffset += itemHeight
+                                                    }
+                                                }
+                                                change.consume()
+                                            }
+                                            draggedItemId = null
+                                            draggingOffset = 0f
+                                        }
+                                    }
+                                }
+                            }
+                    ) {
+                        NavNetworkItem(
+                            connection = connection,
+                            onClick = { onItemSelected(NavSection.NetworkStorage(connection.id)) },
+                            onRemove = { appState.appConfigs.removeNetworkConnection(connection.id) },
+                            onEdit = { onEditNetworkClick(connection) },
+                            appState = appState
+                        )
+                    }
                 }
             }
 
@@ -643,7 +753,8 @@ private fun NavContextMenu(
     path: String? = null,
     uri: Uri? = null,
     section: NavSection? = null,
-    onRemove: (() -> Unit)? = null
+    onRemove: (() -> Unit)? = null,
+    onEdit: (() -> Unit)? = null
 ) {
     DropdownMenu(expanded = expanded, onDismissRequest = onDismissRequest) {
         DropdownMenuItem(
@@ -660,6 +771,15 @@ private fun NavContextMenu(
                     is NavSection.Gallery -> appState.onOpenInNewTab?.invoke(
                         UniversalFile(name = "Gallery", isDirectory = true, lastModified = 0, length = 0, provider = LocalProvider, providerId = "gallery://")
                     )
+                    is NavSection.NetworkStorage -> {
+                        val conn = appState.appConfigs.networkConnections.find { it.id == section.connectionId }
+                        if (conn != null) {
+                            val provider = StorageProviders.network(conn)
+                            appState.onOpenInNewTab?.invoke(
+                                UniversalFile(name = conn.displayName, isDirectory = true, lastModified = 0, length = 0, provider = provider, providerId = provider.rootId())
+                            )
+                        }
+                    }
                     else -> if (path != null) {
                         appState.onOpenInNewTab?.invoke(File(path).toUniversal())
                     } else if (uri != null) {
@@ -686,6 +806,15 @@ private fun NavContextMenu(
                         }
                         appState.context.startActivity(intent)
                     }
+                    is NavSection.NetworkStorage -> {
+                        val intent = Intent(appState.context, MainActivity::class.java).apply {
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            addFlags(Intent.FLAG_ACTIVITY_MULTIPLE_TASK)
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_DOCUMENT)
+                            putExtra("networkConnectionId", section.connectionId)
+                        }
+                        appState.context.startActivity(intent)
+                    }
                     else -> when {
                         path != null -> appState.openInNewWindow(listOf(File(path).toUniversal()))
                         uri != null -> {
@@ -708,8 +837,20 @@ private fun NavContextMenu(
                 leadingIcon = { Icon(Icons.Default.DeleteForever, null) }
             )
         }
-        if (onRemove != null) {
+        if (onEdit != null || onRemove != null) {
             HorizontalDivider()
+        }
+        if (onEdit != null) {
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.nav_network_edit)) },
+                onClick = {
+                    onDismissRequest()
+                    onEdit()
+                },
+                leadingIcon = { Icon(Icons.Default.Edit, null) }
+            )
+        }
+        if (onRemove != null) {
             DropdownMenuItem(
                 text = { Text(if (path != null) stringResource(R.string.menu_remove_favorites) else stringResource(R.string.menu_remove)) },
                 onClick = {
@@ -733,7 +874,7 @@ private fun NavContextMenu(
                 leadingIcon = { if (appState.appConfigs.isGalleryAlbumsEnabled) Icon(Icons.Default.Check, null) }
             )
         }
-        if (section !is NavSection.Recent && section !is NavSection.Gallery) {
+        if (section !is NavSection.Recent && section !is NavSection.Gallery && section !is NavSection.NetworkStorage) {
             HorizontalDivider()
             DropdownMenuItem(
                 text = { Text(stringResource(R.string.menu_properties)) },
@@ -894,6 +1035,7 @@ private fun NavNetworkItem(
     connection: NetworkConnection,
     onClick: () -> Unit,
     onRemove: () -> Unit,
+    onEdit: () -> Unit,
     appState: FileExplorerState
 ) {
     var expanded by remember { mutableStateOf(false) }
@@ -983,7 +1125,8 @@ private fun NavNetworkItem(
                 appState = appState,
                 label = connection.displayName,
                 section = NavSection.NetworkStorage(connection.id),
-                onRemove = onRemove
+                onRemove = onRemove,
+                onEdit = onEdit
             )
         }
     }

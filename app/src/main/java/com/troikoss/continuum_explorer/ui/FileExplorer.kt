@@ -50,6 +50,7 @@ import com.troikoss.continuum_explorer.managers.DetailsMode
 import com.troikoss.continuum_explorer.managers.FileOperationsManager
 import com.troikoss.continuum_explorer.managers.SettingsManager
 import com.troikoss.continuum_explorer.model.NavSection
+import com.troikoss.continuum_explorer.model.NetworkConnection
 import com.troikoss.continuum_explorer.ui.activities.PopUpActivity
 import com.troikoss.continuum_explorer.model.ScreenSize
 import com.troikoss.continuum_explorer.model.LibraryItem
@@ -70,7 +71,8 @@ fun FileExplorer(
     initialUri: String? = null,
     initialArchive: File? = null,
     initialArchiveUri: Uri? = null,
-    initialLibraryItem: LibraryItem = LibraryItem.None
+    initialLibraryItem: LibraryItem = LibraryItem.None,
+    initialNetworkConnectionId: String? = null
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -126,6 +128,13 @@ fun FileExplorer(
                     if (!trashDir.exists()) trashDir.mkdirs()
                     firstState.navigateTo(trashDir, null, addToHistory = false, libraryItem = LibraryItem.RecycleBin)
                 }
+                initialNetworkConnectionId != null -> {
+                    val conn = firstState.appConfigs.networkConnections.find { it.id == initialNetworkConnectionId }
+                    if (conn != null) {
+                        val provider = StorageProviders.network(conn)
+                        firstState.navigateTo(null, null, addToHistory = false, networkProvider = provider, networkId = provider.rootId(), networkConnectionId = conn.id)
+                    }
+                }
                 initialLibraryItem != LibraryItem.None -> firstState.navigateTo(null, null, addToHistory = false, libraryItem = initialLibraryItem)
                 initialPath != null -> firstState.navigateTo(File(initialPath), null, addToHistory = false)
                 initialUri != null -> firstState.navigateTo(null, Uri.parse(initialUri), addToHistory = false)
@@ -154,6 +163,15 @@ fun FileExplorer(
             val result = FileOperationsManager.requestNetworkConnection()
             if (result != null) {
                 appState.appConfigs.addNetworkConnection(result)
+            }
+        }
+        context.startActivity(Intent(context, PopUpActivity::class.java))
+    }
+    val onEditNetwork: (NetworkConnection) -> Unit = { existing ->
+        networkScope.launch {
+            val result = FileOperationsManager.requestNetworkConnection(existing)
+            if (result != null) {
+                appState.appConfigs.updateNetworkConnection(result)
             }
         }
         context.startActivity(Intent(context, PopUpActivity::class.java))
@@ -199,7 +217,8 @@ fun FileExplorer(
                         appState = appState,
                         onCloseDrawer = { scope.launch { drawerState.close() } },
                         onAddStorage = { safLauncher.launch(null) },
-                        onAddNetwork = onAddNetwork
+                        onAddNetwork = onAddNetwork,
+                        onEditNetwork = onEditNetwork
                     )
                 }
             }
@@ -231,7 +250,8 @@ fun FileExplorer(
                     modifier = Modifier.padding(innerPadding),
                     appState = appState,
                     onAddStorage = { safLauncher.launch(null) },
-                    onAddNetwork = onAddNetwork
+                    onAddNetwork = onAddNetwork,
+                    onEditNetwork = onEditNetwork
                 )
             }
         }
@@ -243,7 +263,8 @@ private fun NavigationContent(
     appState: FileExplorerState,
     onCloseDrawer: () -> Unit,
     onAddStorage: () -> Unit,
-    onAddNetwork: () -> Unit = {}
+    onAddNetwork: () -> Unit = {},
+    onEditNetwork: (NetworkConnection) -> Unit = {}
 ) {
     val context = LocalContext.current
     NavigationPane(
@@ -258,6 +279,7 @@ private fun NavigationContent(
         },
         onAddStorageClick = onAddStorage,
         onAddNetworkClick = onAddNetwork,
+        onEditNetworkClick = onEditNetwork,
         onNavigate = onCloseDrawer
     )
 }
@@ -302,7 +324,8 @@ private fun ExplorerBody(
     modifier: Modifier = Modifier,
     appState: FileExplorerState,
     onAddStorage: () -> Unit,
-    onAddNetwork: () -> Unit = {}
+    onAddNetwork: () -> Unit = {},
+    onEditNetwork: (NetworkConnection) -> Unit = {}
 ) {
     val context = LocalContext.current
     val screenSize = appState.getScreenSize()
@@ -331,7 +354,8 @@ private fun ExplorerBody(
                             },
                             onSafItemSelected = { appState.navigateTo(null, it) },
                             onAddStorageClick = onAddStorage,
-                            onAddNetworkClick = onAddNetwork
+                            onAddNetworkClick = onAddNetwork,
+                            onEditNetworkClick = onEditNetwork
                         )
                     }
                 }
