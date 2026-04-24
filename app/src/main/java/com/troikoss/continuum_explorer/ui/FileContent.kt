@@ -69,6 +69,7 @@ import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.troikoss.continuum_explorer.model.FileColumnType
+import com.troikoss.continuum_explorer.model.ScreenSize
 import com.troikoss.continuum_explorer.model.UniversalFile
 import com.troikoss.continuum_explorer.model.ViewMode
 import com.troikoss.continuum_explorer.ui.components.BackgroundContextMenu
@@ -281,9 +282,7 @@ fun FileContent(appState: FileExplorerState) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, fileListShape)
-            .clip(fileListShape)
-            .background(MaterialTheme.colorScheme.surfaceContainerLowest)
+            .then( if (appState.getScreenSize() != ScreenSize.SMALL) Modifier.border(1.dp, MaterialTheme.colorScheme.outlineVariant, fileListShape).clip(fileListShape).background(MaterialTheme.colorScheme.surfaceContainerLowest) else Modifier)
             .onGloballyPositioned { containerCoordinates = it }
             .containerGestures(
                 selectionManager = selectionManager,
