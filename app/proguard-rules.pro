@@ -41,10 +41,11 @@
 # smbj — SMB2/3 client
 -keep class com.hierynomus.** { *; }
 -keep class com.rapid7.** { *; }
+-keep class net.engio.** { *; }
 -dontwarn com.hierynomus.**
 -dontwarn com.rapid7.**
+-dontwarn net.engio.**
 
-# javax.el (often used by dependencies like Hibernate Validator or some network libs)
 -dontwarn javax.el.BeanELResolver
 -dontwarn javax.el.ELContext
 -dontwarn javax.el.ELResolver
