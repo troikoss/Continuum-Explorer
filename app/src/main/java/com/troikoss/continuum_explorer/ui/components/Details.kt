@@ -157,6 +157,15 @@ fun DetailsPane(
                             text = stringResource(R.string.details_size, appState.formatSize(file.length)),
                             fontSize = 14.sp
                         )
+                    } else {
+                        val childCount = remember(file) { file.fileRef?.listFiles()?.size }
+                        if (childCount != null) {
+                            Text(
+                                text = if (childCount == 1) stringResource(R.string.details_item_count_singular)
+                                       else stringResource(R.string.details_item_count_plural, childCount),
+                                fontSize = 14.sp
+                            )
+                        }
                     }
 
                     val (resolution, duration) = rememberMediaMetadata(file, fileType, context)
@@ -282,6 +291,16 @@ fun DetailsBar(
                         fontSize = 14.sp,
                         modifier = Modifier.weight(1f)
                     )
+                } else {
+                    val childCount = remember(file) { file.fileRef?.listFiles()?.size }
+                    if (childCount != null) {
+                        Text(
+                            text = if (childCount == 1) stringResource(R.string.details_item_count_singular)
+                                   else stringResource(R.string.details_item_count_plural, childCount),
+                            fontSize = 14.sp,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
                 }
             }
 

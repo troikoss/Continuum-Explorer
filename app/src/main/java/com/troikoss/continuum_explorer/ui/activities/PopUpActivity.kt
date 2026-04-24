@@ -258,7 +258,17 @@ fun PropertiesContent(onClose: () -> Unit) {
 
             PropertyRow(stringResource(R.string.prop_name), file.name)
             PropertyRow(stringResource(R.string.prop_type), fileType)
-            
+            if (file.isDirectory) {
+                val childCount = remember(file) { file.fileRef?.listFiles()?.size }
+                if (childCount != null) {
+                    PropertyRow(
+                        stringResource(R.string.prop_items),
+                        if (childCount == 1) stringResource(R.string.details_item_count_singular)
+                        else stringResource(R.string.details_item_count_plural, childCount)
+                    )
+                }
+            }
+
             if (isCalculatingSize) {
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 4.dp)) {
                     Text(

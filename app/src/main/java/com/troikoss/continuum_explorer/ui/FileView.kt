@@ -21,6 +21,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -39,6 +40,7 @@ import com.troikoss.continuum_explorer.utils.*
 import com.troikoss.continuum_explorer.utils.IconHelper.FileThumbnail
 import com.troikoss.continuum_explorer.utils.IconHelper.FolderPreview
 import com.troikoss.continuum_explorer.utils.IconHelper.isMimeTypePreviewable
+import com.troikoss.continuum_explorer.R
 
 /**
  * Renders a single file or folder item, switching layout based on the current ViewMode.
@@ -374,6 +376,7 @@ private fun FileDetailsView(
     toolTipProvider: PopupPositionProvider
 ) {
     val context = LocalContext.current
+    val resources = LocalResources.current
 
     val iconSelectionEnabled = SettingsManager.iconTouchSelection.value
 
@@ -432,7 +435,7 @@ private fun FileDetailsView(
                     val meta = uuidKey?.let { appState.recycleBinMetadata[it] }
                     val text = when (column.type) {
                         FileColumnType.DATE -> remember(file) { appState.formatDate(file.lastModified) }
-                        FileColumnType.SIZE -> if (file.isDirectory) "--" else remember(file) { appState.formatSize(file.length) }
+                        FileColumnType.SIZE -> if (file.isDirectory) remember(file) { file.fileRef?.listFiles()?.size?.let { n -> if (n == 1) resources.getString(R.string.details_item_count_singular) else resources.getString(R.string.details_item_count_plural, n) } ?: "--" } else remember(file) { appState.formatSize(file.length) }
                         FileColumnType.TYPE -> getFileType(file, context)
                         FileColumnType.DATE_DELETED -> meta?.deletedAt?.let { appState.formatDate(it) } ?: "--"
                         FileColumnType.DELETED_FROM -> meta?.deletedFrom ?: "--"
