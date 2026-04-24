@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -333,13 +334,15 @@ private fun ExplorerBody(
     val detailsPaneWidth = appState.appConfigs.detailsPaneWidth
 
     Column(modifier = modifier.fillMaxSize()) {
-        Row(modifier = Modifier.weight(1f)) {
+        Row(modifier = Modifier.weight(1f).padding(8.dp)) {
             // Navigation Pane (Side)
             if (screenSize != ScreenSize.SMALL) {
-                Box (modifier = Modifier.padding(vertical = 8.dp)) {
+                Box(modifier = Modifier.fillMaxHeight().padding(end = 8.dp)) {
                     PermanentDrawerSheet(
-                        modifier = Modifier.width(navPaneWidth),
-                        windowInsets = WindowInsets(0, 0, 0, 0)
+                        modifier = Modifier.width(navPaneWidth).fillMaxHeight(),
+                        windowInsets = WindowInsets(0, 0, 0, 0),
+                        drawerShape = RoundedCornerShape(16.dp),
+                        drawerContainerColor = MaterialTheme.colorScheme.surfaceContainerLow
                     ) {
                         NavigationPane(
                             appState = appState,
@@ -358,6 +361,7 @@ private fun ExplorerBody(
                     }
                 }
                 VerticalResizeHandle(
+                    showDivider = false,
                     onResize = { delta ->
                         appState.appConfigs.navPaneWidth = (appState.appConfigs.navPaneWidth + delta).coerceIn(200.dp, 300.dp)
                         appState.appConfigs.savePaneWidths()
@@ -373,6 +377,7 @@ private fun ExplorerBody(
             // Details Pane
             if (screenSize == ScreenSize.LARGE && SettingsManager.detailsMode.value == DetailsMode.PANE) {
                 VerticalResizeHandle(
+                    showDivider = false,
                     onResize = { delta ->
                         appState.appConfigs.detailsPaneWidth =
                             (appState.appConfigs.detailsPaneWidth - delta).coerceIn(200.dp, 300.dp)
@@ -381,7 +386,7 @@ private fun ExplorerBody(
                 )
                 DetailsPane(
                     appState = appState,
-                    modifier = Modifier.width(detailsPaneWidth)
+                    modifier = Modifier.width(detailsPaneWidth).padding(start = 8.dp).fillMaxHeight()
                 )
             }
         }

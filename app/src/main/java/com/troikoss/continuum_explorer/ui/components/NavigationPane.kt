@@ -735,12 +735,12 @@ private fun NavBackgroundContextMenu(
 @Composable
 private fun NavSectionHeader(text: String) {
     Text(
-        text = text,
+        text = text.uppercase(),
         modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-        style = MaterialTheme.typography.labelMedium,
-        color = MaterialTheme.colorScheme.secondary,
-        fontWeight = FontWeight.SemiBold,
-        letterSpacing = 1.2.sp
+        style = MaterialTheme.typography.labelSmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        fontWeight = FontWeight.Medium,
+        letterSpacing = 0.5.sp
     )
 }
 
@@ -919,12 +919,12 @@ private fun NavItem(
             onClick = onClick,
             icon = { Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.secondary) },
             modifier = Modifier
-                .height(40.dp)
+                .height(36.dp)
                 .contextMenuDetector(enableLongPress = true, aggressive = true) { offset ->
                     menuOffset = with(density) { DpOffset(offset.x.toDp(), offset.y.toDp()) }
                     expanded = true
                 },
-            shape = MaterialTheme.shapes.small
+            shape = androidx.compose.foundation.shape.RoundedCornerShape(18.dp)
         )
 
         Box(modifier = Modifier.offset(menuOffset.x, menuOffset.y)) {
@@ -960,9 +960,9 @@ private fun NavFavoriteItem(
             selected = false,
             onClick = onClick,
             icon = { Icon(Icons.Default.Folder, contentDescription = null, tint = MaterialTheme.colorScheme.secondary) },
-            shape = MaterialTheme.shapes.small,
+            shape = androidx.compose.foundation.shape.RoundedCornerShape(18.dp),
             modifier = Modifier
-                .height(40.dp)
+                .height(36.dp)
                 .contextMenuDetector(enableLongPress = true, aggressive = true) { offset ->
                     menuOffset = with(density) {
                         DpOffset(offset.x.toDp(), offset.y.toDp())
@@ -1006,9 +1006,9 @@ private fun NavSafItem(
             selected = false,
             onClick = onClick,
             icon = { Icon(Icons.Default.FolderSpecial, contentDescription = null, tint = MaterialTheme.colorScheme.secondary) },
-            shape = MaterialTheme.shapes.small,
+            shape = androidx.compose.foundation.shape.RoundedCornerShape(18.dp),
             modifier = Modifier
-                .height(40.dp)
+                .height(36.dp)
                 .contextMenuDetector(enableLongPress = true, aggressive = true) { offset ->
                     menuOffset = with(density) {
                         DpOffset(offset.x.toDp(), offset.y.toDp())
@@ -1109,9 +1109,9 @@ private fun NavNetworkItem(
             selected = false,
             onClick = onClick,
             icon = { Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.secondary) },
-            shape = MaterialTheme.shapes.small,
+            shape = androidx.compose.foundation.shape.RoundedCornerShape(18.dp),
             modifier = Modifier
-                .then(if (!isSmb || diskInfo == null) Modifier.height(40.dp) else Modifier)
+                .then(if (!isSmb || diskInfo == null) Modifier.height(36.dp) else Modifier)
                 .contextMenuDetector(enableLongPress = true, aggressive = true) { offset ->
                     menuOffset = with(density) { DpOffset(offset.x.toDp(), offset.y.toDp()) }
                     expanded = true
@@ -1232,7 +1232,7 @@ private fun NavStorageItem(
                     menuOffset = with(density) { DpOffset(offset.x.toDp(), offset.y.toDp()) }
                     expandedMenu = true
                 },
-                shape = MaterialTheme.shapes.medium
+                shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp)
             )
 
             Box(modifier = Modifier.offset(menuOffset.x, menuOffset.y)) {

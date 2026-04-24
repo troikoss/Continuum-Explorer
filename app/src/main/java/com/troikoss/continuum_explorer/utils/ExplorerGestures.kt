@@ -836,7 +836,8 @@ fun Modifier.fileDropTarget(
 @Composable
 fun VerticalResizeHandle(
     onResize: (Dp) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    showDivider: Boolean = true
 ) {
     val context = LocalContext.current
     val density = LocalDensity.current
@@ -856,8 +857,7 @@ fun VerticalResizeHandle(
             .wrapContentWidth(unbounded = true),
         contentAlignment = Alignment.Center
     ) {
-        // Visible divider line
-        VerticalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+        if (showDivider) VerticalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
         Box(
             modifier = Modifier

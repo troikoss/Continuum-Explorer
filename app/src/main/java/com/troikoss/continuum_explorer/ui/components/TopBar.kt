@@ -5,6 +5,9 @@ import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
@@ -176,10 +179,21 @@ fun TopBar(
         }
     }
 
-    Surface( modifier = Modifier
-        .fillMaxWidth()
-        .height(56.dp), 
-        color = if (SettingsManager.isColorfulBarsEnabled.value) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainer
+    val topBarBorderColor = MaterialTheme.colorScheme.outlineVariant
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(56.dp)
+            .drawBehind {
+                val strokeWidth = 1.dp.toPx()
+                drawLine(
+                    color = topBarBorderColor,
+                    start = Offset(0f, size.height - strokeWidth / 2),
+                    end = Offset(size.width, size.height - strokeWidth / 2),
+                    strokeWidth = strokeWidth
+                )
+            },
+        color = if (SettingsManager.isColorfulBarsEnabled.value) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface
     ) {
         Row (modifier = Modifier.padding(8.dp), verticalAlignment = CenterVertically) {
             if (appState.getScreenSize() == ScreenSize.SMALL) {
@@ -340,6 +354,7 @@ fun TopBar(
             Surface(
                 modifier = Modifier
                     .padding(horizontal = 8.dp)
+                    .height(40.dp)
                     .weight(1f)
                     .clickable(
                         interactionSource = interactionSource,
@@ -347,8 +362,8 @@ fun TopBar(
                     ) {
                         if (!addressBar && !searchBar) addressBar = true
                     },
-                color = MaterialTheme.colorScheme.surface,
-                shape = MaterialTheme.shapes.extraLarge
+                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                shape = RoundedCornerShape(20.dp)
             ) {
                 if (searchBar) {
                     Row(

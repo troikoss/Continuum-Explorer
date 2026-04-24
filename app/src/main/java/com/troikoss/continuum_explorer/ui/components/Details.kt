@@ -2,6 +2,8 @@ package com.troikoss.continuum_explorer.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -80,9 +82,13 @@ fun DetailsPane(
 
     val fileType = if (selectionCount >= 1) getFileType(selectedItems.first(), context) else null
 
+    val detailsShape = RoundedCornerShape(16.dp)
+
     Box(
         modifier = modifier
             .fillMaxHeight()
+            .clip(detailsShape)
+            .background(MaterialTheme.colorScheme.surfaceContainerLow)
     ) {
         Column(
             modifier = Modifier
