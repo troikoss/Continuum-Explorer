@@ -55,22 +55,12 @@ fun TabBar(
 ) {
     val scrollState = rememberScrollState()
     val coroutineScope = rememberCoroutineScope()
-    val borderColor = MaterialTheme.colorScheme.outlineVariant
 
     BoxWithConstraints(
         modifier = modifier
             .fillMaxWidth()
             .height(40.dp)
-            .background(MaterialTheme.colorScheme.surfaceContainer)
-            .drawBehind {
-                val strokeWidth = 1.dp.toPx()
-                drawLine(
-                    color = borderColor,
-                    start = Offset(0f, size.height - strokeWidth / 2),
-                    end = Offset(size.width, size.height - strokeWidth / 2),
-                    strokeWidth = strokeWidth
-                )
-            },
+            .background(MaterialTheme.colorScheme.surfaceContainer),
         contentAlignment = Alignment.BottomStart
     ) {
         // Shrink tabs proportionally as more are added, scroll when they hit minimum.

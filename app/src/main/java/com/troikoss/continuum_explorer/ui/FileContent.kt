@@ -1,7 +1,6 @@
 package com.troikoss.continuum_explorer.ui
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
@@ -282,7 +281,7 @@ fun FileContent(appState: FileExplorerState) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .then( if (appState.getScreenSize() != ScreenSize.SMALL) Modifier.border(1.dp, MaterialTheme.colorScheme.outlineVariant, fileListShape).clip(fileListShape).background(MaterialTheme.colorScheme.surfaceContainerLowest) else Modifier)
+            .then( if (appState.getScreenSize() != ScreenSize.SMALL) Modifier.clip(fileListShape).background(MaterialTheme.colorScheme.surfaceContainerLowest) else Modifier)
             .onGloballyPositioned { containerCoordinates = it }
             .containerGestures(
                 selectionManager = selectionManager,

@@ -97,6 +97,22 @@ class FileExplorerState(
     // Centralized selection manager
     val selectionManager = SelectionManager()
 
+    // Inline rename state
+    var renamingFile by mutableStateOf<UniversalFile?>(null)
+    var renameText by mutableStateOf("")
+    fun startRename(file: UniversalFile) {
+        if (renamingFile != null && renamingFile != file) {
+            confirmRename(renamingFile!!, renameText.trim())
+        }
+        renamingFile = file
+        renameText = file.name
+    }
+
+    fun cancelRename() {
+        renamingFile = null
+        renameText = ""
+    }
+
     // Date formatter for consistent date display
     private val dateFormatter = SimpleDateFormat("MMM dd, yyyy h:mm a", Locale.getDefault())
 

@@ -10,6 +10,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import kotlinx.coroutines.flow.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.focus.FocusRequester
@@ -71,6 +72,14 @@ fun FileView(
     // Lifecycle & Positioning
     DisposableEffect(file) {
         onDispose { itemPositions.remove(file) }
+    }
+
+    // Restore keyboard focus to the container when rename closes
+    LaunchedEffect(Unit) {
+        snapshotFlow { appState.renamingFile }
+            .drop(1)
+            .filter { it == null }
+            .collect { focusRequester.requestFocus() }
     }
 
 
@@ -151,10 +160,10 @@ fun FileView(
                     }
             ) {
                 when (viewMode) {
-                    ViewMode.GRID -> FileGridView(file, isSelected, isHovered, isLead, appState, mouseTooltipProvider)
-                    ViewMode.GALLERY -> FileGalleryView(file, isSelected, isHovered, isLead, appState, mouseTooltipProvider)
-                    ViewMode.CONTENT -> FileContentView(file, isSelected, isHovered, isLead, appState, mouseTooltipProvider)
-                    ViewMode.DETAILS -> FileDetailsView(file, isSelected, isHovered, isLead, appState, hScrollState, mouseTooltipProvider)
+                    ViewMode.GRID -> FileGridView(file, isSelected, isHovered, isLead, appState, focusRequester, mouseTooltipProvider)
+                    ViewMode.GALLERY -> FileGalleryView(file, isSelected, isHovered, isLead, appState, focusRequester, mouseTooltipProvider)
+                    ViewMode.CONTENT -> FileContentView(file, isSelected, isHovered, isLead, appState, focusRequester, mouseTooltipProvider)
+                    ViewMode.DETAILS -> FileDetailsView(file, isSelected, isHovered, isLead, appState, focusRequester, hScrollState, mouseTooltipProvider)
                 }
             }
 
@@ -179,6 +188,7 @@ private fun FileGalleryView(
     isHovered: Boolean,
     isLead: Boolean,
     appState: FileExplorerState,
+    focusRequester: FocusRequester,
     toolTipProvider: PopupPositionProvider
 ) {
 
@@ -218,17 +228,27 @@ private fun FileGalleryView(
                     contentAlignment = Alignment.BottomCenter
                 ) {
                     Box (modifier = Modifier.background(Color.Black.copy(alpha = 0.5f)).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                        Text(
-                            text = file.name,
-                            color = Color.White,
-                            textAlign = TextAlign.Center,
-                            style = MaterialTheme.typography.bodyMedium,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis,
-                            onTextLayout = { textLayoutResult ->
-                                isOverflowing = textLayoutResult.hasVisualOverflow
-                            }
-                        )
+                        if (appState.renamingFile == file) {
+                            InlineRenameField(
+                                file = file,
+                                appState = appState,
+                                modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
+                                textStyle = MaterialTheme.typography.bodyMedium.copy(color = Color.White, textAlign = TextAlign.Center)
+                            )
+                        } else {
+                            Text(
+                                text = file.name,
+                                color = Color.White,
+                                textAlign = TextAlign.Center,
+                                style = MaterialTheme.typography.bodyMedium,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.renameOnClick(file, appState.selectionManager, appState),
+                                onTextLayout = { textLayoutResult ->
+                                    isOverflowing = textLayoutResult.hasVisualOverflow
+                                }
+                            )
+                        }
                     }
                 }
             } else isOverflowing = true
@@ -252,6 +272,7 @@ private fun FileGridView(
     isHovered: Boolean,
     isLead: Boolean,
     appState: FileExplorerState,
+    focusRequester: FocusRequester,
     toolTipProvider: PopupPositionProvider
 ) {
 
@@ -282,21 +303,31 @@ private fun FileGridView(
                 modifier = Modifier.align(Alignment.BottomEnd)
             )
         }
-        TooltipBox(
-            positionProvider = toolTipProvider,
-            tooltip = { if (isOverflowing) PlainTooltip { Text(file.name) } },
-            state = tooltipState
-        ) {
-            Text(
-                text = file.name,
-                textAlign = TextAlign.Center,
-                style = MaterialTheme.typography.bodyMedium,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-                onTextLayout = { textLayoutResult ->
-                    isOverflowing = textLayoutResult.hasVisualOverflow
-                }
+        if (appState.renamingFile == file) {
+            InlineRenameField(
+                file = file,
+                appState = appState,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
+                textStyle = MaterialTheme.typography.bodyMedium.copy(textAlign = TextAlign.Center)
             )
+        } else {
+            TooltipBox(
+                positionProvider = toolTipProvider,
+                tooltip = { if (isOverflowing) PlainTooltip { Text(file.name) } },
+                state = tooltipState
+            ) {
+                Text(
+                    text = file.name,
+                    textAlign = TextAlign.Center,
+                    style = MaterialTheme.typography.bodyMedium,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.renameOnClick(file, appState.selectionManager, appState),
+                    onTextLayout = { textLayoutResult ->
+                        isOverflowing = textLayoutResult.hasVisualOverflow
+                    }
+                )
+            }
         }
     }
 }
@@ -309,6 +340,7 @@ private fun FileContentView(
     isHovered: Boolean,
     isLead: Boolean,
     appState: FileExplorerState,
+    focusRequester: FocusRequester,
     toolTipProvider: PopupPositionProvider
 ) {
     val formattedSize = remember(file) { appState.formatSize(file.length) }
@@ -324,19 +356,28 @@ private fun FileContentView(
     Column (modifier = Modifier.selectionBackground(isSelected, isHovered, isLead, shape = shape)) {
         ListItem(
             headlineContent = {
-                TooltipBox(
-                    positionProvider = toolTipProvider,
-                    tooltip = { if (isOverflowing) PlainTooltip { Text(file.name) } },
-                    state = tooltipState
-                ) {
-                    Text(
-                        text = file.name,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        onTextLayout = { textLayoutResult ->
-                            isOverflowing = textLayoutResult.hasVisualOverflow
-                        }
+                if (appState.renamingFile == file) {
+                    InlineRenameField(
+                        file = file,
+                        appState = appState,
+                        modifier = Modifier.fillMaxWidth()
                     )
+                } else {
+                    TooltipBox(
+                        positionProvider = toolTipProvider,
+                        tooltip = { if (isOverflowing) PlainTooltip { Text(file.name) } },
+                        state = tooltipState
+                    ) {
+                        Text(
+                            text = file.name,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.renameOnClick(file, appState.selectionManager, appState),
+                            onTextLayout = { textLayoutResult ->
+                                isOverflowing = textLayoutResult.hasVisualOverflow
+                            }
+                        )
+                    }
                 }
             },
             supportingContent = { Text(if (file.isDirectory) "Folder - $formattedDate" else "$formattedSize - $formattedDate") },
@@ -372,6 +413,7 @@ private fun FileDetailsView(
     isHovered: Boolean,
     isLead: Boolean,
     appState: FileExplorerState,
+    focusRequester: FocusRequester,
     hScrollState: ScrollState?,
     toolTipProvider: PopupPositionProvider
 ) {
@@ -413,20 +455,28 @@ private fun FileDetailsView(
                     )
                 }
                 Spacer(Modifier.width(12.dp))
-                TooltipBox(
-                    positionProvider = toolTipProvider,
-                    tooltip = { if (isOverflowing) PlainTooltip { Text(file.name) } },
-                    state = tooltipState
-                ) {
-                    Text(
-                        text = file.name,
-                        modifier = Modifier.width(nameColumnWidth),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        onTextLayout = { textLayoutResult ->
-                            isOverflowing = textLayoutResult.hasVisualOverflow
-                        }
+                if (appState.renamingFile == file) {
+                    InlineRenameField(
+                        file = file,
+                        appState = appState,
+                        modifier = Modifier.width(nameColumnWidth)
                     )
+                } else {
+                    TooltipBox(
+                        positionProvider = toolTipProvider,
+                        tooltip = { if (isOverflowing) PlainTooltip { Text(file.name) } },
+                        state = tooltipState
+                    ) {
+                        Text(
+                            text = file.name,
+                            modifier = Modifier.width(nameColumnWidth).renameOnClick(file, appState.selectionManager, appState),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            onTextLayout = { textLayoutResult ->
+                                isOverflowing = textLayoutResult.hasVisualOverflow
+                            }
+                        )
+                    }
                 }
 
                 appState.folderConfigs.visibleColumns.forEach { column ->

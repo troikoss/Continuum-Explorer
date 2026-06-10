@@ -11,6 +11,14 @@ import androidx.compose.foundation.draganddrop.dragAndDropSource
 import androidx.compose.foundation.draganddrop.dragAndDropTarget
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.awaitLongPressOrCancellation
 import androidx.compose.foundation.layout.Box
@@ -19,6 +27,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.requiredWidth
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentWidth
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.*
@@ -32,6 +41,7 @@ import androidx.compose.ui.draganddrop.toAndroidDragEvent
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.input.key.Key
@@ -40,6 +50,7 @@ import androidx.compose.ui.input.key.isCtrlPressed
 import androidx.compose.ui.input.key.isShiftPressed
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.PointerEvent
 import androidx.compose.ui.input.pointer.PointerEventPass
@@ -68,6 +79,7 @@ import com.troikoss.continuum_explorer.ui.activities.PopUpActivity
 import com.troikoss.continuum_explorer.model.UniversalFile
 import com.troikoss.continuum_explorer.model.ViewMode
 import com.troikoss.continuum_explorer.model.StorageProvider
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.io.File
@@ -259,6 +271,16 @@ fun Modifier.containerGestures(
             if (keyEvent.type == KeyEventType.KeyDown) {
                 val shift = keyEvent.isShiftPressed
                 val ctrl = keyEvent.isCtrlPressed
+                val isRenaming = appState.renamingFile != null
+
+                // Skip navigation keys while rename is active (consume so they don't propagate)
+                if (isRenaming && keyEvent.key in listOf(
+                        Key.DirectionUp, Key.DirectionDown,
+                        Key.DirectionLeft, Key.DirectionRight,
+                        Key.PageUp, Key.PageDown,
+                        Key.MoveHome, Key.MoveEnd
+                    )
+                ) return@onKeyEvent true
 
                 when (keyEvent.key) {
                     Key.DirectionUp -> {
@@ -432,6 +454,7 @@ fun Modifier.containerGestures(
                     val isStylus = event.changes.any { it.type == PointerType.Stylus }
                     val wasHandled = event.changes.any { it.isConsumed }
                     if (isMouse && event.type == PointerEventType.Press && !wasHandled && event.buttons.isPrimaryPressed) {
+                        appState.cancelRename()
                         selectionManager.clear(true)
                         focusRequester.requestFocus()
                     } else if ((isTouch || isStylus) && event.type == PointerEventType.Press && !wasHandled) {
@@ -498,6 +521,23 @@ fun Modifier.itemGestures(
                 if (isMouse) {
                     val isShift = event.keyboardModifiers.isShiftPressed
                     val isCtrl = event.keyboardModifiers.isCtrlPressed
+                    val isRenaming = appState.renamingFile == file
+
+                    if (isRenaming) {
+                        if (event.type == PointerEventType.Press) {
+                            val wasConsumedByChild = event.changes.any { it.isConsumed }
+                            if (!wasConsumedByChild) {
+                                appState.cancelRename()
+                                event.changes.forEach { it.consume() }
+                            }
+                        }
+                        continue
+                    }
+
+                    // Clicking a different file during rename cancels it
+                    if (appState.renamingFile != null && event.type == PointerEventType.Press) {
+                        appState.cancelRename()
+                    }
 
                     if (event.type == PointerEventType.Press) {
                         val isPrimary = event.buttons.isPrimaryPressed
@@ -575,24 +615,26 @@ fun Modifier.fileDragSource(
                 val down = awaitFirstDown(requireUnconsumed = false)
                 val isMouse = down.type == PointerType.Mouse
 
-                if (isMouse) {
-                    // MOUSE LOGIC: unchanged
-                    var isDragging = false
-                    while (true) {
-                        val event = awaitPointerEvent()
-                        val change = event.changes.firstOrNull { it.id == down.id }
-                        if (change == null || !change.pressed) break
-                        if ((change.position - down.position).getDistance() > viewConfiguration.touchSlop) {
-                            isDragging = true
-                            break
+                    if (isMouse) {
+                        // MOUSE LOGIC: unchanged
+                        var isDragging = false
+                        while (true) {
+                            val event = awaitPointerEvent()
+                            val change = event.changes.firstOrNull { it.id == down.id }
+                            if (change == null || !change.pressed) break
+                            if ((change.position - down.position).getDistance() > viewConfiguration.touchSlop) {
+                                if (appState.renamingFile != file) {
+                                    isDragging = true
+                                }
+                                break
+                            }
                         }
-                    }
-                    if (isDragging) {
-                        prepareInternalDragState(file, selectionManager, appState)
-                        createDragTransferData(context, selectionManager.selectedItems)?.let {
-                            dragScope.startTransfer(it)
+                        if (isDragging) {
+                            prepareInternalDragState(file, selectionManager, appState)
+                            createDragTransferData(context, selectionManager.selectedItems)?.let {
+                                dragScope.startTransfer(it)
+                            }
                         }
-                    }
 
                 } else {
                     // TOUCH LOGIC
@@ -917,4 +959,122 @@ fun Modifier.iconTouchToggle(
             }
         }
     }
+}
+
+/**
+ * Triggers inline rename when a mouse click is performed on the name
+ * of an already-selected file item. Only fires when exactly one item
+ * is selected, matching standard rename-on-click behavior.
+ */
+fun Modifier.renameOnClick(
+    file: UniversalFile,
+    selectionManager: SelectionManager,
+    appState: FileExplorerState
+): Modifier = composed {
+    val scope = rememberCoroutineScope()
+
+    this.pointerInput(file, selectionManager) {
+        var pendingRename: Job? = null
+
+        awaitPointerEventScope {
+            while (true) {
+                val event = awaitPointerEvent()
+                val isMouse = event.changes.any { it.type == PointerType.Mouse }
+                if (isMouse && event.type == PointerEventType.Press && event.buttons.isPrimaryPressed) {
+                    pendingRename?.cancel()
+                    if (selectionManager.isSelected(file) && selectionManager.selectedItems.size == 1) {
+                        pendingRename = scope.launch {
+                            delay(300L)
+                            pendingRename = null
+                            if (appState.renamingFile == null && selectionManager.isSelected(file)) {
+                                appState.startRename(file)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun InlineRenameField(
+    file: UniversalFile,
+    appState: FileExplorerState,
+    modifier: Modifier = Modifier,
+    textStyle: TextStyle = LocalTextStyle.current
+) {
+    val focusRequester = remember { FocusRequester() }
+    val selectEnd = remember(file) {
+        if (!file.isDirectory) {
+            val dotIndex = file.name.lastIndexOf('.')
+            if (dotIndex > 0) dotIndex else file.name.length
+        } else {
+            file.name.length
+        }
+    }
+    var textFieldValue by remember { mutableStateOf(TextFieldValue(appState.renameText, TextRange(0, selectEnd))) }
+
+    val effectiveTextStyle = if (textStyle.color == Color.Unspecified) {
+        textStyle.copy(color = MaterialTheme.colorScheme.onSurface)
+    } else {
+        textStyle
+    }
+
+    LaunchedEffect(Unit) {
+        focusRequester.requestFocus()
+    }
+
+    BasicTextField(
+        value = textFieldValue,
+        onValueChange = {
+            textFieldValue = it
+            appState.renameText = it.text
+        },
+        modifier = modifier
+            .focusRequester(focusRequester)
+            .focusProperties {
+                up = FocusRequester.Cancel
+                down = FocusRequester.Cancel
+                left = FocusRequester.Cancel
+                right = FocusRequester.Cancel
+            }
+            .onPreviewKeyEvent { keyEvent ->
+                if (keyEvent.type == KeyEventType.KeyDown) {
+                    when (keyEvent.key) {
+                        Key.Enter, Key.NumPadEnter -> {
+                            confirmAndCancel(appState, file)
+                            true
+                        }
+                        Key.Escape -> {
+                            appState.cancelRename()
+                            true
+                        }
+                        else -> false
+                    }
+                } else false
+            }
+            .onKeyEvent { keyEvent ->
+                if (keyEvent.type == KeyEventType.KeyDown) {
+                    when (keyEvent.key) {
+                        Key.DirectionUp, Key.DirectionDown, Key.DirectionLeft, Key.DirectionRight -> true
+                        else -> false
+                    }
+                } else false
+            },
+        singleLine = true,
+        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+        keyboardActions = KeyboardActions(
+            onDone = { confirmAndCancel(appState, file) }
+        ),
+        textStyle = effectiveTextStyle
+    )
+}
+
+private fun confirmAndCancel(appState: FileExplorerState, file: UniversalFile) {
+    val newName = appState.renameText.trim()
+    if (newName.isNotEmpty() && newName != file.name) {
+        appState.confirmRename(file, newName)
+    }
+    appState.cancelRename()
 }
