@@ -10,11 +10,8 @@ import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
 import android.os.ParcelFileDescriptor
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.ui.draw.shadow
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.InsertDriveFile
 import androidx.compose.material.icons.automirrored.filled.ListAlt
@@ -60,7 +57,6 @@ import coil.compose.SubcomposeAsyncImage
 import coil.compose.SubcomposeAsyncImageContent
 import coil.request.ImageRequest
 import coil.request.SuccessResult
-import com.troikoss.continuum_explorer.managers.SettingsManager
 import com.troikoss.continuum_explorer.model.UniversalFile
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -80,7 +76,6 @@ object IconHelper {
         modifier: Modifier = Modifier,
         iconSize: Dp = 24.dp,
         tint: Color = MaterialTheme.colorScheme.secondary,
-        isDetailView: Boolean = false,
         contentScale: ContentScale = ContentScale.Fit
     ) {
         val fallbackIcon = getIconForItem(file)
@@ -90,7 +85,7 @@ object IconHelper {
             when {
                 name.endsWith(".pdf") -> PdfThumbnail(file, fallbackIcon, modifier, iconSize, tint)
                 name.endsWith(".apk") -> ApkThumbnail(file, fallbackIcon, modifier, iconSize, tint)
-                name.endsWith(".txt") -> TextFilePreview(file, fallbackIcon, modifier, iconSize, tint, isDetailView)
+                name.endsWith(".txt") -> TextFilePreview(file, fallbackIcon, modifier, iconSize, tint)
                 else -> {
                     SubcomposeAsyncImage(
                         model = if (file.provider.capabilities.isRemote) file else (file.documentFileRef?.uri ?: file.fileRef?.absolutePath),
@@ -119,36 +114,33 @@ object IconHelper {
     @Composable
     fun ItemIcon(
         file: UniversalFile,
-        isSelected: Boolean,
-        appState: FileExplorerState,
+        modifier: Modifier = Modifier,
+        isSelected: Boolean = false,
         contentSize: Dp,
         contentScale: ContentScale = ContentScale.Fit,
-        iconSelectionEnabled: Boolean = SettingsManager.iconTouchSelection.value,
-        fillMaxSize: Boolean = false
     ) {
-
-        Box {
+        Box(modifier = modifier) {
             FileThumbnail(
                 file = file,
                 tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary,
-                modifier = Modifier
-                    .then(if (fillMaxSize) Modifier.fillMaxSize() else Modifier.size(contentSize))
-                    .then(if (iconSelectionEnabled) Modifier.iconTouchToggle(file, appState.selectionManager) else Modifier),
                 iconSize = contentSize,
-                contentScale = contentScale
+                contentScale = contentScale,
+                modifier = Modifier.align(Alignment.Center)
             )
-
-            FolderIcon(
-                folder = file,
-                iconSize = contentSize/2,
-                modifier = Modifier.align(Alignment.Center).padding(top = 3.dp)
-            )
-
-            FolderPreview(
-                folder = file,
-                thumbSize = contentSize/100*66,
-                modifier = Modifier.align(Alignment.BottomEnd)
-            )
+            Box(modifier = Modifier.size(contentSize).align(Alignment.Center)) {
+                FolderIcon(
+                    folder = file,
+                    iconSize = contentSize / 2,
+                    modifier = Modifier
+                        .align(Alignment.Center)
+                        .padding(top = 3.dp)
+                )
+                FolderPreview(
+                    folder = file,
+                    thumbSize = contentSize / 100 * 66,
+                    modifier = Modifier.align(Alignment.BottomEnd)
+                )
+            }
         }
     }
 
@@ -367,7 +359,6 @@ object IconHelper {
         modifier: Modifier,
         iconSize: Dp,
         tint: Color,
-        isDetailView: Boolean
     ) {
         var textSnippet by remember(file) { mutableStateOf("") }
 
@@ -380,11 +371,11 @@ object IconHelper {
                         val length = reader.read(buffer)
                         if (length > 0) String(buffer, 0, length) else ""
                     } } ?: ""
-                } catch (e: Exception) { "" }
+                } catch (_: Exception) { "" }
             }
         }
 
-        if (isDetailView && textSnippet.isNotEmpty()) {
+        if (textSnippet.isNotEmpty() && iconSize >= 40.dp) {
             Surface(modifier = modifier, color = MaterialTheme.colorScheme.surfaceVariant, shape = MaterialTheme.shapes.extraSmall) {
                 Text(
                     text = textSnippet,

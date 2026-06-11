@@ -210,14 +210,13 @@ private fun FileGalleryView(
             IconHelper.ItemIcon(
                 file = file,
                 isSelected = isSelected,
-                appState = appState,
                 contentSize = contentSize,
-                iconSelectionEnabled = false,
-                fillMaxSize = true
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop
             )
 
 
-            if (!isMimeTypePreviewable(file) || file.isDirectory) {
+            if (!isMimeTypePreviewable(file) || file.isDirectory || file.name.lowercase().endsWith(".txt")) {
                 Box(
                     modifier = Modifier
                         .fillMaxSize(),
@@ -288,9 +287,7 @@ private fun FileGridView(
         IconHelper.ItemIcon(
             file = file,
             isSelected = isSelected,
-            appState = appState,
-            contentSize = contentSize,
-            iconSelectionEnabled = false
+            contentSize = contentSize
         )
         if (appState.renamingFile == file) {
             InlineRenameField(
@@ -339,6 +336,8 @@ private fun FileContentView(
 
     val shape = RoundedCornerShape(8.dp)
 
+    val iconSelectionEnabled = SettingsManager.iconTouchSelection.value
+
     Column (modifier = Modifier.selectionBackground(isSelected, isHovered, isLead, shape = shape)) {
         ListItem(
             headlineContent = {
@@ -373,12 +372,13 @@ private fun FileContentView(
                 )
             },
             leadingContent = {
-                IconHelper.ItemIcon(
-                    file = file,
-                    isSelected = isSelected,
-                    appState = appState,
-                    contentSize = 40.dp,
-                )
+                Box(modifier = Modifier.then(if (iconSelectionEnabled) Modifier.iconTouchToggle(file, appState.selectionManager) else Modifier)) {
+                    IconHelper.ItemIcon(
+                        file = file,
+                        isSelected = isSelected,
+                        contentSize = 40.dp,
+                    )
+                }
             },
             colors = ListItemDefaults.colors(containerColor = Color.Transparent),
             modifier = Modifier.padding(horizontal = 8.dp)
@@ -408,6 +408,8 @@ private fun FileDetailsView(
 
     val shape = RoundedCornerShape(8.dp)
 
+    val iconSelectionEnabled = SettingsManager.iconTouchSelection.value
+
     CompositionLocalProvider(LocalOverscrollConfiguration provides null) {
         Column(
             modifier = Modifier
@@ -419,12 +421,13 @@ private fun FileDetailsView(
                     .padding(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                IconHelper.ItemIcon(
-                    file = file,
-                    isSelected = isSelected,
-                    appState = appState,
-                    contentSize = 24.dp,
-                )
+                Box(modifier = Modifier.then(if (iconSelectionEnabled) Modifier.iconTouchToggle(file, appState.selectionManager) else Modifier)) {
+                    IconHelper.ItemIcon(
+                        file = file,
+                        isSelected = isSelected,
+                        contentSize = 24.dp,
+                    )
+                }
                 Spacer(Modifier.width(12.dp))
                 if (appState.renamingFile == file) {
                     InlineRenameField(

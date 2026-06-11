@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -25,6 +26,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -104,18 +106,11 @@ fun DetailsPane(
             ) {
                 if (currentPath != null) {
                     val file = if (selectedItems.isEmpty()) currentPath else selectedItems.first()
-                    Box {
-                        FileThumbnail(
-                            file = file,
-                            isDetailView = true,
-                            iconSize = 100.dp
-                        )
-                        FolderPreview(
-                            folder = file,
-                            thumbSize = 50.dp,
-                            modifier = Modifier.align(Alignment.BottomEnd)
-                        )
-                    }
+                    IconHelper.ItemIcon(
+                        file = file,
+                        contentSize = 100.dp,
+                        modifier = Modifier.fillMaxSize()
+                    )
                 } else {
                     Text(stringResource(R.string.msg_invalid_path))
                 }
@@ -213,7 +208,6 @@ fun DetailsBar(
                 Box {
                     FileThumbnail(
                         file = file,
-                        isDetailView = true,
                         modifier = Modifier.padding(8.dp),
                         iconSize = 50.dp
                     )
