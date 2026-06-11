@@ -210,6 +210,11 @@
     <string name="settings_language_portuguese">Portugais</string>
     <string name="settings_language_spanish">Espagnol</string>
     <string name="settings_choose_language">Choisir la langue</string>
+    <string name="settings_default_folder_options">Options de dossier par défaut</string>
+    <string name="settings_sort_by">Trier par</string>
+    <string name="settings_sort_order">Ordre</string>
+    <string name="sort_ascending">Croissant</string>
+    <string name="sort_descending">Décroissant</string>
 
     <!-- Context Menus/Command Bar -->
     <string name="menu_restore">Restaurer</string>
@@ -233,6 +238,9 @@
     <string name="menu_new">Nouveau</string>
     <string name="menu_sort">Trier</string>
     <string name="menu_view">Affichage</string>
+    <string name="menu_group">Groupe</string>
+    <string name="menu_folders_first">Folders first</string>
+    <string name="menu_show_hidden">Afficher les fichiers cachés</string>
     <string name="menu_empty_recycle_bin">Vider la corbeille</string>
     <string name="menu_refresh">Actualiser</string>
     <string name="menu_text_document">Document texte</string>
@@ -290,6 +298,12 @@
     <string name="audio">Audio</string>
     <string name="document">Document</string>
     <string name="file">Fichier</string>
+    <string name="file_type_format_archive">Archive %s</string>
+    <string name="file_type_format_image">Image %s</string>
+    <string name="file_type_format_video">Vidéo %s</string>
+    <string name="file_type_format_audio">Audio %s</string>
+    <string name="file_type_format_document">Document %s</string>
+    <string name="file_type_format_file">Fichier %s</string>
     <string name="folder">Dossier</string>
 
     <!-- Actions/Operations Messages -->
@@ -392,6 +406,13 @@
     <string name="menu_gallery_albums">Albums</string>
     <string name="details_header_type">Type</string>
     <string name="menu_by_type">Par type</string>
+    <string name="menu_group_by">Grouper par %s</string>
+
+    <plurals name="group_item_count">
+        <item quantity="one">%d élément</item>
+        <item quantity="other">%d éléments</item>
+    </plurals>
+
     <string name="nav_network">Réseau</string>
     <string name="nav_add_local_storage">Ajouter un stockage local</string>
     <string name="nav_add_network_storage">Ajouter un stockage réseau</string>

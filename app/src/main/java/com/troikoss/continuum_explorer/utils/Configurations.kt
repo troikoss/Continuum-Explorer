@@ -180,10 +180,12 @@ class FolderConfigurations(private val context: Context) {
                 }
             }
         }
-        val default = when (key) {
-            "virtual://recent" -> SortParams(FileColumnType.DATE, SortOrder.Descending)
-            "virtual://recycle_bin" -> SortParams(FileColumnType.DATE_DELETED, SortOrder.Descending)
-            else -> SortParams(FileColumnType.NAME, SortOrder.Ascending)
+        val isDownloads = key?.lowercase()?.contains("download") == true
+        val default = when {
+            isDownloads -> SortParams(FileColumnType.DATE, SortOrder.Descending)
+            key == "virtual://recent" -> SortParams(FileColumnType.DATE, SortOrder.Descending)
+            key == "virtual://recycle_bin" -> SortParams(FileColumnType.DATE_DELETED, SortOrder.Descending)
+            else -> SortParams(SettingsManager.defaultSortColumnType.value, SettingsManager.defaultSortOrder.value)
         }
         updateSortParams(default, null)
     }
@@ -197,6 +199,104 @@ class FolderConfigurations(private val context: Context) {
                 modifier = Modifier.size(18.dp)
             )
         }
+    }
+
+    var isGroupingEnabled by mutableStateOf(false)
+        private set
+
+    private val groupingExplicitlySet = mutableSetOf<String>()
+
+    var foldersFirst by mutableStateOf(true)
+        private set
+
+    private val foldersFirstExplicitlySet = mutableSetOf<String>()
+
+    fun toggleFoldersFirst(key: String?, onChanged: () -> Unit) {
+        foldersFirst = !foldersFirst
+        if (key != null) {
+            foldersFirstExplicitlySet.add(key)
+            saveFoldersFirstForCurrentPath(foldersFirst, key)
+        }
+        onChanged()
+    }
+
+    private fun saveFoldersFirstForCurrentPath(enabled: Boolean, key: String) {
+        val prefs = context.getSharedPreferences("folder_folders_first", Context.MODE_PRIVATE)
+        prefs.edit().putBoolean(key, enabled).apply()
+    }
+
+    fun resolveFoldersFirst(key: String?) {
+        if (key != null) {
+            val prefs = context.getSharedPreferences("folder_folders_first", Context.MODE_PRIVATE)
+            if (prefs.contains(key)) {
+                foldersFirst = prefs.getBoolean(key, true)
+                return
+            }
+        }
+        val isDownloads = key?.lowercase()?.contains("download") == true
+        foldersFirst = when {
+            isDownloads -> false
+            else -> SettingsManager.foldersFirst.value
+        }
+    }
+
+    fun toggleGrouping(key: String?, onChanged: () -> Unit) {
+        isGroupingEnabled = !isGroupingEnabled
+        if (key != null) {
+            groupingExplicitlySet.add(key)
+            saveGroupingForCurrentPath(isGroupingEnabled, key)
+        }
+        onChanged()
+    }
+
+    private fun saveGroupingForCurrentPath(enabled: Boolean, key: String) {
+        val prefs = context.getSharedPreferences("folder_grouping", Context.MODE_PRIVATE)
+        prefs.edit().putBoolean(key, enabled).apply()
+    }
+
+    fun resolveGrouping(key: String?) {
+        if (key != null) {
+            val prefs = context.getSharedPreferences("folder_grouping", Context.MODE_PRIVATE)
+            if (prefs.contains(key)) {
+                isGroupingEnabled = prefs.getBoolean(key, false)
+                return
+            }
+        }
+        val isDownloads = key?.lowercase()?.contains("download") == true
+        isGroupingEnabled = when {
+            isDownloads -> true
+            else -> SettingsManager.isGroupingEnabled.value
+        }
+    }
+
+    var showHiddenFiles by mutableStateOf(false)
+        private set
+
+    private val showHiddenExplicitlySet = mutableSetOf<String>()
+
+    fun toggleShowHiddenFiles(key: String?, onChanged: () -> Unit) {
+        showHiddenFiles = !showHiddenFiles
+        if (key != null) {
+            showHiddenExplicitlySet.add(key)
+            saveShowHiddenForCurrentPath(showHiddenFiles, key)
+        }
+        onChanged()
+    }
+
+    private fun saveShowHiddenForCurrentPath(enabled: Boolean, key: String) {
+        val prefs = context.getSharedPreferences("folder_show_hidden", Context.MODE_PRIVATE)
+        prefs.edit().putBoolean(key, enabled).apply()
+    }
+
+    fun resolveShowHiddenFiles(key: String?) {
+        if (key != null) {
+            val prefs = context.getSharedPreferences("folder_show_hidden", Context.MODE_PRIVATE)
+            if (prefs.contains(key)) {
+                showHiddenFiles = prefs.getBoolean(key, false)
+                return
+            }
+        }
+        showHiddenFiles = SettingsManager.showHiddenFiles.value
     }
 
     fun updateGridSize(newSize: Int, key: String?) {

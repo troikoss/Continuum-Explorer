@@ -20,6 +20,7 @@ import com.troikoss.continuum_explorer.managers.SearchManager
 import com.troikoss.continuum_explorer.managers.SelectionManager
 import com.troikoss.continuum_explorer.managers.SettingsManager
 import com.troikoss.continuum_explorer.model.*
+import com.troikoss.continuum_explorer.model.DisplayItem
 import com.troikoss.continuum_explorer.model.StorageProvider
 import com.troikoss.continuum_explorer.providers.LocalProvider
 import kotlinx.coroutines.CoroutineScope
@@ -29,6 +30,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Locale
 
 /**
@@ -69,6 +71,10 @@ class FileExplorerState(
 
     // The processed and sorted list of files to display
     var files by mutableStateOf(emptyList<UniversalFile>())
+
+    // The display list — flat files or grouped with headers, depending on grouping toggle
+    val displayItems: List<DisplayItem>
+        get() = if (folderConfigs.isGroupingEnabled) groupFiles(files) else files.map { DisplayItem.File(it) }
 
     // Recycle bin metadata keyed by file name, populated only when in the recycle bin
     var recycleBinMetadata by mutableStateOf(emptyMap<String, RecycleBinMetadata>())
@@ -144,6 +150,8 @@ class FileExplorerState(
                 folderConfigs.resolveViewMode(key)
                 folderConfigs.resolveSortParams(key)
                 folderConfigs.resolveGridSize(key)
+                folderConfigs.resolveGrouping(key)
+                folderConfigs.resolveFoldersFirst(key)
                 folderConfigs.resolveColumnVisibility(key, libraryItem == LibraryItem.RecycleBin)
                 folderConfigs.resolveColumnWidths(key)
             }
@@ -315,7 +323,7 @@ class FileExplorerState(
         loadingJob?.cancel()
         loadingJob = scope.launch {
             val sortParams = folderConfigs.sortParams
-            val showHidden = SettingsManager.showHiddenFiles.value
+            var showHidden: Boolean
 
             withContext(Dispatchers.Main) {
                 isSearchMode = true
@@ -325,6 +333,10 @@ class FileExplorerState(
                 folderConfigs.resolveViewMode(key)
                 folderConfigs.resolveSortParams(key)
                 folderConfigs.resolveGridSize(key)
+                folderConfigs.resolveGrouping(key)
+                folderConfigs.resolveFoldersFirst(key)
+                folderConfigs.resolveShowHiddenFiles(key)
+                showHidden = folderConfigs.showHiddenFiles
                 loadedPathKey = key ?: context.getString(R.string.msg_search_results)
             }
             try {
@@ -429,9 +441,10 @@ class FileExplorerState(
         // assignment so they never change before the new list is visible.
         val key = getCurrentStorageKey()
         folderConfigs.resolveSortParams(key)
+        folderConfigs.resolveShowHiddenFiles(key)
 
         val sortParams = folderConfigs.sortParams
-        val showHidden = SettingsManager.showHiddenFiles.value
+        val showHidden = folderConfigs.showHiddenFiles
 
         try {
             val (sortedList, newMeta) = withContext(Dispatchers.IO) {
@@ -465,7 +478,7 @@ class FileExplorerState(
                             withContext(Dispatchers.Main) { networkError = null }
                             result
                         } catch (e: Exception) {
-                            withContext(Dispatchers.Main) { networkError = e.message ?: "Network error" }
+                            withContext(Dispatchers.Main) { networkError = e.message ?: context.getString(R.string.network_error) }
                             emptyList()
                         }
                     } else if (currentPath != null) {
@@ -499,6 +512,8 @@ class FileExplorerState(
             withContext(Dispatchers.Main) {
                 folderConfigs.resolveViewMode(key)
                 folderConfigs.resolveGridSize(key)
+                folderConfigs.resolveGrouping(key)
+                folderConfigs.resolveFoldersFirst(key)
                 folderConfigs.resolveColumnVisibility(key, libraryItem == LibraryItem.RecycleBin)
                 folderConfigs.resolveColumnWidths(key)
                 recycleBinMetadata = newMeta
@@ -546,8 +561,10 @@ class FileExplorerState(
         meta: Map<String, RecycleBinMetadata> = emptyMap()
     ): List<UniversalFile> {
         return rawList.sortedWith { f1, f2 ->
-            if (f1.isDirectory && !f2.isDirectory) return@sortedWith -1
-            if (!f1.isDirectory && f2.isDirectory) return@sortedWith 1
+            if (folderConfigs.foldersFirst) {
+                if (f1.isDirectory && !f2.isDirectory) return@sortedWith -1
+                if (!f1.isDirectory && f2.isDirectory) return@sortedWith 1
+            }
 
             val result = when (params.columnType) {
                 FileColumnType.NAME -> f1.name.lowercase().compareTo(f2.name.lowercase())
@@ -570,6 +587,79 @@ class FileExplorerState(
                 }
             }
             if (params.order == SortOrder.Ascending) result else -result
+        }
+    }
+
+    private fun groupFiles(files: List<UniversalFile>): List<DisplayItem> {
+        val params = folderConfigs.sortParams
+        val result = mutableListOf<DisplayItem>()
+        var i = 0
+        var groupId = 0
+        while (i < files.size) {
+            val label = getGroupLabel(files[i], params)
+            val groupItems = files.drop(i).takeWhile { getGroupLabel(it, params) == label }
+            result.add(DisplayItem.Group(label, groupItems.size, groupId++))
+            groupItems.forEach { result.add(DisplayItem.File(it)) }
+            i += groupItems.size
+        }
+        return result
+    }
+
+    private fun getGroupLabel(file: UniversalFile, params: SortParams): String {
+        return when (params.columnType) {
+            FileColumnType.NAME -> {
+                val c = file.name.firstOrNull() ?: return context.getString(R.string.group_name_symbols)
+                when {
+                    c in 'A'..'Z' -> c.toString()
+                    c in 'a'..'z' -> c.uppercaseChar().toString()
+                    c in '0'..'9' -> context.getString(R.string.group_name_numbers)
+                    else -> context.getString(R.string.group_name_symbols)
+                }
+            }
+            FileColumnType.DATE -> {
+                val now = Calendar.getInstance()
+                val fileCal = Calendar.getInstance().apply { timeInMillis = file.lastModified }
+                val diffDays = ((now.timeInMillis - file.lastModified) / (1000 * 60 * 60 * 24)).toInt()
+                when {
+                    diffDays == 0 -> context.getString(R.string.today)
+                    diffDays == 1 -> context.getString(R.string.yesterday)
+                    diffDays <= 7 -> context.getString(R.string.this_week)
+                    now.get(Calendar.MONTH) == fileCal.get(Calendar.MONTH) &&
+                        now.get(Calendar.YEAR) == fileCal.get(Calendar.YEAR) -> context.getString(R.string.this_month)
+                    else -> context.getString(R.string.older)
+                }
+            }
+            FileColumnType.SIZE -> {
+                val len = file.length
+                when {
+                    len < 1024 -> context.getString(R.string.size_less_than_1kb)
+                    len < 1024 * 1024 -> context.getString(R.string.size_1kb_to_1mb)
+                    len < 100 * 1024 * 1024 -> context.getString(R.string.size_1mb_to_100mb)
+                    len < 1024 * 1024 * 1024 -> context.getString(R.string.size_100mb_to_1gb)
+                    else -> context.getString(R.string.size_more_than_1gb)
+                }
+            }
+            FileColumnType.TYPE -> getFileType(file, context)
+            FileColumnType.DATE_DELETED -> {
+                val uuidKey = file.fileRef?.parentFile?.name ?: file.name
+                val meta = recycleBinMetadata[uuidKey]
+                val deletedAt = meta?.deletedAt ?: return context.getString(R.string.unknown)
+                val now = Calendar.getInstance()
+                val fileCal = Calendar.getInstance().apply { timeInMillis = deletedAt }
+                val diffDays = ((now.timeInMillis - deletedAt) / (1000 * 60 * 60 * 24)).toInt()
+                when {
+                    diffDays == 0 -> context.getString(R.string.today)
+                    diffDays == 1 -> context.getString(R.string.yesterday)
+                    diffDays <= 7 -> context.getString(R.string.this_week)
+                    now.get(Calendar.MONTH) == fileCal.get(Calendar.MONTH) &&
+                        now.get(Calendar.YEAR) == fileCal.get(Calendar.YEAR) -> context.getString(R.string.this_month)
+                    else -> context.getString(R.string.older)
+                }
+            }
+            FileColumnType.DELETED_FROM -> {
+                val uuidKey = file.fileRef?.parentFile?.name ?: file.name
+                recycleBinMetadata[uuidKey]?.deletedFrom ?: context.getString(R.string.unknown)
+            }
         }
     }
 

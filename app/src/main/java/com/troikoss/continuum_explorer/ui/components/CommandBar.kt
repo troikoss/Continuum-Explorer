@@ -59,6 +59,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SuggestionChipDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -76,6 +77,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.troikoss.continuum_explorer.R
+import com.troikoss.continuum_explorer.managers.SettingsManager
 import com.troikoss.continuum_explorer.managers.UndoManager
 import com.troikoss.continuum_explorer.model.FileColumnType
 import com.troikoss.continuum_explorer.model.LibraryItem
@@ -460,6 +462,34 @@ fun SortDropDown(
             trailingIcon = { appState.folderConfigs.SortArrow(FileColumnType.SIZE) },
             onClick = { onSortClick(FileColumnType.SIZE) }
         )
+
+        HorizontalDivider()
+
+        DropdownMenuItem(
+            text = { Text(stringResource(R.string.menu_group)) },
+            leadingIcon = {
+                if (appState.folderConfigs.isGroupingEnabled) {
+                    Icon(Icons.Default.Done, null, tint = MaterialTheme.colorScheme.primary)
+                }
+            },
+            onClick = {
+                appState.folderConfigs.toggleGrouping(appState.getCurrentStorageKey()) { appState.refresh() }
+                onDismiss()
+            }
+        )
+
+        DropdownMenuItem(
+            text = { Text(stringResource(R.string.menu_folders_first)) },
+            leadingIcon = {
+                if (appState.folderConfigs.foldersFirst) {
+                    Icon(Icons.Default.Done, null, tint = MaterialTheme.colorScheme.primary)
+                }
+            },
+            onClick = {
+                appState.folderConfigs.toggleFoldersFirst(appState.getCurrentStorageKey()) { appState.refresh() }
+                onDismiss()
+            }
+        )
     }
 }
 
@@ -497,6 +527,23 @@ private fun ViewMenuDropDown(appState: FileExplorerState) {
             trailingIcon = { if (appState.activeViewMode == ViewMode.GALLERY) Icon(Icons.Default.Done, null) },
             onClick = { appState.folderConfigs.updateViewMode(ViewMode.GALLERY, appState.getCurrentStorageKey()); onDismiss() }
         )
+
+        if (!SettingsManager.showHiddenFiles.value) {
+            HorizontalDivider()
+
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.menu_show_hidden)) },
+                leadingIcon = {
+                    if (appState.folderConfigs.showHiddenFiles) {
+                        Icon(Icons.Default.Done, null, tint = MaterialTheme.colorScheme.primary)
+                    }
+                },
+                onClick = {
+                    appState.folderConfigs.toggleShowHiddenFiles(appState.getCurrentStorageKey()) { appState.refresh() }
+                    onDismiss()
+                }
+            )
+        }
     }
 }
 

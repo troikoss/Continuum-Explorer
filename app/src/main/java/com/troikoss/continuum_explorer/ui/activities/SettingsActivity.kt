@@ -36,6 +36,8 @@ import com.troikoss.continuum_explorer.managers.SettingsManager
 import com.troikoss.continuum_explorer.managers.ThemeMode
 import com.troikoss.continuum_explorer.managers.TouchDragBehavior
 import com.troikoss.continuum_explorer.model.ViewMode
+import com.troikoss.continuum_explorer.model.FileColumnType
+import com.troikoss.continuum_explorer.model.SortOrder
 
 class SettingsActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -64,6 +66,10 @@ fun SettingsScreen(onBack: () -> Unit) {
     val iconTouchSelection = SettingsManager.iconTouchSelection.value
     val defaultViewMode = SettingsManager.defaultViewMode.value
     val isColorfulBarsEnabled = SettingsManager.isColorfulBarsEnabled.value
+    val foldersFirstEnabled = SettingsManager.foldersFirst.value
+    val groupingEnabled = SettingsManager.isGroupingEnabled.value
+    val defaultSortColumnType = SettingsManager.defaultSortColumnType.value
+    val defaultSortOrder = SettingsManager.defaultSortOrder.value
 
     var showDeleteDialog by remember { mutableStateOf(false) }
     var showTouchDragDialog by remember { mutableStateOf(false) }
@@ -71,7 +77,7 @@ fun SettingsScreen(onBack: () -> Unit) {
     var showLanguageDialog by remember { mutableStateOf(false) }
     var showShortcutsDialog by remember { mutableStateOf(false) }
     var showDetailsDialog by remember { mutableStateOf(false) }
-    var showDefaultViewModeDialog by remember { mutableStateOf(false) }
+    var showDefaultFolderOptionsDialog by remember { mutableStateOf(false) }
     var showAboutDialog by remember { mutableStateOf(false) }
 
     Scaffold(
@@ -153,20 +159,6 @@ fun SettingsScreen(onBack: () -> Unit) {
                 modifier = Modifier.clickable { showDetailsDialog = true }
             )
             ListItem(
-                headlineContent = { Text(stringResource(R.string.settings_default_view_mode)) },
-                supportingContent = {
-                    val text = when (defaultViewMode) {
-                        ViewMode.DETAILS -> stringResource(R.string.menu_details)
-                        ViewMode.CONTENT -> stringResource(R.string.menu_content)
-                        ViewMode.GRID -> stringResource(R.string.menu_grid)
-                        ViewMode.GALLERY -> stringResource(R.string.menu_gallery)
-                    }
-                    Text(text)
-                },
-                modifier = Modifier.clickable { showDefaultViewModeDialog = true }
-            )
-
-            ListItem(
                 headlineContent = { Text(stringResource(R.string.settings_show_command_bar)) },
                 supportingContent = { Text(stringResource(R.string.settings_show_command_bar_desc)) },
                 trailingContent = {
@@ -177,15 +169,20 @@ fun SettingsScreen(onBack: () -> Unit) {
                 }
             )
 
+            HorizontalDivider()
+
             ListItem(
-                headlineContent = { Text(stringResource(R.string.settings_show_hidden_files)) },
-                supportingContent = { Text(stringResource(R.string.settings_show_hidden_files_desc)) },
-                trailingContent = {
-                    Switch(
-                        checked = showHiddenFiles,
-                        onCheckedChange = { SettingsManager.setShowHiddenFiles(context, it) }
-                    )
-                }
+                headlineContent = { Text(stringResource(R.string.settings_default_folder_options)) },
+                supportingContent = {
+                    val text = when (defaultViewMode) {
+                        ViewMode.DETAILS -> stringResource(R.string.menu_details)
+                        ViewMode.CONTENT -> stringResource(R.string.menu_content)
+                        ViewMode.GRID -> stringResource(R.string.menu_grid)
+                        ViewMode.GALLERY -> stringResource(R.string.menu_gallery)
+                    }
+                    Text(text)
+                },
+                modifier = Modifier.clickable { showDefaultFolderOptionsDialog = true }
             )
 
             HorizontalDivider()
@@ -485,49 +482,142 @@ fun SettingsScreen(onBack: () -> Unit) {
                 )
             }
 
-            if (showDefaultViewModeDialog) {
+            if (showDefaultFolderOptionsDialog) {
                 AlertDialog(
-                    onDismissRequest = { showDefaultViewModeDialog = false },
-                    title = { Text(stringResource(R.string.settings_choose_default_view_mode)) },
+                    onDismissRequest = { showDefaultFolderOptionsDialog = false },
+                    title = { Text(stringResource(R.string.settings_default_folder_options)) },
                     text = {
-                        Column {
+                        Column(Modifier.verticalScroll(rememberScrollState())) {
+                            Text(
+                                stringResource(R.string.settings_default_view_mode),
+                                style = MaterialTheme.typography.labelLarge,
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
+                            )
                             OptionItem(
                                 label = stringResource(R.string.menu_details),
                                 selected = defaultViewMode == ViewMode.DETAILS,
-                                onClick = {
-                                    SettingsManager.setDefaultViewMode(context, ViewMode.DETAILS)
-                                    showDefaultViewModeDialog = false
-                                }
+                                onClick = { SettingsManager.setDefaultViewMode(context, ViewMode.DETAILS) }
                             )
                             OptionItem(
                                 label = stringResource(R.string.menu_content),
                                 selected = defaultViewMode == ViewMode.CONTENT,
-                                onClick = {
-                                    SettingsManager.setDefaultViewMode(context, ViewMode.CONTENT)
-                                    showDefaultViewModeDialog = false
-                                }
+                                onClick = { SettingsManager.setDefaultViewMode(context, ViewMode.CONTENT) }
                             )
                             OptionItem(
                                 label = stringResource(R.string.menu_grid),
                                 selected = defaultViewMode == ViewMode.GRID,
-                                onClick = {
-                                    SettingsManager.setDefaultViewMode(context, ViewMode.GRID)
-                                    showDefaultViewModeDialog = false
-                                }
+                                onClick = { SettingsManager.setDefaultViewMode(context, ViewMode.GRID) }
                             )
                             OptionItem(
                                 label = stringResource(R.string.menu_gallery),
                                 selected = defaultViewMode == ViewMode.GALLERY,
-                                onClick = {
-                                    SettingsManager.setDefaultViewMode(context, ViewMode.GALLERY)
-                                    showDefaultViewModeDialog = false
-                                }
+                                onClick = { SettingsManager.setDefaultViewMode(context, ViewMode.GALLERY) }
                             )
+
+                            HorizontalDivider(Modifier.padding(vertical = 8.dp))
+
+                            Text(
+                                stringResource(R.string.menu_sort),
+                                style = MaterialTheme.typography.labelLarge,
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.padding(bottom = 4.dp)
+                            )
+                            Text(
+                                stringResource(R.string.settings_sort_by),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(top = 4.dp, bottom = 2.dp)
+                            )
+                            OptionItem(
+                                label = stringResource(R.string.menu_by_name),
+                                selected = defaultSortColumnType == FileColumnType.NAME,
+                                onClick = { SettingsManager.setDefaultSortColumnType(context, FileColumnType.NAME) }
+                            )
+                            OptionItem(
+                                label = stringResource(R.string.menu_by_date),
+                                selected = defaultSortColumnType == FileColumnType.DATE,
+                                onClick = { SettingsManager.setDefaultSortColumnType(context, FileColumnType.DATE) }
+                            )
+                            OptionItem(
+                                label = stringResource(R.string.menu_by_size),
+                                selected = defaultSortColumnType == FileColumnType.SIZE,
+                                onClick = { SettingsManager.setDefaultSortColumnType(context, FileColumnType.SIZE) }
+                            )
+                            OptionItem(
+                                label = stringResource(R.string.menu_by_type),
+                                selected = defaultSortColumnType == FileColumnType.TYPE,
+                                onClick = { SettingsManager.setDefaultSortColumnType(context, FileColumnType.TYPE) }
+                            )
+                            Text(
+                                stringResource(R.string.settings_sort_order),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(top = 4.dp, bottom = 2.dp)
+                            )
+                            OptionItem(
+                                label = stringResource(R.string.sort_ascending),
+                                selected = defaultSortOrder == SortOrder.Ascending,
+                                onClick = { SettingsManager.setDefaultSortOrder(context, SortOrder.Ascending) }
+                            )
+                            OptionItem(
+                                label = stringResource(R.string.sort_descending),
+                                selected = defaultSortOrder == SortOrder.Descending,
+                                onClick = { SettingsManager.setDefaultSortOrder(context, SortOrder.Descending) }
+                            )
+
+                            HorizontalDivider(Modifier.padding(vertical = 8.dp))
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    stringResource(R.string.settings_show_hidden_files),
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                Switch(
+                                    checked = showHiddenFiles,
+                                    onCheckedChange = { SettingsManager.setShowHiddenFiles(context, it) }
+                                )
+                            }
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    stringResource(R.string.menu_folders_first),
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                Switch(
+                                    checked = foldersFirstEnabled,
+                                    onCheckedChange = { SettingsManager.setFoldersFirst(context, it) }
+                                )
+                            }
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    stringResource(R.string.menu_group),
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                Switch(
+                                    checked = groupingEnabled,
+                                    onCheckedChange = { SettingsManager.setGroupingEnabled(context, it) }
+                                )
+                            }
                         }
                     },
                     confirmButton = {
-                        TextButton(onClick = { showDefaultViewModeDialog = false }) {
-                            Text(stringResource(R.string.cancel))
+                        TextButton(onClick = { showDefaultFolderOptionsDialog = false }) {
+                            Text(stringResource(R.string.close))
                         }
                     }
                 )
@@ -578,7 +668,7 @@ fun SettingsScreen(onBack: () -> Unit) {
                                 Text(stringResource(R.string.app_name), style = MaterialTheme.typography.titleMedium)
                                 Text("$version", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
                                 Text(
-                                    text = "GitHub",
+                                    text = stringResource(R.string.github),
                                     color = MaterialTheme.colorScheme.primary,
                                     style = MaterialTheme.typography.bodyMedium.copy(
                                         textDecoration = androidx.compose.ui.text.style.TextDecoration.Underline // Adds the underline
@@ -594,7 +684,7 @@ fun SettingsScreen(onBack: () -> Unit) {
                     },
                     confirmButton = {
                         TextButton(onClick = { showAboutDialog = false }) {
-                            Text("OK")
+                            Text(stringResource(R.string.ok))
                         }
                     }
                 )

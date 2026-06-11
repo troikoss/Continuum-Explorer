@@ -215,6 +215,11 @@
     <string name="settings_language_portuguese">Portuguese</string>
     <string name="settings_language_spanish">Spanish</string>
     <string name="settings_choose_language">Choose Language</string>
+    <string name="settings_default_folder_options">Default Folder Options</string>
+    <string name="settings_sort_by">Sort by</string>
+    <string name="settings_sort_order">Order</string>
+    <string name="sort_ascending">Ascending</string>
+    <string name="sort_descending">Descending</string>
 
     <!-- Context Menus/Command Bar -->
     <string name="menu_restore">Restore</string>
@@ -238,6 +243,50 @@
     <string name="menu_new">New</string>
     <string name="menu_sort">Sort</string>
     <string name="menu_view">View</string>
+    <string name="menu_group">Grouping</string>
+    <string name="menu_folders_first">Folders first</string>
+    <string name="menu_show_hidden">Show hidden files</string>
+    <string name="retry">Retry</string>
+    <string name="github">GitHub</string>
+    <string name="folder_prefix">Folder - %s</string>
+    <string name="file_size_date">%1$s - %2$s</string>
+    <string name="network_error">Network error</string>
+    <string name="test_connected">✓ Connected</string>
+    <string name="test_failed">Failed</string>
+    <string name="placeholder_display_name">My NAS</string>
+    <string name="placeholder_host">192.168.1.x  or  nas.local</string>
+    <string name="placeholder_anonymous">Leave blank for anonymous</string>
+    <string name="placeholder_username">username</string>
+    <string name="label_private_key_uri">Private key URI (optional)</string>
+    <string name="placeholder_private_key_uri">content://…</string>
+    <string name="label_private_key_passphrase">Private key passphrase (optional)</string>
+    <string name="label_private_key_text">Private key text fallback (optional)</string>
+    <string name="placeholder_private_key_text">-----BEGIN OPENSSH PRIVATE KEY-----</string>
+    <string name="label_domain">Domain / Workgroup (optional)</string>
+    <string name="today">Today</string>
+    <string name="yesterday">Yesterday</string>
+    <string name="this_week">This Week</string>
+    <string name="this_month">This Month</string>
+    <string name="older">Older</string>
+    <string name="size_less_than_1kb">&lt; 1 KB</string>
+    <string name="size_1kb_to_1mb">1 KB – 1 MB</string>
+    <string name="size_1mb_to_100mb">1 MB – 100 MB</string>
+    <string name="size_100mb_to_1gb">100 MB – 1 GB</string>
+    <string name="size_more_than_1gb">≥ 1 GB</string>
+    <string name="group_name_numbers">0-9</string>
+    <string name="group_name_symbols">#</string>
+    <string name="file_type_format_archive">%s Archive</string>
+    <string name="file_type_format_image">%s Image</string>
+    <string name="file_type_format_video">%s Video</string>
+    <string name="file_type_format_audio">%s Audio</string>
+    <string name="file_type_format_document">%s Document</string>
+    <string name="file_type_format_file">%s File</string>
+    <string name="kind_folder">kind:folder</string>
+    <string name="kind_document">kind:document</string>
+    <string name="kind_image">kind:image</string>
+    <string name="kind_video">kind:video</string>
+    <string name="kind_audio">kind:audio</string>
+    <string name="kind_archive">kind:archive</string>
     <string name="menu_empty_recycle_bin">Empty Recycle Bin</string>
     <string name="menu_refresh">Refresh</string>
     <string name="menu_text_document">Text Document</string>
@@ -415,6 +464,12 @@
     <string name="msg_deletion">Deleted %1$d files</string>
     <string name="details_header_type">Type</string>
     <string name="menu_by_type">By Type</string>
+    <string name="menu_group_by">Group by %s</string>
+
+    <plurals name="group_item_count">
+        <item quantity="one">%d item</item>
+        <item quantity="other">%d items</item>
+    </plurals>
 
     <!-- Network file operations -->
     <string name="msg_remote_permanent_warning">Network files will be deleted permanently (cannot be moved to trash).</string>

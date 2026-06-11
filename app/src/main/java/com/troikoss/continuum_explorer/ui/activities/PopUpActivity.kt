@@ -1154,6 +1154,7 @@ fun DetailRow(label: String, value: String) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NetworkConnectionContent(onClose: () -> Unit) {
+    val context = LocalContext.current
     val existing = FileOperationsManager.networkConnectionToEdit.value
     var protocol by remember { mutableStateOf(existing?.protocol ?: NetworkProtocol.FTP) }
     var displayName by remember { mutableStateOf(existing?.displayName ?: "") }
@@ -1272,7 +1273,7 @@ fun NetworkConnectionContent(onClose: () -> Unit) {
             value = displayName,
             onValueChange = { displayName = it; displayNameEdited = true },
             label = { Text(stringResource(R.string.nav_network_display_name)) },
-            placeholder = { Text("My NAS", color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)) },
+            placeholder = { Text(stringResource(R.string.placeholder_display_name), color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)) },
             singleLine = true,
             modifier = Modifier.fillMaxWidth().focusRequester(focusRequester),
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
@@ -1286,7 +1287,7 @@ fun NetworkConnectionContent(onClose: () -> Unit) {
                 if (!displayNameEdited) displayName = it
             },
             label = { Text(stringResource(R.string.nav_network_host)) },
-            placeholder = { Text("192.168.1.x  or  nas.local", color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)) },
+            placeholder = { Text(stringResource(R.string.placeholder_host), color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)) },
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
@@ -1305,7 +1306,7 @@ fun NetworkConnectionContent(onClose: () -> Unit) {
             value = username,
             onValueChange = { username = it },
             label = { Text(stringResource(R.string.nav_network_username)) },
-                placeholder = { Text(if (isFtp) "Leave blank for anonymous" else "username", color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)) },
+                placeholder = { Text(if (isFtp) stringResource(R.string.placeholder_anonymous) else stringResource(R.string.placeholder_username), color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)) },
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
@@ -1333,8 +1334,8 @@ fun NetworkConnectionContent(onClose: () -> Unit) {
             OutlinedTextField(
                 value = sftpPrivateKeyUri,
                 onValueChange = { sftpPrivateKeyUri = it },
-                label = { Text("Private key URI (optional)") },
-                placeholder = { Text("content://...", color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)) },
+                label = { Text(stringResource(R.string.label_private_key_uri)) },
+                placeholder = { Text(stringResource(R.string.placeholder_private_key_uri), color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
@@ -1343,7 +1344,7 @@ fun NetworkConnectionContent(onClose: () -> Unit) {
             OutlinedTextField(
                 value = sftpPrivateKeyPassphrase,
                 onValueChange = { sftpPrivateKeyPassphrase = it },
-                label = { Text("Private key passphrase (optional)") },
+                label = { Text(stringResource(R.string.label_private_key_passphrase)) },
                 singleLine = true,
                 visualTransformation = if (showSftpKeyPassphrase) VisualTransformation.None else PasswordVisualTransformation(),
                 trailingIcon = {
@@ -1361,8 +1362,8 @@ fun NetworkConnectionContent(onClose: () -> Unit) {
             OutlinedTextField(
                 value = sftpPrivateKey,
                 onValueChange = { sftpPrivateKey = it },
-                label = { Text("Private key text fallback (optional)") },
-                placeholder = { Text("-----BEGIN OPENSSH PRIVATE KEY-----", color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)) },
+                label = { Text(stringResource(R.string.label_private_key_text)) },
+                placeholder = { Text(stringResource(R.string.placeholder_private_key_text), color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)) },
                 singleLine = false,
                 minLines = 4,
                 visualTransformation = if (showPastedPrivateKey) VisualTransformation.None else PasswordVisualTransformation(),
@@ -1383,7 +1384,7 @@ fun NetworkConnectionContent(onClose: () -> Unit) {
             OutlinedTextField(
                 value = smbDomain,
                 onValueChange = { smbDomain = it },
-                label = { Text("Domain / Workgroup (optional)") },
+                label = { Text(stringResource(R.string.label_domain)) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
@@ -1457,7 +1458,7 @@ fun NetworkConnectionContent(onClose: () -> Unit) {
                         scope.launch {
                             val result = FileOperationsManager.testNetworkConnection(conn)
                             isTesting = false
-                            testResult = if (result.isSuccess) "✓ Connected" else "✗ ${result.exceptionOrNull()?.message ?: "Failed"}"
+                            testResult = if (result.isSuccess) context.getString(R.string.test_connected) else "✗ ${result.exceptionOrNull()?.message ?: context.getString(R.string.test_failed)}"
                         }
                     },
                     enabled = canTest

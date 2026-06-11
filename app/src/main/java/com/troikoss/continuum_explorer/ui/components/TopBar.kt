@@ -435,9 +435,17 @@ fun TopBar(
                                     )
                                     HorizontalDivider()
                                     val kinds = listOf("folder", "document", "image", "video", "audio", "archive")
+                                    val kindResIds = mapOf(
+                                        "folder" to R.string.kind_folder,
+                                        "document" to R.string.kind_document,
+                                        "image" to R.string.kind_image,
+                                        "video" to R.string.kind_video,
+                                        "audio" to R.string.kind_audio,
+                                        "archive" to R.string.kind_archive
+                                    )
                                     kinds.forEach { kind ->
                                         DropdownMenuItem(
-                                            text = { Text("kind:$kind") },
+                                            text = { Text(stringResource(kindResIds[kind]!!)) },
                                             onClick = {
                                                 searchQuery = TextFieldValue(searchQuery.text + "kind:$kind ")
                                                 searchOptionsMenuExpanded = false

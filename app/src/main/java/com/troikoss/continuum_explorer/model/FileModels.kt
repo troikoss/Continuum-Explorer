@@ -113,6 +113,14 @@ data class UniversalFile(
 }
 
 /**
+ * Represents a displayed item in the file grid – either a file or a group header.
+ */
+sealed class DisplayItem {
+    data class File(val file: UniversalFile) : DisplayItem()
+    data class Group(val label: String, val count: Int, val id: Int = 0) : DisplayItem()
+}
+
+/**
  * Recycle bin metadata for a file, stored separately from UniversalFile.
  */
 data class RecycleBinMetadata(

@@ -783,7 +783,7 @@ fun VideoPlayerScreen(
                                             trailingIcon = {
                                                 Row {
                                                     val sel = subtitleTracks.firstOrNull { it.isSelected }
-                                                    Text(sel?.label ?: "Off", color = Color.Gray)
+                                                    Text(sel?.label ?: stringResource(R.string.off), color = Color.Gray)
                                                     Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null)
                                                 }
                                             },

@@ -5,6 +5,8 @@ import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.core.os.LocaleListCompat
+import com.troikoss.continuum_explorer.model.FileColumnType
+import com.troikoss.continuum_explorer.model.SortOrder
 import com.troikoss.continuum_explorer.model.ViewMode
 import com.troikoss.continuum_explorer.utils.GlobalEvents
 
@@ -48,6 +50,10 @@ object SettingsManager {
     private const val KEY_ICON_TOUCH_SELECTION = "icon_touch_selection"
     private const val KEY_DEFAULT_VIEW_MODE = "default_view_mode"
     private const val KEY_COLORFUL_BARS = "colorful_bars"
+    private const val KEY_FOLDERS_FIRST = "folders_first"
+    private const val KEY_GROUPING_ENABLED = "grouping_enabled"
+    private const val KEY_DEFAULT_SORT_COLUMN = "default_sort_column"
+    private const val KEY_DEFAULT_SORT_ORDER = "default_sort_order"
 
     private val _deleteBehavior = mutableStateOf(DeleteBehavior.ASK)
     val deleteBehavior: State<DeleteBehavior> = _deleteBehavior
@@ -85,6 +91,18 @@ object SettingsManager {
 
     private val _isDefaultArchiveViewerEnabled = mutableStateOf(true)
     val isDefaultArchiveViewerEnabled: State<Boolean> = _isDefaultArchiveViewerEnabled
+
+    private val _foldersFirst = mutableStateOf(true)
+    val foldersFirst: State<Boolean> = _foldersFirst
+
+    private val _isGroupingEnabled = mutableStateOf(false)
+    val isGroupingEnabled: State<Boolean> = _isGroupingEnabled
+
+    private val _defaultSortColumnType = mutableStateOf(FileColumnType.NAME)
+    val defaultSortColumnType: State<FileColumnType> = _defaultSortColumnType
+
+    private val _defaultSortOrder = mutableStateOf(SortOrder.Ascending)
+    val defaultSortOrder: State<SortOrder> = _defaultSortOrder
 
     fun init(context: Context) {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -130,6 +148,21 @@ object SettingsManager {
         _isColorfulBarsEnabled.value = prefs.getBoolean(KEY_COLORFUL_BARS, false)
 
         _isDefaultArchiveViewerEnabled.value = prefs.getBoolean(KEY_DEFAULT_ARCHIVE_VIEWER, true)
+        _foldersFirst.value = prefs.getBoolean(KEY_FOLDERS_FIRST, true)
+        _isGroupingEnabled.value = prefs.getBoolean(KEY_GROUPING_ENABLED, false)
+
+        val savedSortCol = prefs.getString(KEY_DEFAULT_SORT_COLUMN, FileColumnType.NAME.name)
+        _defaultSortColumnType.value = try {
+            FileColumnType.valueOf(savedSortCol ?: FileColumnType.NAME.name)
+        } catch (e: Exception) {
+            FileColumnType.NAME
+        }
+        val savedSortOrder = prefs.getString(KEY_DEFAULT_SORT_ORDER, SortOrder.Ascending.name)
+        _defaultSortOrder.value = try {
+            SortOrder.valueOf(savedSortOrder ?: SortOrder.Ascending.name)
+        } catch (e: Exception) {
+            SortOrder.Ascending
+        }
 
         val savedViewMode = prefs.getString(KEY_DEFAULT_VIEW_MODE, ViewMode.DETAILS.name)
         _defaultViewMode.value = try {
@@ -228,5 +261,29 @@ object SettingsManager {
         _defaultViewMode.value = mode
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         prefs.edit().putString(KEY_DEFAULT_VIEW_MODE, mode.name).apply()
+    }
+
+    fun setFoldersFirst(context: Context, enabled: Boolean) {
+        _foldersFirst.value = enabled
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putBoolean(KEY_FOLDERS_FIRST, enabled).apply()
+    }
+
+    fun setGroupingEnabled(context: Context, enabled: Boolean) {
+        _isGroupingEnabled.value = enabled
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putBoolean(KEY_GROUPING_ENABLED, enabled).apply()
+    }
+
+    fun setDefaultSortColumnType(context: Context, columnType: FileColumnType) {
+        _defaultSortColumnType.value = columnType
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putString(KEY_DEFAULT_SORT_COLUMN, columnType.name).apply()
+    }
+
+    fun setDefaultSortOrder(context: Context, order: SortOrder) {
+        _defaultSortOrder.value = order
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putString(KEY_DEFAULT_SORT_ORDER, order.name).apply()
     }
 }

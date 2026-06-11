@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
@@ -22,12 +23,14 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyGridLayoutInfo
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -35,6 +38,7 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -64,9 +68,14 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalResources
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.DpOffset
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import com.troikoss.continuum_explorer.R
+import com.troikoss.continuum_explorer.model.DisplayItem
 import com.troikoss.continuum_explorer.model.FileColumnType
 import com.troikoss.continuum_explorer.model.ScreenSize
 import com.troikoss.continuum_explorer.model.UniversalFile
@@ -376,7 +385,7 @@ private fun NetworkErrorBanner(message: String, onRetry: () -> Unit) {
         Icon(Icons.Default.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.onErrorContainer, modifier = Modifier.size(18.dp))
         Spacer(Modifier.width(8.dp))
         Text(message, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onErrorContainer, modifier = Modifier.weight(1f))
-        TextButton(onClick = onRetry) { Text("Retry") }
+        TextButton(onClick = onRetry) { Text(stringResource(R.string.retry)) }
     }
 }
 
@@ -543,42 +552,132 @@ private fun FileGrid(
                          else PaddingValues(16.dp)
     ) {
         items(
-            items = appState.files,
-            key = { it.absolutePath },
-            contentType = { file ->
-                when {
-                    file.isDirectory -> "folder"
-                    file.isArchiveEntry -> "archive_entry"
-                    else -> "file"
+            items = appState.displayItems,
+            key = { item ->
+                when (item) {
+                    is DisplayItem.File -> item.file.absolutePath
+                    is DisplayItem.Group -> "group:${item.label}:${item.id}"
+                }
+            },
+            contentType = { item ->
+                when (item) {
+                    is DisplayItem.File -> "file_item"
+                    is DisplayItem.Group -> "group_header"
+                }
+            },
+            span = { item ->
+                when (item) {
+                    is DisplayItem.Group -> GridItemSpan(maxLineSpan)
+                    is DisplayItem.File -> GridItemSpan(1)
                 }
             }
-        ) { file ->
+        ) { item ->
 
-            val isHovered by remember(file, dragActive) {
-                derivedStateOf {
-                    // Suppress hover during any drag operation
-                    if (appState.activeDragY.value != null || appState.isSystemDragActive.value || dragActive) {
-                        false
-                    } else {
-                        val currentRect = itemPositions[file]
-                        val pos = mousePosition()
-                        if (pos == null || currentRect == null || !currentRect.contains(pos)) false
-                        else if (viewMode == ViewMode.DETAILS) (pos.x - currentRect.left) < detailsContentWidthPx
-                        else true
+            when (item) {
+                is DisplayItem.Group -> GroupHeaderRow(label = item.label, count = item.count, hScrollState = hScrollState, viewMode = viewMode, detailsContentWidthPx = detailsContentWidthPx)
+
+                is DisplayItem.File -> {
+                    val file = item.file
+
+                    val isHovered by remember(file, dragActive) {
+                        derivedStateOf {
+                            // Suppress hover during any drag operation
+                            if (appState.activeDragY.value != null || appState.isSystemDragActive.value || dragActive) {
+                                false
+                            } else {
+                                val currentRect = itemPositions[file]
+                                val pos = mousePosition()
+                                if (pos == null || currentRect == null || !currentRect.contains(pos)) false
+                                else if (viewMode == ViewMode.DETAILS) (pos.x - currentRect.left) < detailsContentWidthPx
+                                else true
+                            }
+                        }
                     }
+
+                    FileView(
+                        file = file,
+                        itemPositions = itemPositions,
+                        containerCoordinates = containerCoordinates,
+                        mousePosition = mousePosition,
+                        appState = appState,
+                        focusRequester = focusRequester,
+                        isHovered = isHovered,
+                        hScrollState = hScrollState
+                    )
                 }
             }
+        }
+    }
+}
 
-            FileView(
-                file = file,
-                itemPositions = itemPositions,
-                containerCoordinates = containerCoordinates,
-                mousePosition = mousePosition,
-                appState = appState,
-                focusRequester = focusRequester,
-                isHovered = isHovered,
-                hScrollState = hScrollState
-            )
+@Composable
+private fun GroupHeaderRow(label: String, count: Int, hScrollState: ScrollState?, viewMode: ViewMode, detailsContentWidthPx: Float) {
+    if (viewMode == ViewMode.DETAILS) {
+        DetailsGroupHeader(label = label, count = count, hScrollState = hScrollState, detailsContentWidthPx = detailsContentWidthPx)
+    } else {
+        SimpleGroupHeader(label = label, count = count)
+    }
+}
+
+@Composable
+private fun SimpleGroupHeader(label: String, count: Int) {
+    val resources = LocalResources.current
+    HorizontalDivider()
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.primary
+        )
+        Spacer(Modifier.width(8.dp))
+        Text(
+            text = resources.getQuantityString(R.plurals.group_item_count, count, count),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+@Composable
+private fun DetailsGroupHeader(label: String, count: Int, hScrollState: ScrollState?, detailsContentWidthPx: Float) {
+    val resources = LocalResources.current
+    val density = LocalDensity.current
+    val scrollOffset = hScrollState?.value ?: 0
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clipToBounds()
+    ) {
+        Column(
+            modifier = Modifier
+                .offset { IntOffset(x = -(scrollOffset), y = 0) }
+                .widthIn(min = with(density) { detailsContentWidthPx.toDp().coerceAtLeast(0.dp) })
+        ) {
+            HorizontalDivider()
+            Row(
+                modifier = Modifier.padding(horizontal = 8.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Spacer(Modifier.width(36.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = label,
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        text = resources.getQuantityString(R.plurals.group_item_count, count, count),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
         }
     }
 }

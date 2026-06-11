@@ -41,6 +41,7 @@ import com.troikoss.continuum_explorer.utils.*
 import com.troikoss.continuum_explorer.utils.IconHelper.FileThumbnail
 import com.troikoss.continuum_explorer.utils.IconHelper.FolderPreview
 import com.troikoss.continuum_explorer.utils.IconHelper.isMimeTypePreviewable
+import androidx.compose.ui.res.stringResource
 import com.troikoss.continuum_explorer.R
 
 /**
@@ -380,7 +381,12 @@ private fun FileContentView(
                     }
                 }
             },
-            supportingContent = { Text(if (file.isDirectory) "Folder - $formattedDate" else "$formattedSize - $formattedDate") },
+            supportingContent = {
+                Text(
+                    if (file.isDirectory) stringResource(R.string.folder_prefix, formattedDate)
+                    else stringResource(R.string.file_size_date, formattedSize, formattedDate)
+                )
+            },
             leadingContent = {
                 Box {
                     FileThumbnail(

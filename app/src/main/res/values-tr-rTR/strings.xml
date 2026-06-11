@@ -194,6 +194,11 @@
     <string name="settings_language_portuguese">Portekizce</string>
     <string name="settings_language_spanish">İspanyolca</string>
     <string name="settings_choose_language">Dil Seç</string>
+    <string name="settings_default_folder_options">Varsayılan Klasör Seçenekleri</string>
+    <string name="settings_sort_by">Sıralama</string>
+    <string name="settings_sort_order">Sıra</string>
+    <string name="sort_ascending">Artan</string>
+    <string name="sort_descending">Azalan</string>
     <string name="menu_restore">Geri Yükle</string>
     <string name="menu_delete_permanently">Kalıcı Sil</string>
     <string name="menu_properties">Özellikler</string>
@@ -215,6 +220,9 @@
     <string name="menu_new">Yeni</string>
     <string name="menu_sort">Sırala</string>
     <string name="menu_view">Görünüm</string>
+    <string name="menu_group">Grupla</string>
+    <string name="menu_folders_first">Folders first</string>
+    <string name="menu_show_hidden">Gizli dosyaları göster</string>
     <string name="menu_empty_recycle_bin">Geri Dönüşüm Kutusunu Boşalt</string>
     <string name="menu_refresh">Yenile</string>
     <string name="folder">Klasör</string>
@@ -345,6 +353,12 @@
     <string name="video">Video</string>
     <string name="audio">Ses</string>
     <string name="document">Doküman</string>
+    <string name="file_type_format_archive">%s Arşivi</string>
+    <string name="file_type_format_image">%s Görseli</string>
+    <string name="file_type_format_video">%s Videosu</string>
+    <string name="file_type_format_audio">%s Sesi</string>
+    <string name="file_type_format_document">%s Dokümanı</string>
+    <string name="file_type_format_file">%s Dosyası</string>
     <string name="menu_move">Taşı</string>
     <string name="move_or_copy_title">Taşı mı Kopyala mı?</string>
     <string name="move_or_copy_message">Sürüklenen dosyaları buraya taşımak mı yoksa kopyalamak mı istersiniz?</string>
@@ -359,6 +373,13 @@
     <string name="menu_gallery_albums">Albümler</string>
     <string name="details_header_type">Tür</string>
     <string name="menu_by_type">Türe Göre</string>
+    <string name="menu_group_by">%s Göre Grupla</string>
+
+    <plurals name="group_item_count">
+        <item quantity="one">%d öğe</item>
+        <item quantity="other">%d öğe</item>
+    </plurals>
+
     <string name="nav_network">Ağ</string>
     <string name="nav_add_local_storage">Yerel Depolama Ekle</string>
     <string name="nav_add_network_storage">Ağ Depolama Ekle</string>
