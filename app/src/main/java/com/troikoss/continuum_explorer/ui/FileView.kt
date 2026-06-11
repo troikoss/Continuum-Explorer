@@ -43,6 +43,7 @@ import com.troikoss.continuum_explorer.utils.IconHelper.FolderPreview
 import com.troikoss.continuum_explorer.utils.IconHelper.isMimeTypePreviewable
 import androidx.compose.ui.res.stringResource
 import com.troikoss.continuum_explorer.R
+import com.troikoss.continuum_explorer.utils.IconHelper.FolderIcon
 
 /**
  * Renders a single file or folder item, switching layout based on the current ViewMode.
@@ -161,10 +162,10 @@ fun FileView(
                     }
             ) {
                 when (viewMode) {
-                    ViewMode.GRID -> FileGridView(file, isSelected, isHovered, isLead, appState, focusRequester, mouseTooltipProvider)
-                    ViewMode.GALLERY -> FileGalleryView(file, isSelected, isHovered, isLead, appState, focusRequester, mouseTooltipProvider)
-                    ViewMode.CONTENT -> FileContentView(file, isSelected, isHovered, isLead, appState, focusRequester, mouseTooltipProvider)
-                    ViewMode.DETAILS -> FileDetailsView(file, isSelected, isHovered, isLead, appState, focusRequester, hScrollState, mouseTooltipProvider)
+                    ViewMode.GRID -> FileGridView(file, isSelected, isHovered, isLead, appState, mouseTooltipProvider)
+                    ViewMode.GALLERY -> FileGalleryView(file, isSelected, isHovered, isLead, appState, mouseTooltipProvider)
+                    ViewMode.CONTENT -> FileContentView(file, isSelected, isHovered, isLead, appState, mouseTooltipProvider)
+                    ViewMode.DETAILS -> FileDetailsView(file, isSelected, isHovered, isLead, appState, hScrollState, mouseTooltipProvider)
                 }
             }
 
@@ -189,7 +190,6 @@ private fun FileGalleryView(
     isHovered: Boolean,
     isLead: Boolean,
     appState: FileExplorerState,
-    focusRequester: FocusRequester,
     toolTipProvider: PopupPositionProvider
 ) {
 
@@ -207,18 +207,13 @@ private fun FileGalleryView(
             modifier = Modifier.padding(2.dp).fillMaxWidth().aspectRatio(1f),
             contentAlignment = Alignment.Center
         ) {
-            FileThumbnail(
+            IconHelper.ItemIcon(
                 file = file,
-                modifier = Modifier.fillMaxSize(),
-                tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary,
-                iconSize = contentSize,
-                contentScale = ContentScale.Crop
-            )
-
-            FolderPreview(
-                folder = file,
-                thumbSize = contentSize/1.5f,
-                modifier = Modifier.align(Alignment.BottomEnd)
+                isSelected = isSelected,
+                appState = appState,
+                contentSize = contentSize,
+                iconSelectionEnabled = false,
+                fillMaxSize = true
             )
 
 
@@ -273,7 +268,6 @@ private fun FileGridView(
     isHovered: Boolean,
     isLead: Boolean,
     appState: FileExplorerState,
-    focusRequester: FocusRequester,
     toolTipProvider: PopupPositionProvider
 ) {
 
@@ -291,19 +285,13 @@ private fun FileGridView(
 
         val contentSize = (appState.folderConfigs.gridItemSize * 0.6f).dp
 
-        Box {
-            FileThumbnail(
-                file = file,
-                modifier = Modifier.size((appState.folderConfigs.gridItemSize * 0.6f).dp),
-                tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary,
-                iconSize = contentSize
-            )
-            FolderPreview(
-                folder = file,
-                thumbSize = contentSize/2,
-                modifier = Modifier.align(Alignment.BottomEnd)
-            )
-        }
+        IconHelper.ItemIcon(
+            file = file,
+            isSelected = isSelected,
+            appState = appState,
+            contentSize = contentSize,
+            iconSelectionEnabled = false
+        )
         if (appState.renamingFile == file) {
             InlineRenameField(
                 file = file,
@@ -341,13 +329,10 @@ private fun FileContentView(
     isHovered: Boolean,
     isLead: Boolean,
     appState: FileExplorerState,
-    focusRequester: FocusRequester,
     toolTipProvider: PopupPositionProvider
 ) {
     val formattedSize = remember(file) { appState.formatSize(file.length) }
     val formattedDate = remember(file) { appState.formatDate(file.lastModified) }
-
-    val iconSelectionEnabled = SettingsManager.iconTouchSelection.value
 
     val tooltipState = rememberTooltipState()
     var isOverflowing by remember { mutableStateOf(false) }
@@ -388,21 +373,12 @@ private fun FileContentView(
                 )
             },
             leadingContent = {
-                Box {
-                    FileThumbnail(
-                        file = file,
-                        tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary,
-                        modifier = Modifier
-                            .size(40.dp)
-                            .then(if (iconSelectionEnabled) Modifier.iconTouchToggle(file, appState.selectionManager) else Modifier),
-                        iconSize = 40.dp
-                    )
-                    FolderPreview(
-                        folder = file,
-                        thumbSize = 24.dp,
-                        modifier = Modifier.align(Alignment.BottomEnd)
-                    )
-                }
+                IconHelper.ItemIcon(
+                    file = file,
+                    isSelected = isSelected,
+                    appState = appState,
+                    contentSize = 40.dp,
+                )
             },
             colors = ListItemDefaults.colors(containerColor = Color.Transparent),
             modifier = Modifier.padding(horizontal = 8.dp)
@@ -419,14 +395,11 @@ private fun FileDetailsView(
     isHovered: Boolean,
     isLead: Boolean,
     appState: FileExplorerState,
-    focusRequester: FocusRequester,
     hScrollState: ScrollState?,
     toolTipProvider: PopupPositionProvider
 ) {
     val context = LocalContext.current
     val resources = LocalResources.current
-
-    val iconSelectionEnabled = SettingsManager.iconTouchSelection.value
 
     val nameColumnWidth = appState.folderConfigs.columnWidths.getOrElse(FileColumnType.NAME) {Dp.Unspecified}
 
@@ -446,20 +419,12 @@ private fun FileDetailsView(
                     .padding(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Box{
-                    FileThumbnail(
-                        file = file,
-                        modifier = Modifier
-                            .size(24.dp)
-                            .then(if (iconSelectionEnabled) Modifier.iconTouchToggle(file, appState.selectionManager) else Modifier),
-                        tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary
-                    )
-                    FolderPreview(
-                        folder = file,
-                        thumbSize = 16.dp,
-                        modifier = Modifier.align(Alignment.BottomEnd)
-                    )
-                }
+                IconHelper.ItemIcon(
+                    file = file,
+                    isSelected = isSelected,
+                    appState = appState,
+                    contentSize = 24.dp,
+                )
                 Spacer(Modifier.width(12.dp))
                 if (appState.renamingFile == file) {
                     InlineRenameField(

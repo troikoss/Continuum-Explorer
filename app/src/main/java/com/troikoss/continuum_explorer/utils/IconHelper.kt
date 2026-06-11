@@ -10,14 +10,18 @@ import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
 import android.os.ParcelFileDescriptor
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.shadow
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.InsertDriveFile
 import androidx.compose.material.icons.automirrored.filled.ListAlt
 import androidx.compose.material.icons.filled.Android
 import androidx.compose.material.icons.filled.AudioFile
 import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.FolderZip
 import androidx.compose.material.icons.filled.Image
@@ -34,6 +38,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asAndroidPath
@@ -55,6 +60,7 @@ import coil.compose.SubcomposeAsyncImage
 import coil.compose.SubcomposeAsyncImageContent
 import coil.request.ImageRequest
 import coil.request.SuccessResult
+import com.troikoss.continuum_explorer.managers.SettingsManager
 import com.troikoss.continuum_explorer.model.UniversalFile
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -110,6 +116,42 @@ object IconHelper {
         }
     }
 
+    @Composable
+    fun ItemIcon(
+        file: UniversalFile,
+        isSelected: Boolean,
+        appState: FileExplorerState,
+        contentSize: Dp,
+        contentScale: ContentScale = ContentScale.Fit,
+        iconSelectionEnabled: Boolean = SettingsManager.iconTouchSelection.value,
+        fillMaxSize: Boolean = false
+    ) {
+
+        Box {
+            FileThumbnail(
+                file = file,
+                tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary,
+                modifier = Modifier
+                    .then(if (fillMaxSize) Modifier.fillMaxSize() else Modifier.size(contentSize))
+                    .then(if (iconSelectionEnabled) Modifier.iconTouchToggle(file, appState.selectionManager) else Modifier),
+                iconSize = contentSize,
+                contentScale = contentScale
+            )
+
+            FolderIcon(
+                folder = file,
+                iconSize = contentSize/2,
+                modifier = Modifier.align(Alignment.Center).padding(top = 3.dp)
+            )
+
+            FolderPreview(
+                folder = file,
+                thumbSize = contentSize/100*66,
+                modifier = Modifier.align(Alignment.BottomEnd)
+            )
+        }
+    }
+
     // --- Icon Logic ---
 
     /**
@@ -154,6 +196,27 @@ object IconHelper {
 
             // Default file icon
             else -> Icons.AutoMirrored.Filled.InsertDriveFile
+        }
+    }
+
+    private fun getFolderTypeIcon(folderName: String): ImageVector? {
+        val name = folderName.lowercase().trim()
+        return when {
+            name == "download" || name == "downloads" -> Icons.Default.Download
+            name == "documents" || name == "document" -> Icons.Default.Description
+            name == "pictures" || name == "picture" || name == "photos" || name == "photo" ||
+            name == "dcim" || name == "camera" || name == "screenshots" -> Icons.Default.Image
+            name == "music" || name == "audio" || name == "podcasts" || name == "ringtones" ||
+            name == "notifications" || name == "alarms" -> Icons.Default.AudioFile
+            name == "videos" || name == "video" || name == "movies" || name == "movie" ||
+            name == "recordings" -> Icons.Default.VideoFile
+            name == "apk" || name == "android" -> Icons.Default.Android
+            name == "archives" || name == "archive" || name == "zip" || name == "backup" ||
+            name == "backups" -> Icons.Default.FolderZip
+            name.startsWith("pdf") -> Icons.Default.PictureAsPdf
+            name == "applications" || name == "apps" -> Icons.Default.Android
+            name == "templates" || name == "template" -> Icons.Default.Description
+            else -> null
         }
     }
 
@@ -211,6 +274,25 @@ object IconHelper {
                     contentScale = ContentScale.Crop,
                 )
             }
+        }
+    }
+
+    @Composable
+    fun FolderIcon(
+        folder: UniversalFile,
+        modifier: Modifier = Modifier,
+        iconSize: Dp = 24.dp,
+        tint: Color = MaterialTheme.colorScheme.onSecondary,
+    ) {
+        if (!folder.isDirectory) return
+        val typeIcon = remember(folder) { getFolderTypeIcon(folder.name) }
+        typeIcon?.let {
+            Icon(
+                imageVector = it,
+                contentDescription = null,
+                modifier = modifier.size(iconSize),
+                tint = tint
+            )
         }
     }
 
