@@ -216,10 +216,20 @@
     <string name="settings_language_spanish">Spanish</string>
     <string name="settings_choose_language">Choose Language</string>
     <string name="settings_default_folder_options">Default Folder Options</string>
+    <string name="settings_default_folder_options_desc">View mode, sort order, headers and zoom defaults</string>
     <string name="settings_sort_by">Sort by</string>
     <string name="settings_sort_order">Order</string>
     <string name="sort_ascending">Ascending</string>
     <string name="sort_descending">Descending</string>
+    <string name="settings_details_headers">Details Headers</string>
+    <string name="settings_default_zoom">Default Zoom (Grid / Gallery)</string>
+    <string name="settings_reset_folder_options">Reset to defaults</string>
+    <string name="settings_reset_folder_options_title">Reset to defaults</string>
+    <string name="settings_reset_folder_options_confirm">This will reset all default folder options to their original values.</string>
+    <string name="reset">Reset</string>
+    <string name="settings_reset_all">Reset all folder overrides</string>
+    <string name="settings_reset_all_title">Reset all folder overrides</string>
+    <string name="settings_reset_all_confirm">This will clear all per-folder custom settings (view mode, sort, zoom, etc.) and reset them to the global defaults above.</string>
 
     <!-- Context Menus/Command Bar -->
     <string name="menu_restore">Restore</string>

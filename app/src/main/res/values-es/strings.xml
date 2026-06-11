@@ -211,10 +211,20 @@
     <string name="settings_language_spanish">Español</string>
     <string name="settings_choose_language">Elegir idioma</string>
     <string name="settings_default_folder_options">Opciones de carpeta predeterminadas</string>
+    <string name="settings_default_folder_options_desc">Modo de vista, ordenación, encabezados y zoom predeterminados</string>
+    <string name="settings_details_headers">Encabezados de detalles</string>
     <string name="settings_sort_by">Ordenar por</string>
     <string name="settings_sort_order">Orden</string>
     <string name="sort_ascending">Ascendente</string>
     <string name="sort_descending">Descendente</string>
+    <string name="settings_default_zoom">Zoom predeterminado (Cuadrícula / Galería)</string>
+    <string name="settings_reset_folder_options">Restablecer valores predeterminados</string>
+    <string name="settings_reset_folder_options_title">Restablecer valores predeterminados</string>
+    <string name="settings_reset_folder_options_confirm">Esto restablecerá todas las opciones de carpeta predeterminadas a sus valores originales.</string>
+    <string name="reset">Restablecer</string>
+    <string name="settings_reset_all">Restablecer todas las anulaciones de carpeta</string>
+    <string name="settings_reset_all_title">Restablecer todas las anulaciones de carpeta</string>
+    <string name="settings_reset_all_confirm">Esto borrará todos los ajustes personalizados por carpeta (modo de vista, ordenación, zoom, etc.) y los restablecerá a los valores predeterminados anteriores.</string>
 
     <!-- Context Menus/Command Bar -->
     <string name="menu_restore">Restaurar</string>
@@ -239,7 +249,7 @@
     <string name="menu_sort">Ordenar</string>
     <string name="menu_view">Vista</string>
     <string name="menu_group">Agrupar</string>
-    <string name="menu_folders_first">Folders first</string>
+    <string name="menu_folders_first">Carpetas primero</string>
     <string name="menu_show_hidden">Mostrar archivos ocultos</string>
     <string name="menu_empty_recycle_bin">Vaciar papelera</string>
     <string name="menu_refresh">Actualizar</string>

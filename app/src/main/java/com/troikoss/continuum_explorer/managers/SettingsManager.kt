@@ -3,6 +3,7 @@ package com.troikoss.continuum_explorer.managers
 import android.content.Context
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.runtime.State
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.core.os.LocaleListCompat
 import com.troikoss.continuum_explorer.model.FileColumnType
@@ -54,6 +55,10 @@ object SettingsManager {
     private const val KEY_GROUPING_ENABLED = "grouping_enabled"
     private const val KEY_DEFAULT_SORT_COLUMN = "default_sort_column"
     private const val KEY_DEFAULT_SORT_ORDER = "default_sort_order"
+    private const val KEY_DEFAULT_HEADER_DATE = "default_header_date"
+    private const val KEY_DEFAULT_HEADER_SIZE = "default_header_size"
+    private const val KEY_DEFAULT_HEADER_TYPE = "default_header_type"
+    private const val KEY_DEFAULT_GRID_ZOOM = "default_grid_zoom"
 
     private val _deleteBehavior = mutableStateOf(DeleteBehavior.ASK)
     val deleteBehavior: State<DeleteBehavior> = _deleteBehavior
@@ -103,6 +108,18 @@ object SettingsManager {
 
     private val _defaultSortOrder = mutableStateOf(SortOrder.Ascending)
     val defaultSortOrder: State<SortOrder> = _defaultSortOrder
+
+    private val _defaultHeaderDate = mutableStateOf(true)
+    val defaultHeaderDate: State<Boolean> = _defaultHeaderDate
+
+    private val _defaultHeaderSize = mutableStateOf(true)
+    val defaultHeaderSize: State<Boolean> = _defaultHeaderSize
+
+    private val _defaultHeaderType = mutableStateOf(true)
+    val defaultHeaderType: State<Boolean> = _defaultHeaderType
+
+    private val _defaultGridZoom = mutableIntStateOf(100)
+    val defaultGridZoom: State<Int> = _defaultGridZoom
 
     fun init(context: Context) {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -170,6 +187,11 @@ object SettingsManager {
         } catch (e: Exception) {
             ViewMode.DETAILS
         }
+
+        _defaultHeaderDate.value = prefs.getBoolean(KEY_DEFAULT_HEADER_DATE, true)
+        _defaultHeaderSize.value = prefs.getBoolean(KEY_DEFAULT_HEADER_SIZE, true)
+        _defaultHeaderType.value = prefs.getBoolean(KEY_DEFAULT_HEADER_TYPE, true)
+        _defaultGridZoom.value = prefs.getInt(KEY_DEFAULT_GRID_ZOOM, 100).coerceIn(60, 300)
     }
 
     fun setLanguage(context: Context, languageTag: String) {
@@ -261,29 +283,103 @@ object SettingsManager {
         _defaultViewMode.value = mode
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         prefs.edit().putString(KEY_DEFAULT_VIEW_MODE, mode.name).apply()
+        GlobalEvents.triggerConfigUpdate()
     }
 
     fun setFoldersFirst(context: Context, enabled: Boolean) {
         _foldersFirst.value = enabled
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         prefs.edit().putBoolean(KEY_FOLDERS_FIRST, enabled).apply()
+        GlobalEvents.triggerConfigUpdate()
     }
 
     fun setGroupingEnabled(context: Context, enabled: Boolean) {
         _isGroupingEnabled.value = enabled
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         prefs.edit().putBoolean(KEY_GROUPING_ENABLED, enabled).apply()
+        GlobalEvents.triggerConfigUpdate()
     }
 
     fun setDefaultSortColumnType(context: Context, columnType: FileColumnType) {
         _defaultSortColumnType.value = columnType
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         prefs.edit().putString(KEY_DEFAULT_SORT_COLUMN, columnType.name).apply()
+        GlobalEvents.triggerConfigUpdate()
     }
 
     fun setDefaultSortOrder(context: Context, order: SortOrder) {
         _defaultSortOrder.value = order
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         prefs.edit().putString(KEY_DEFAULT_SORT_ORDER, order.name).apply()
+        GlobalEvents.triggerConfigUpdate()
+    }
+
+    fun setDefaultHeaderDate(context: Context, enabled: Boolean) {
+        _defaultHeaderDate.value = enabled
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putBoolean(KEY_DEFAULT_HEADER_DATE, enabled).apply()
+        GlobalEvents.triggerConfigUpdate()
+    }
+
+    fun setDefaultHeaderSize(context: Context, enabled: Boolean) {
+        _defaultHeaderSize.value = enabled
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putBoolean(KEY_DEFAULT_HEADER_SIZE, enabled).apply()
+        GlobalEvents.triggerConfigUpdate()
+    }
+
+    fun setDefaultHeaderType(context: Context, enabled: Boolean) {
+        _defaultHeaderType.value = enabled
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putBoolean(KEY_DEFAULT_HEADER_TYPE, enabled).apply()
+        GlobalEvents.triggerConfigUpdate()
+    }
+
+    fun setDefaultGridZoom(context: Context, zoom: Int) {
+        val clamped = zoom.coerceIn(60, 300)
+        _defaultGridZoom.value = clamped
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putInt(KEY_DEFAULT_GRID_ZOOM, clamped).apply()
+        GlobalEvents.triggerConfigUpdate()
+    }
+
+    fun resetDefaultFolderOptions(context: Context) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().apply {
+            putString(KEY_DEFAULT_VIEW_MODE, ViewMode.DETAILS.name)
+            putString(KEY_DEFAULT_SORT_COLUMN, FileColumnType.NAME.name)
+            putString(KEY_DEFAULT_SORT_ORDER, SortOrder.Ascending.name)
+            putBoolean(KEY_SHOW_HIDDEN_FILES, false)
+            putBoolean(KEY_FOLDERS_FIRST, true)
+            putBoolean(KEY_GROUPING_ENABLED, false)
+            putBoolean(KEY_DEFAULT_HEADER_DATE, true)
+            putBoolean(KEY_DEFAULT_HEADER_SIZE, true)
+            putBoolean(KEY_DEFAULT_HEADER_TYPE, true)
+            putInt(KEY_DEFAULT_GRID_ZOOM, 100)
+            apply()
+        }
+        _defaultViewMode.value = ViewMode.DETAILS
+        _defaultSortColumnType.value = FileColumnType.NAME
+        _defaultSortOrder.value = SortOrder.Ascending
+        _showHiddenFiles.value = false
+        _foldersFirst.value = true
+        _isGroupingEnabled.value = false
+        _defaultHeaderDate.value = true
+        _defaultHeaderSize.value = true
+        _defaultHeaderType.value = true
+        _defaultGridZoom.value = 100
+        GlobalEvents.triggerConfigUpdate()
+    }
+
+    fun resetAllFolderOverrides(context: Context) {
+        val prefNames = listOf(
+            "folder_view_modes", "folder_sort_params", "folder_grid_sizes",
+            "folder_grouping", "folder_folders_first", "folder_show_hidden",
+            "column_visibility", "column_widths"
+        )
+        prefNames.forEach { name ->
+            context.getSharedPreferences(name, Context.MODE_PRIVATE).edit().clear().apply()
+        }
+        GlobalEvents.triggerConfigUpdate()
     }
 }

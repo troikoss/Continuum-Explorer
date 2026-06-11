@@ -211,10 +211,20 @@
     <string name="settings_language_spanish">Espagnol</string>
     <string name="settings_choose_language">Choisir la langue</string>
     <string name="settings_default_folder_options">Options de dossier par défaut</string>
+    <string name="settings_default_folder_options_desc">Mode d\'affichage, tri, en-têtes et zoom par défaut</string>
+    <string name="settings_details_headers">En-têtes de détails</string>
     <string name="settings_sort_by">Trier par</string>
     <string name="settings_sort_order">Ordre</string>
     <string name="sort_ascending">Croissant</string>
     <string name="sort_descending">Décroissant</string>
+    <string name="settings_default_zoom">Zoom par défaut (Grille / Galerie)</string>
+    <string name="settings_reset_folder_options">Réinitialiser les valeurs par défaut</string>
+    <string name="settings_reset_folder_options_title">Réinitialiser les valeurs par défaut</string>
+    <string name="settings_reset_folder_options_confirm">Cela réinitialisera toutes les options de dossier par défaut à leurs valeurs d\'origine.</string>
+    <string name="reset">Réinitialiser</string>
+    <string name="settings_reset_all">Réinitialiser tous les réglages de dossiers</string>
+    <string name="settings_reset_all_title">Réinitialiser tous les réglages de dossiers</string>
+    <string name="settings_reset_all_confirm">Cela effacera tous les réglages personnalisés par dossier (affichage, tri, zoom, etc.) et les réinitialisera aux valeurs par défaut ci-dessus.</string>
 
     <!-- Context Menus/Command Bar -->
     <string name="menu_restore">Restaurer</string>
@@ -239,7 +249,7 @@
     <string name="menu_sort">Trier</string>
     <string name="menu_view">Affichage</string>
     <string name="menu_group">Groupe</string>
-    <string name="menu_folders_first">Folders first</string>
+    <string name="menu_folders_first">Dossiers en premier</string>
     <string name="menu_show_hidden">Afficher les fichiers cachés</string>
     <string name="menu_empty_recycle_bin">Vider la corbeille</string>
     <string name="menu_refresh">Actualiser</string>

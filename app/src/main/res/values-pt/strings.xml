@@ -211,10 +211,20 @@
     <string name="settings_language_spanish">Espanhol</string>
     <string name="settings_choose_language">Escolher Idioma</string>
     <string name="settings_default_folder_options">Opções de pasta padrão</string>
+    <string name="settings_default_folder_options_desc">Modo de exibição, ordenação, cabeçalhos e zoom padrão</string>
+    <string name="settings_details_headers">Cabeçalhos de detalhes</string>
     <string name="settings_sort_by">Ordenar por</string>
     <string name="settings_sort_order">Ordem</string>
     <string name="sort_ascending">Crescente</string>
     <string name="sort_descending">Decrescente</string>
+    <string name="settings_default_zoom">Zoom padrão (Grade / Galeria)</string>
+    <string name="settings_reset_folder_options">Restaurar padrões</string>
+    <string name="settings_reset_folder_options_title">Restaurar padrões</string>
+    <string name="settings_reset_folder_options_confirm">Isso restaurará todas as opções de pasta padrão para seus valores originais.</string>
+    <string name="reset">Restaurar</string>
+    <string name="settings_reset_all">Restaurar todas as substituições de pasta</string>
+    <string name="settings_reset_all_title">Restaurar todas as substituições de pasta</string>
+    <string name="settings_reset_all_confirm">Isso limpará todas as configurações personalizadas por pasta (modo de exibição, ordenação, zoom, etc.) e as restaurará para os padrões acima.</string>
 
     <!-- Context Menus/Command Bar -->
     <string name="menu_restore">Restaurar</string>
@@ -239,7 +249,7 @@
     <string name="menu_sort">Organizar</string>
     <string name="menu_view">Exibir</string>
     <string name="menu_group">Agrupar</string>
-    <string name="menu_folders_first">Folders first</string>
+    <string name="menu_folders_first">Pastas primeiro</string>
     <string name="menu_show_hidden">Mostrar arquivos ocultos</string>
     <string name="menu_empty_recycle_bin">Esvaziar Lixeira</string>
     <string name="menu_refresh">Atualizar</string>

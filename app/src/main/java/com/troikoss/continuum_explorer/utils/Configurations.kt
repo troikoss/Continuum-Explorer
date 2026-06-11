@@ -57,12 +57,14 @@ class FolderConfigurations(private val context: Context) {
                 try { hiddenColumns.add(FileColumnType.valueOf(typeName)) } catch (_: Exception) {}
             }
         } else {
-            // Apply defaults: recycle bin shows DATE_DELETED/DELETED_FROM and hides DATE; elsewhere the reverse
             if (isInRecycleBin) {
                 hiddenColumns.add(FileColumnType.DATE)
             } else {
                 hiddenColumns.add(FileColumnType.DATE_DELETED)
                 hiddenColumns.add(FileColumnType.DELETED_FROM)
+                if (!SettingsManager.defaultHeaderDate.value) hiddenColumns.add(FileColumnType.DATE)
+                if (!SettingsManager.defaultHeaderSize.value) hiddenColumns.add(FileColumnType.SIZE)
+                if (!SettingsManager.defaultHeaderType.value) hiddenColumns.add(FileColumnType.TYPE)
             }
         }
     }
@@ -314,12 +316,12 @@ class FolderConfigurations(private val context: Context) {
     fun resolveGridSize(key: String?) {
         val prefs = context.getSharedPreferences("folder_grid_sizes", Context.MODE_PRIVATE)
         if (key != null) {
-            // Load the saved size, using 100 as a default if nothing is found for that key
-            val savedSize = prefs.getInt(key, 100)
+            val defaultZoom = if (viewMode == ViewMode.GRID || viewMode == ViewMode.GALLERY)
+                SettingsManager.defaultGridZoom.value else 100
+            val savedSize = prefs.getInt(key, defaultZoom)
             gridItemSize = savedSize
             return
         }
-        // If there's no specific folder, just use the default
         gridItemSize = 100
     }
 
