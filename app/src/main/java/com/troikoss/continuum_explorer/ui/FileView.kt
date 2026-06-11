@@ -196,8 +196,6 @@ private fun FileGalleryView(
     val tooltipState = rememberTooltipState()
     var isOverflowing by remember { mutableStateOf(false) }
 
-    val contentSize = (appState.folderConfigs.gridItemSize * 0.6f).dp
-
     TooltipBox(
         positionProvider = toolTipProvider,
         tooltip = { if (isOverflowing) PlainTooltip { Text(file.name) } },
@@ -210,7 +208,7 @@ private fun FileGalleryView(
             IconHelper.ItemIcon(
                 file = file,
                 isSelected = isSelected,
-                contentSize = contentSize,
+                contentSize = appState.folderConfigs.gridItemSize.dp,
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop
             )

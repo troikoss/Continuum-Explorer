@@ -90,7 +90,7 @@ object IconHelper {
                     SubcomposeAsyncImage(
                         model = if (file.provider.capabilities.isRemote) file else (file.documentFileRef?.uri ?: file.fileRef?.absolutePath),
                         contentDescription = null,
-                        modifier = modifier,
+                        modifier = modifier.size(iconSize),
                         contentScale = contentScale,
                     ) {
                         if (painter.state is AsyncImagePainter.State.Success) {
@@ -263,6 +263,7 @@ object IconHelper {
                 FileThumbnail(
                     file = file,
                     modifier = Modifier.size(thumbSize),
+                    iconSize = thumbSize,
                     contentScale = ContentScale.Crop,
                 )
             }
@@ -338,7 +339,7 @@ object IconHelper {
             SubcomposeAsyncImage(
                 model = thumbFile,
                 contentDescription = null,
-                modifier = modifier,
+                modifier = modifier.size(iconSize),
                 contentScale = ContentScale.Fit,
             ) {
                 if (painter.state is AsyncImagePainter.State.Success) {
